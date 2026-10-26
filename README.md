@@ -1,19 +1,23 @@
+**English** · [العربية](README.ar.md)
+
 # SV1 — BY ee.zvz
+
+[![ci](https://github.com/ee-zvz/sv1/actions/workflows/ci.yml/badge.svg)](https://github.com/ee-zvz/sv1/actions/workflows/ci.yml)
 
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
 SQLite session history. Release `1.1.0`.
 
-أداة فحص ثغرات **XSS** و **SQL Injection** و **Blind XSS** و **SSRF** مكتوبة
-ببايثون، تشتغل على ويندوز 11. عند التشغيل تطلع مقدمة متحركة (لوقو SV1 بتدرّج
-لوني + اسم المؤلف) ثم يبدأ الفحص.
+A vulnerability scanner for **XSS**, **SQL Injection**, **Blind XSS** and **SSRF**
+written in Python, running on Windows 11. On start it prints an animated banner
+(the SV1 logo with a colour gradient, plus the author name) and then begins the scan.
 
 ---
 
-## التنصيب
+## Install
 
-يتطلب **Python 3.10+**.
+Requires **Python 3.10+**.
 
 ```powershell
 cd sv1
@@ -21,163 +25,163 @@ python -m pip install -r requirements.txt
 python -m playwright install chromium
 ```
 
-خطوة المتصفح اختيارية لكن مطلوبة لإثبات التنفيذ (XSS حقيقي، DOM، Stored)،
-ولزيارة صفحة المشرف في Blind XSS، ولزحف SPA. بدونها الأداة تشتغل وتفحص
-الانعكاس و SQLi و blind callback و SSRF بشكل عادي.
+The browser step is optional, but required for execution proof (real XSS, DOM,
+Stored), for visiting the admin page in Blind XSS, and for SPA crawling. Without
+it the tool still runs and tests reflection, SQLi, blind callbacks and SSRF normally.
 
-التشغيل السريع:
+Quick start:
 
 ```powershell
 .\run.bat -u http://target.tld --crawl
 ```
 
-`run.bat` يسوي بيئة افتراضية `.venv` تلقائياً أول مرة، وينزّل المتطلبات، ويشغّل الأداة.
+`run.bat` creates a `.venv` on first run, installs requirements, and launches the tool.
 
-> للمقدمة المتحركة استخدم **Windows Terminal** (يدعم ألوان 24-bit والرموز).
+> Use **Windows Terminal** for the animated banner (24-bit colour and glyph support).
 
 ---
 
-## الاستخدام
+## Usage
 
 ```powershell
-python sv1.py -u <URL> [خيارات]
+python sv1.py -u <URL> [options]
 ```
 
-| الخيار | المعنى |
+| Option | Meaning |
 |---|---|
-| `-u, --url` | الهدف (مطلوب). يقبل بدون `http://` ويضيفه تلقائياً |
-| `--crawl` | يتبع الروابط من الصفحة |
-| `--depth N` | عمق الزحف (افتراضي 2) |
-| `--pages N` | أقصى عدد صفحات (افتراضي 25) |
-| `--threads N` | عدد الخيوط (افتراضي 8) |
-| `--timeout S` | مهلة الطلب بالثواني (افتراضي 12) |
-| `--rps N` | حد الطلبات بالثانية (افتراضي 8، `0` = بلا حد) |
-| `--fail-on LEVEL` | متى يرجع الكود 1: `any` (افتراضي)، `none`، `low`، `medium`، `high`، `critical` |
-| `--scope FILE` | ملف allowlist للنطاقات/المسارات؛ أي شيء خارجه يُرفض |
-| `--db FILE` | قاعدة SQLite لحفظ الجلسات والنتائج |
-| `--diff` | مقارنة الجلسة الحالية بالسابقة في `--db` |
-| `--retest` | إعادة فحص نتائج الجلسة المحفوظة بدل الزحف |
-| `--sarif FILE` | تقرير SARIF 2.1.0 للـ CI |
-| `--xss` | فحص XSS فقط |
-| `--sqli` | فحص SQLi فقط |
-| `--no-xss` / `--no-sqli` | تعطيل أحد الفحصين |
-| `--time` | تشغيل فحص الحقن الزمني (بطيء، دقيق) |
-| `--no-union` | تعطيل استخراج UNION |
-| `--headers` | حقن في `X-Forwarded-For` و `Referer` و `User-Agent` |
-| `--deep` | هيدرات إضافية: `X-Real-IP`, `Client-IP`, `Origin` … |
-| `--cookies` | حقن في قيم الكوكيز الممررة بـ `--cookie` |
-| `--json URL` | فحص حقن JSON على نقطة POST |
-| `--json-data JSON` | قالب جسم JSON (افتراضي `{"id": "1", "q": "test"}`) |
-| `--params` | اكتشاف باراميترات GET مخفية على عنوان الهدف |
-| `--js` | استخراج نقاط حقن من سكربتات الصفحات |
-| `--second-order` | فحص SQLi من الدرجة الثانية (يكتب في الهدف) |
-| `--dump` | سحب هوية القاعدة وأسماء الجداول بعد نجاح UNION |
-| `--spa` | زحف SPA: تحميل الصفحات في Chromium والتقاط XHR/fetch |
-| `--openapi SPEC` | استيراد نقاط الحقن من ملف أو رابط OpenAPI JSON |
-| `--blind` | Blind XSS: يحقن سكربت callback في نماذج POST وينتظر اتصالاً (يكتب في الهدف) |
-| `--blind-visit URL` | يفتح صفحة المشرف بعد الحقن، يتكرر (محاكاة محلية) |
-| `--ssrf` | يفحص الباراميترات الشبيهة بالروابط عبر callback |
-| `--oob BASE` | عنوان callback العام (افتراضي `http://127.0.0.1:8777`) |
-| `--oob-bind HOST:PORT` | عنوان الاستماع للـ callback (افتراضي `127.0.0.1:8777`) |
-| `--oob-wait S` | ثواني انتظار callback بعد الفحص (افتراضي 8) |
-| `--browser` | إجبار إثبات التنفيذ في Chromium |
-| `--no-browser` | تعطيل المتصفح كلياً |
-| `--stored` | فحص XSS المخزّن (يكتب بيانات في الهدف) |
-| `--artifacts DIR` | مجلد صور الإثبات (افتراضي `sv1-artifacts`) |
-| `--html FILE` | تقرير HTML بالصور |
-| `-H "Key: Value"` | هيدر إضافي، يتكرر |
-| `--cookie "sid=abc"` | كوكيز الجلسة |
-| `--proxy URL` | بروكسي |
-| `-k, --insecure` | تجاهل شهادة TLS |
-| `-o FILE` | تصدير النتائج `.json` أو `.csv` |
-| `--no-verify` | تخطي مرحلة إعادة التشغيل (replay) |
-| `--no-banner` | تخطي المقدمة |
-| `--version` | طباعة الإصدار |
-| `-v` | إظهار أخطاء الشبكة والأخطاء الداخلية |
+| `-u, --url` | Target (required). Accepts a value without `http://` and adds it |
+| `--crawl` | Follow links from the page |
+| `--depth N` | Crawl depth (default 2) |
+| `--pages N` | Maximum pages (default 25) |
+| `--threads N` | Worker threads (default 8) |
+| `--timeout S` | Request timeout in seconds (default 12) |
+| `--rps N` | Requests per second (default 8, `0` = unlimited) |
+| `--fail-on LEVEL` | When to exit 1: `any` (default), `none`, `low`, `medium`, `high`, `critical` |
+| `--scope FILE` | Host/path allowlist; anything outside is refused |
+| `--db FILE` | SQLite database for sessions and findings |
+| `--diff` | Compare this session with the previous one in `--db` |
+| `--retest` | Replay findings from the saved session instead of crawling |
+| `--sarif FILE` | SARIF 2.1.0 report for CI |
+| `--xss` | XSS checks only |
+| `--sqli` | SQLi checks only |
+| `--no-xss` / `--no-sqli` | Disable one of the two |
+| `--time` | Run time-based injection checks (slow, accurate) |
+| `--no-union` | Disable UNION extraction |
+| `--headers` | Inject into `X-Forwarded-For`, `Referer`, `User-Agent` |
+| `--deep` | Additional headers: `X-Real-IP`, `Client-IP`, `Origin`, … |
+| `--cookies` | Inject into cookie values passed with `--cookie` |
+| `--json URL` | Test JSON body injection on a POST endpoint |
+| `--json-data JSON` | JSON body template (default `{"id": "1", "q": "test"}`) |
+| `--params` | Discover hidden GET parameters on the target URL |
+| `--js` | Extract injection points from page scripts |
+| `--second-order` | Second-order SQLi (writes to the target) |
+| `--dump` | Pull database identity and table names after a successful UNION |
+| `--spa` | SPA crawl: load pages in Chromium and capture XHR/fetch |
+| `--openapi SPEC` | Import injection points from a local or remote OpenAPI JSON file |
+| `--blind` | Blind XSS: inject a callback script into POST forms and wait for a hit (writes to the target) |
+| `--blind-visit URL` | Open the admin page after injection, repeats (local simulation) |
+| `--ssrf` | Test URL-like parameters through a callback |
+| `--oob BASE` | Public callback address (default `http://127.0.0.1:8777`) |
+| `--oob-bind HOST:PORT` | Callback listen address (default `127.0.0.1:8777`) |
+| `--oob-wait S` | Seconds to wait for a callback after the scan (default 8) |
+| `--browser` | Force execution proof in Chromium |
+| `--no-browser` | Disable the browser entirely |
+| `--stored` | Stored XSS checks (writes data to the target) |
+| `--artifacts DIR` | Evidence screenshot directory (default `sv1-artifacts`) |
+| `--html FILE` | HTML report with screenshots |
+| `-H "Key: Value"` | Extra header, repeatable |
+| `--cookie "sid=abc"` | Session cookies |
+| `--proxy URL` | Proxy |
+| `-k, --insecure` | Ignore the TLS certificate |
+| `-o FILE` | Export findings to `.json` or `.csv` |
+| `--no-verify` | Skip the replay stage |
+| `--no-banner` | Skip the banner |
+| `--version` | Print the version |
+| `-v` | Show network and internal errors |
 
-### أمثلة
+### Examples
 
 ```powershell
-# موقع كامل، فحص كامل + تقرير بالصور
+# Whole site, full scan + HTML report
 python sv1.py -u https://site.tld --crawl --html report.html -o report.json
 
-# صفحة بحث واحدة، XSS فقط
+# Single search page, XSS only
 python sv1.py -u "https://site.tld/search?q=test" --xss
 
-# نقطة ID مع فحص زمني وجلسة مسجلة
+# ID endpoint with time-based checks and a saved session
 python sv1.py -u "https://site.tld/item?id=1" --sqli --time --cookie "PHPSESSID=abc123"
 
-# فحص مخزّن (يكتب في الهدف) مع صور الإثبات
+# Stored scan (writes to the target) with evidence screenshots
 python sv1.py -u https://site.tld --crawl --stored --html report.html
 
-# بلا متصفح (أسرع، بلا إثبات تنفيذ)
+# No browser (faster, no execution proof)
 python sv1.py -u https://site.tld --crawl --no-browser
 
-# حقن الهيدرات والكوكيز (تختبر عنوان الهدف نفسه)
+# Header and cookie injection (tests the target URL itself)
 python sv1.py -u https://site.tld/api/account --headers --deep --cookies --cookie "sid=abc"
 
-# واجهة JSON (PowerShell يشيل التنصيص الداخلي، لذا استخدم backtick)
-python sv1.py -u https://site.tld/api/item --json https://site.tld/api/item \
+# JSON endpoint (PowerShell eats inner quotes, so use backticks)
+python sv1.py -u https://site.tld/api/item --json https://site.tld/api/item `
   --json-data "{\`"id\`": 1, \`"q\`": \`"test\`"}"
 
-# باراميترات مخفية على صفحة واحدة
+# Hidden parameters on one page
 python sv1.py -u https://site.tld/export --params
 
-# نقاط من JavaScript + SQLi من الدرجة الثانية
+# Points from JavaScript + second-order SQLi
 python sv1.py -u https://site.tld --crawl --js --second-order
 
-# سحب هوية القاعدة وأسماء الجداول بعد إثبات UNION
+# Pull database identity and table names after UNION proof
 python sv1.py -u "https://site.tld/item?id=1" --dump
 
-# زحف SPA + استيراد مواصفات OpenAPI
+# SPA crawl + OpenAPI import
 python sv1.py -u https://site.tld --crawl --spa --openapi https://site.tld/openapi.json
 
-# Blind XSS: احقن في النماذج، ثم افتح صفحة المشرف (محاكاة محلية)
+# Blind XSS: inject into forms, then open the admin page (local simulation)
 python sv1.py -u https://site.tld/contact --blind `
   --blind-visit https://site.tld/admin/messages --html report.html
 
-# SSRF: باراميتر URL يطلب عنوان الـ callback
+# SSRF: a URL parameter requests the callback address
 python sv1.py -u "https://site.tld/fetch?url=x" --ssrf
 
-# CI: SARIF + فشل فقط عند HIGH أو أعلى
+# CI: SARIF + fail only on HIGH or above
 python sv1.py -u https://site.tld --crawl --sarif sv1.sarif --fail-on high
 
-# نطاق محدد من ملف + تاريخ + diff بين الجلسات
+# Scoped from a file + history + diff between sessions
 python sv1.py -u https://site.tld --crawl --scope scope.txt `
   --db sv1-history.db --diff --fail-on high
 
-# إعادة فحص نتائج الجلسة السابقة (بدون زحف)
+# Replay the previous session (no crawling)
 python sv1.py -u https://site.tld --db sv1-history.db --retest --fail-on high
 
-# هدف بعيد: لازم callback عام يوصل للـ listener (نفق/بروكسي عكسي)
+# Remote target: the callback must be reachable from it (tunnel / reverse proxy)
 python sv1.py -u https://site.tld --blind --oob https://cb.example.tld `
   --oob-bind 0.0.0.0:8777 --oob-wait 30
 ```
 
-مخرجات الأداة: صفر = ما فيه نتائج (أو `--fail-on none`)، واحد = فيه نتيجة
-عند/فوق عتبة `--fail-on`، اثنان = الهدف ما استجاب أو فشل فتح الملفات.
+Exit codes: `0` = no findings (or `--fail-on none`), `1` = a finding at or above
+the `--fail-on` threshold, `2` = the target did not respond or a file could not be opened.
 
 ---
 
-## CI والذاكرة (P5)
+## CI and memory (P5)
 
-### SARIF و`--fail-on`
+### SARIF and `--fail-on`
 
 ```powershell
 python sv1.py -u https://site.tld --crawl `
   --sarif sv1.sarif --fail-on high
 ```
 
-- `--sarif` يكتب SARIF 2.1.0: قاعدة لكل `kind/technique`، نتيجة لكل finding،
-  بصمة ثابتة (`sv1Fingerprint`) وموقع ودرجة أمان. يصلح للرفع إلى GitHub code
-  scanning أو أي أداة تقرأ SARIF.
-- `--fail-on` يحدد كود الخروج فقط، ما يخفي النتائج:
-  - `any` (الافتراضي): 1 إذا فيه أي نتيجة.
-  - `none`: 0 دائماً مع بقاء التقرير.
-  - `low/medium/high/critical`: 1 إذا فيه نتيجة عند العتبة أو أعلى.
-  - 2 يبقى للهدف غير القابل للوصول أو فشل الكتابة.
-- عتبة `high` لا تفشل على MEDIUM، وعتبة `critical` لا تفشل على HIGH.
-- مثال CI:
+- `--sarif` writes SARIF 2.1.0: one rule per `kind/technique`, one result per
+  finding, a stable fingerprint (`sv1Fingerprint`), a physical location and a
+  security severity. Ready for GitHub code scanning or any SARIF consumer.
+- `--fail-on` only sets the exit code; it never hides findings:
+  - `any` (default): 1 when any finding exists.
+  - `none`: always 0, report still written.
+  - `low/medium/high/critical`: 1 when a finding is at or above the threshold.
+  - 2 stays reserved for an unreachable target or a write failure.
+- A `high` threshold does not fail on MEDIUM; a `critical` threshold does not fail on HIGH.
+- CI example:
 
 ```yaml
 - run: python sv1.py -u "$TARGET" --crawl --sarif sv1.sarif --fail-on high
@@ -187,7 +191,7 @@ python sv1.py -u https://site.tld --crawl `
     sarif_file: sv1.sarif
 ```
 
-### ملف النطاق `--scope`
+### Scope file `--scope`
 
 ```text
 # scope.txt
@@ -197,297 +201,332 @@ https://api.example.com/v1/*
 127.0.0.1:8099
 ```
 
-- سطر لكل قاعدة، `#` للتعليق، و`*` wildcard في المضيف أو المسار.
-- لازم الهدف نفسه يطابق قاعدة، وإلا يتوقف الفحص بكود 2.
-- الزاحف ما يجلب صفحات خارج النطاق، والنقاط المستوردة من OpenAPI/JS/SPA
-  والهيدرات/الكوكيز/JSON تُفلتر. الملف الفارغ أو غير المقروء = رفض.
-- الملف يحدد ما يُفحص، وليس جدار شبكة: صفحات SPA قد تطلب أصولاً خارجية أثناء
-  العرض. لا تعتمد عليه للحماية الشبكية.
+- One rule per line, `#` for comments, `*` wildcard in host or path.
+- The target itself must match a rule, otherwise the scan stops with code 2.
+- The crawler never fetches outside scope, and points imported from
+  OpenAPI/JS/SPA, headers, cookies and JSON are filtered. An empty or unreadable
+  file is a refusal.
+- The file defines what is tested, not a network wall: SPA pages may still load
+  external assets while rendering. Do not rely on it for network isolation.
 
-### قاعدة الجلسات `--db` و`--diff`
+### Session database `--db` and `--diff`
 
 ```powershell
 python sv1.py -u https://site.tld --crawl --db sv1.db --diff
 ```
 
-- SQLite يحفظ كل جلسة وكل النتائج: الهدف، الوقت، الإصدار، الإحصاءات،
-  البصمة، نقطة الحقن القابلة لإعادة الإرسال.
-- `--diff` يقارن مع آخر جلسة لنفس الهدف:
-  `+N new · N open · -N fixed`. البصمة تعتمد على النوع + طريقة HTTP + الرابط
-  (بعد ترتيب query) + الباراميتر + تقنية الكشف، فالبايلود المتغير ما يخلق
-  finding جديداً، لكن error وUNION على نفس النقطة يبقيان نتيجتين.
-- الجلسة تُحفظ حتى لو كانت نظيفة، حتى يستطيع diff لاحق أن يثبت الإصلاح.
-- `--retest` يقرأ آخر جلسة ويعيد إرسال النتائج القابلة لإعادة الإرسال فقط:
-  XSS/SQLi error/boolean/time/second-order. لا يزحف ولا يعيد فحص OOB.
-  نتائج Blind/SSRF/Stored/DOM/UNION تُعدّ `skipped` لأنها تحتاج متصفحاً أو
-  استخراجاً كاملاً. استخدم نفس `-u` المستخدم في الجلسة الأصلية.
-- إذا صار الهدف غير قابل للوصول، retest يعلّم النتائج `fixed` (لم تعد
-  قابلة للإثبات) ويطبع العدد؛ هذا سلوك مقصود.
+- SQLite stores every session and every finding: target, time, version, stats,
+  fingerprint, replayable injection point.
+- `--diff` compares against the latest session for the same target:
+  `+N new · N open · -N fixed`. The fingerprint is kind + HTTP method + URL
+  (query sorted) + parameter + detection technique, so a changing payload does
+  not create a new finding, while error-based and UNION on the same point stay
+  two findings.
+- A session is saved even when clean, so a later diff can prove the fix.
+- `--retest` reads the latest session and replays the replayable findings only:
+  XSS / SQLi error / boolean / time / second-order. It does not crawl and does
+  not re-test OOB. Blind/SSRF/Stored/DOM/UNION findings are marked `skipped`
+  because they need a browser or a full extraction. Use the same `-u` as the
+  original session.
+- If the target becomes unreachable, retest marks findings `fixed` (no longer
+  provable) and prints the count; this is intended.
 
-### 429 والتكيّف
+### 429 and adaptation
 
-حد `--rps` ما عاد ثابتاً فقط: عند `429/503` يضاعف SV1 الفاصل حتى 8 أضعاف،
-ويحترم `Retry-After` الرقمي (بحد 30 ثانية)، ثم يعود تدريجياً بعد 20 رداً
-سليماً. `--rps 0` يبقى بلا حد.
+`--rps` is no longer a fixed limit: on `429/503` SV1 doubles the interval up to
+8x, honours a numeric `Retry-After` (capped at 30s), and recovers gradually
+after 20 healthy responses. `--rps 0` stays unlimited.
 
-> P5.1 لاحقاً: محرك async بـ `httpx`، `--resume`، وcurl repro داخل HTML.
-> الإصدار 1.1.0 يغطي SARIF وfail-on وscope وSQLite diff/retest وتكيّف 429.
+> P5.1 later: async engine on `httpx`, `--resume`, and curl repro inside the HTML.
+> Release 1.1.0 covers SARIF, fail-on, scope, SQLite diff/retest and 429 adaptation.
 
 ---
 
-## كيف يفحص
+## How it scans
 
-**الأساس: قياس الصفحة أولاً**
-كل نقطة تُطلب مرتين بدون تعديل. تُقارن النسختان على مستوى التوكنز
-(`difflib`) ويُقاس الضجيج: nonce، CSRF token، وقت، عداد. الضجيج يحدد
-كل قرار بعده:
+**Baseline: measure the page first**
 
-- `floor = 3 × noise` — أقل فرق يمكن تصديقه.
-- الصفحة الثابتة: مقارنة واحدة.
-- الصفحة المتغيرة: كل فرع يُعاد مرتين قبل المقارنة.
+Every point is requested twice unmodified. The two copies are compared at token
+level (`difflib`) and the noise is measured: nonce, CSRF token, time, counters.
+That noise drives every decision after it:
 
-الصفحة التي يتجاوز ضجيجها 10% تُعامَل كغير موثوقة، وكل نتيجة عليها تنزل
-درجة ثقة.
+- `floor = 3 × noise` — the smallest believable difference.
+- Stable page: one comparison.
+- Volatile page: each branch is re-fetched twice before comparing.
 
-**XSS (منعكس)**
-1. يرسل توكن عشوائي `sv1xxxxxxxx` في الباراميتر.
-2. إذا ما رجع في الرد → لا انعكاس، يتخطاه.
-3. يقرأ **قواعد** موضع الانعكاس: نص HTML، خاصية داخل وسم (وأي اقتباس)،
-   داخل `<script>` (وأي نوع نص JS)، أو داخل تعليق.
-4. يبني بايلود واحداً يقفل بالضبط ما هو مفتوح — مثلاً داخل
-   `<script>var x = "..."` يستخدم `";alert(tok)//`، وداخل
-   `value='...'` يستخدم `'><svg/onload=...>`.
-5. يتحقق أن البايلود رجع **حرفياً** في الرد → `HIGH`.
-   إذا رجع التوكن والوسوم مشفّرة → `MEDIUM`.
+A page whose noise exceeds 10% is treated as unreliable, and every finding on it
+loses a confidence grade.
+
+**XSS (reflected)**
+
+1. Sends a random token `sv1xxxxxxxx` in the parameter.
+2. If it does not come back in the response → no reflection, skip.
+3. Reads the **grammar** of the reflection point: HTML text, an attribute inside
+   a tag (and which quote), inside `<script>` (and which JS string type), or
+   inside a comment.
+4. Builds one payload that closes exactly what is open — e.g. inside
+   `<script>var x = "..."` it uses `";alert(tok)//`, and inside
+   `value='...'` it uses `'><svg/onload=...>`.
+5. Verifies the payload came back **verbatim** → `HIGH`.
+   If the token returns with the tags encoded → `MEDIUM`.
 
 **SQLi**
-1. **Error-based** — بايلودات كاسرة + بصمات أخطاء 7 قواعد بيانات، مع
-   استثناء الأخطاء الموجودة في الصفحة الأصلية.
-2. **Boolean-based** — 6 أزواج (صح/خطأ)، ويقبل فقط إذا:
-   الفرعان تكررا بنفس الشكل، «الصح» طابق الأصل، «الخطأ» خالفه، والفرق
-   بينهما فوق أرضية الضجيج.
-3. **Time-based** (`--time`) — SLEEP / WAITFOR / pg_sleep / DBMS_PIPE،
-   بتأكيد مرتين وهامش فوق زمن الأصل.
-4. **UNION + استخراج** — تُشغّل فقط على نقطة أثبتت الحقن أصلاً:
-   - عدّ الأعمدة: `ORDER BY n` يفشل عند أول عمود زائد → بحث ثنائي.
-   - تحديد العمود المرتجع: `UNION SELECT NULL,...,'sv1u...',...` حتى يظهر الماركر.
-   - استخراج فعلي: `version()`، `@@version`، `sqlite_version()`،
-     أو `v$version` لأوراكل. القيمة نفسها تُكتب في الدليل، والبصمة تحدد القاعدة.
-   - `--dump`: يقرأ `current_user()` و`database()` وأسماء الجداول من كتالوج
-     القاعدة عبر نفس العمود المرتجع. كل قيمة محاطة بماركر `sv1[...]sv1` حتى
-     تُقتطع من الرد بلا تخمين؛ بحد 3 طلبات و12 جدولاً. مدعوم على
-     MySQL/PostgreSQL/MSSQL/SQLite.
-   - النتيجة `CRITICAL` و `CONFIRMED` — قرأنا من القاعدة، ما خمّنّا.
 
-**تجاوز الفلاتر**
-إذا رد الهدف على بايلود بـ `403/406/429`، تُعاد نفس الحقنة بصياغات أخرى:
-مسافات على شكل `/**/`، تبويب `%09`، تبديل حالة الأحرف، وتشفير مزدوج.
-البايلود اللي نجح فعلاً هو اللي يُحفظ في النتيجة، ومرحلة الـ replay تجرب
-نفس الصياغات قبل ما تحكم على النتيجة بأنها غير مستقرة.
+1. **Error-based** — breaking payloads + error signatures for 7 databases,
+   excluding errors already present on the original page.
+2. **Boolean-based** — 6 true/false pairs, accepted only if: both branches
+   repeat with the same shape, "true" matches the original, "false" differs from
+   it, and the gap between them is above the noise floor.
+3. **Time-based** (`--time`) — SLEEP / WAITFOR / pg_sleep / DBMS_PIPE, confirmed
+   twice with a margin above the original timing.
+4. **UNION + extraction** — only runs on a point that already proved injectable:
+   - Column count: `ORDER BY n` fails at the first excess column → binary search.
+   - Echoed column: `UNION SELECT NULL,...,'sv1u...',...` until the marker appears.
+   - Real extraction: `version()`, `@@version`, `sqlite_version()`, or `v$version`
+     for Oracle. The value itself is written to the evidence, and the fingerprint
+     identifies the database.
+   - `--dump`: reads `current_user()`, `database()` and table names from the
+     database catalog through the same echoed column. Every value is wrapped in
+     an `sv1[...]sv1` marker so it is cut from the response without guessing;
+     capped at 3 requests and 12 tables. Supported on MySQL/PostgreSQL/MSSQL/SQLite.
+   - Result is `CRITICAL` and `CONFIRMED` — read from the database, not guessed.
 
-**مواقع الحقن**
-- `query` و `form` — تلقائي من الزحف.
-- `header` (`--headers`) — قيم الهيدرات المذكورة أعلاه على عنوان الهدف.
-- `cookie` (`--cookies`) — كل كوكي ممرر بـ `--cookie`.
-- `json` (`--json`) — كل مفتاح في جسم JSON، مع `Content-Type: application/json`.
-- `js` (`--js`) — كل URL فيه query داخل `<script>` مضمّن أو ملف سكربت خارجي
-  بنفس الأصل. يغطي `fetch` و `axios` و `$.ajax` و أي رابط مكتوب كنص.
-- `multipart` — نماذج `enctype="multipart/form-data"` تُرسل multipart فعلاً،
-  والحقول النصية داخلها تصير نقاط حقن.
+**Filter bypass**
+
+If the target answers a payload with `403/406/429`, the same injection is retried
+in other shapes: `/**/` whitespace, `%09` tabs, case swapping, double encoding.
+The payload that actually worked is the one stored in the finding, and the replay
+stage tries the same shapes before declaring a finding unstable.
+
+**Injection sites**
+
+- `query` and `form` — automatically from the crawl.
+- `header` (`--headers`) — the header values listed above on the target URL.
+- `cookie` (`--cookies`) — every cookie passed with `--cookie`.
+- `json` (`--json`) — every key in a JSON body, with `Content-Type: application/json`.
+- `js` (`--js`) — every URL with a query inside an inline `<script>` or a
+  same-origin external script. Covers `fetch`, `axios`, `$.ajax` and any URL
+  written as text.
+- `multipart` — `enctype="multipart/form-data"` forms are actually sent as
+  multipart, and their text fields become injection points.
 
 **Replay**
-كل نتيجة تُعاد بعد الفحص (`--no-verify` يلغيها). إذا ما تكررت، تنزل درجة
-خطورتها ودرجة ثقتها ويُكتب في التقرير أنها غير مستقرة. هذا يقتل الإيجابيات
-الكاذبة الناتجة عن صفحات random أو WAF.
 
-**إثبات التنفيذ (Chromium)**
-إذا Playwright مثبّت، SV1 يفتح الصفحة فعلياً ويعيد الحقن كما أرسله:
+Every finding is replayed after the scan (`--no-verify` disables it). If it does
+not reproduce, its severity and confidence drop and the report states it is
+unstable. This kills false positives produced by random pages or a WAF.
 
-- سكربت التهيئة يستبدل `alert/confirm/prompt` قبل أي سكربت في الصفحة ويسجل
-  كل نداء بماركر خاص بالفحص (`sv1...`).
-- النتيجة ما تصير `CONFIRMED` إلا إذا انطلق الماركر داخل الصفحة.
-- ما انطلق → تنزل لـ `MEDIUM` مع ملاحظة صريحة.
-- كل نتيجة مؤكدة تاخذ screenshot في `sv1-artifacts/`.
+**Execution proof (Chromium)**
+
+With Playwright installed, SV1 actually opens the page and re-sends the injection
+as sent:
+
+- An init script replaces `alert/confirm/prompt` before any page script and
+  records every call with a scan-specific marker (`sv1...`).
+- A finding is only `CONFIRMED` if the marker fired inside the page.
+- No fire → drops to `MEDIUM` with an explicit note.
+- Every confirmed finding gets a screenshot in `sv1-artifacts/`.
 
 **DOM XSS**
-تحليل ثابت لكل `<script>`: يبحث عن مصادر
+
+Static analysis of every `<script>`: looks for sources
 (`location.hash/search/href`, `document.referrer`, `window.name`, `document.cookie`)
-وأحواض (`innerHTML`, `document.write`, `eval`, `insertAdjacentHTML`, `setTimeout` …).
-كل زوج مصدر→حوض يُختبر في المتصفح: `#payload` أو باراميترات شائعة. الثغرة
-تسجل فقط إذا نفّذ المتصفح الماركر.
+and sinks (`innerHTML`, `document.write`, `eval`, `insertAdjacentHTML`, `setTimeout` …).
+Every source→sink pair is tested in the browser: `#payload` or common parameters.
+The finding is recorded only if the browser executed the marker.
 
 **Stored XSS** (`--stored`)
-يرسل البايلود في نماذج POST، ثم يزور الصفحات مرة ثانية وينتظر الماركر.
-يكتب بيانات في الهدف.
 
-**اكتشاف باراميترات مخفية** (`--params`)
-يبدأ بباراميتر تحكم عشوائي: إذا غيّر الصفحة، الصفحة تتفاعل مع أي شيء
-والنتيجة غير موثوقة. غير ذلك يرسل أسماء شائعة على دفعات (16 اسم)، وإذا تغيّر
-الرد يقسم الدفعة نصفين حتى يعزل الاسم، ثم يؤكد كل اسم لحاله مرتين. الأسماء
-الموجودة أصلاً في الرابط تُستثنى، والأسماء التي تعمل فقط مجتمعة تُرفض.
-الفحص على عنوان الهدف نفسه (مثل Arjun)، مو على كل صفحة زحفتها.
+Sends the payload into POST forms, then visits the pages again and waits for the
+marker. Writes data to the target.
 
-**نقاط من JavaScript** (`--js`)
-الزاحف يتبع `<a href>` فقط. التطبيقات الحديثة تنادي `/api/...` من داخل
-السكربت. SV1 يقرأ السكربت المضمّن ويجلب السكربتات الخارجية بنفس الأصل (بحد
-6 ملفات لكل صفحة)، يستخرج كل نص بين علامات اقتباس فيه `?` أو `&`، يحوّله
-إلى `InjectionPoint` عادي، ويكمّل عليه XSS + SQLi. الروابط الخارجية
-والملفات الثابتة (`*.js?v=1`) تُستبعد.
+**Hidden parameter discovery** (`--params`)
 
-**زحف SPA** (`--spa`)
-الزاحف العادي يقرأ HTML فقط. SV1 يفتح حتى 6 صفحات فيها `<script>` داخل
-Chromium فعلياً، يستمع لطلبات `xhr` و`fetch`، ويحوّل كل رابط فيها query إلى
-نقطة حقن عادية. كذلك يلتقط روابط `<a>` التي لا تظهر إلا بعد تنفيذ JavaScript:
-الرابط اللي فيه query يصير نقاط حقن، والرابط بدونه يُجلب كصفحة (بحد 4).
-هذا يغطي الواجهات التي تبني نفسها بالمتصفح.
+Starts with a random control parameter: if it changes the page, the page reacts
+to anything and the result is unreliable. Otherwise it sends common names in
+batches (16 names), and when the response changes it splits the batch in half
+until the name is isolated, then confirms each name twice on its own. Names
+already present in the URL are excluded, and names that only work together are
+rejected. It tests the target URL itself (like Arjun), not every crawled page.
 
-الحدود: يلتقط استدعاءات GET ذات query فقط، مو جسم POST للـ XHR. يحتاج
-Chromium؛ مع `--no-browser` يُتخطى بتحذير.
+**Points from JavaScript** (`--js`)
 
-**استيراد OpenAPI** (`--openapi`)
+The crawler follows `<a href>` only. Modern apps call `/api/...` from inside the
+script. SV1 reads the inline script and fetches same-origin external scripts
+(capped at 6 files per page), extracts every quoted string containing `?` or `&`,
+turns it into a normal `InjectionPoint`, and runs XSS + SQLi on it. External links
+and static files (`*.js?v=1`) are excluded.
+
+**SPA crawl** (`--spa`)
+
+The normal crawler reads HTML only. SV1 opens up to 6 pages containing `<script>`
+in a real Chromium, listens for `xhr` and `fetch` requests, and turns every URL
+with a query into a normal injection point. It also captures `<a>` links that only
+appear after JavaScript runs: a link with a query becomes injection points, and a
+link without one is fetched as a page (capped at 4). This covers interfaces that
+build themselves in the browser.
+
+Limits: it captures GET calls with a query only, not XHR POST bodies. Requires
+Chromium; with `--no-browser` it is skipped with a warning.
+
+**OpenAPI import** (`--openapi`)
+
 ```powershell
 python sv1.py -u https://site.tld --openapi spec.json
 python sv1.py -u https://site.tld --openapi https://site.tld/openapi.json
 ```
-يقرأ JSON (ملف محلي أو رابط)، يبني العناوين من `servers[0]` + `paths`،
-ويصنع نقطة لكل باراميتر `query` وكل خاصية في جسم JSON أو form أو multipart.
-`$ref` المحلي يُتبع، و`{param}` في المسار يُستبدل بـ `1` (المسار نفسه ما
-يُحقن). بحد 80 نقطة و6 حقول لكل عملية. YAML غير مدعوم — صدّره JSON أولاً.
 
-**الـ callback (OOB)**
-عند استخدام `--blind` أو `--ssrf` يشغّل SV1 سيرفر HTTP محلياً على
-`127.0.0.1:8777`. كل حقنة تاخذ توكن فريد (16 حرف hex). السيرفر يسجل وقت
-الوصول، IP، User-Agent، Referer، والـ query — وما يسجل طلباً بلا توكن مسجل.
-مسار `/t/<token>` يرجّع سكربت، ومسار `/e/<token>` يرجّع صورة 1×1.
+Reads JSON (local file or URL), builds URLs from `servers[0]` + `paths`, and
+creates a point for every `query` parameter and every property in a JSON, form or
+multipart body. Local `$ref` is followed, and `{param}` in the path is replaced
+with `1` (the path itself is never injected). Capped at 80 points and 6 fields per
+operation. YAML is not supported — export JSON first.
 
-- هدف محلي: العنوان الافتراضي يكفي.
-- هدف بعيد: `--oob https://...` + `--oob-bind 0.0.0.0:8777` + نفق/فتح منفذ
-  يوصل للـ listener. عنوان `127.0.0.1` ما يوصل من خارج الجهاز.
-- إذا الهدف HTTPS استخدم callback بـ HTTPS؛ المتصفح يمنع mixed content.
-- `--oob-wait` يحدد أقصى انتظار للاتصالات (blind و SSRF) بعد الحقن/الفحص.
-- السيرفر ما يقرأ ملفات وما يعرض محتوى الهدف؛ يسجل hit فقط.
+**The callback (OOB)**
+
+With `--blind` or `--ssrf`, SV1 starts a local HTTP server on `127.0.0.1:8777`.
+Every injection gets a unique token (16 hex chars). The server records arrival
+time, IP, User-Agent, Referer and query — and never records a request without a
+registered token. `/t/<token>` returns a script, `/e/<token>` returns a 1×1 image.
+
+- Local target: the default address is enough.
+- Remote target: `--oob https://...` + `--oob-bind 0.0.0.0:8777` + a tunnel or
+  opened port that reaches the listener. A `127.0.0.1` address is not reachable
+  from outside the machine.
+- If the target is HTTPS, use an HTTPS callback; the browser blocks mixed content.
+- `--oob-wait` sets the maximum wait for callbacks (blind and SSRF) after the
+  injection/scan.
+- The server reads no files and serves no target content; it records hits only.
 
 **Blind XSS** (`--blind`)
-1. يجمع نماذج POST (بحد 6 نماذج، وحقلين لكل نموذج).
-2. يحقن شكلين: `<script src="http://cb/t/TOKEN"></script>` و
-   `"><script src="..."></script>` مع توكن مستقل لكل حقنة.
-3. إذا فُتحت الصفحة في متصفح، يطلب `/t` ويرجّع JavaScript يحمّل
-   `/e/TOKEN?p=<sink-url>`.
-4. `/t` = السكربت انجلب. `/e` = السكربت **نُفّذ**، والـ `p` يحدد صفحة
-   العرض الفعلية.
-5. `--blind-visit` يفتح صفحة المشرف داخل Chromium بعد الحقن (محاكاة محلية)،
-   وياخذ screenshot. بدونه ينتظر `--oob-wait` مشرفاً حقيقياً.
-6. النتيجة: `HIGH` + `CONFIRMED` عند التنفيذ، و`HIGH` + `MEDIUM` إذا انجلب
-   السكربت فقط (مثلاً CSP منع الصورة). ما تطلع نتيجة بلا hit.
 
-`--blind` يكتب بيانات في الهدف.
+1. Collects POST forms (capped at 6 forms, 2 fields each).
+2. Injects two shapes: `<script src="http://cb/t/TOKEN"></script>` and
+   `"><script src="..."></script>`, with an independent token per injection.
+3. If the page is opened in a browser, it requests `/t` and returns JavaScript
+   that loads `/e/TOKEN?p=<sink-url>`.
+4. `/t` = the script was fetched. `/e` = the script **executed**, and `p`
+   identifies the actual rendering page.
+5. `--blind-visit` opens the admin page inside Chromium after injection (local
+   simulation) and takes a screenshot. Without it, SV1 waits `--oob-wait` for a
+   real admin.
+6. Result: `HIGH` + `CONFIRMED` on execution, `HIGH` + `MEDIUM` if the script was
+   only fetched (e.g. CSP blocked the image). No hit, no finding.
+
+`--blind` writes data to the target.
 
 **SSRF** (`--ssrf`)
-- يختار باراميترات query/form/JSON/multipart التي اسمها يشبه عنواناً
-  (`url`, `redirect`, `callback`, `webhook`, `next`, `dest` …) أو قيمتها
-  الأصلية URL كامل.
-- يرسل `http://<callback>/t/<token>` في مكانها. السيرفر يسجل الاتصال.
-- الاختبار لا يتبع redirects: هدف يرد `302` نحو الـ callback ما يخلق نتيجة
-  كاذبة، لأن الطلب لازم يجي من الهدف نفسه.
-- النتيجة `HIGH` + `CONFIRMED` مع وقت الوصول و IP والـ User-Agent.
-- بحد 15 نقطة، وبروتوكول HTTP(S) فقط. الهيدرات والكوكيز مستبعدة.
+
+- Picks query/form/JSON/multipart parameters whose name looks like an address
+  (`url`, `redirect`, `callback`, `webhook`, `next`, `dest` …) or whose original
+  value is a full URL.
+- Sends `http://<callback>/t/<token>` in place of it. The server records the connection.
+- The test does not follow redirects: a target returning `302` toward the callback
+  creates no false finding, because the request has to come from the target itself.
+- Result `HIGH` + `CONFIRMED` with arrival time, IP and User-Agent.
+- Capped at 15 points, HTTP(S) only. Headers and cookies are excluded.
 
 **Second-order SQLi** (`--second-order`)
-الحقنة تُخزَّن الآن وتُنفَّذ لاحقاً في استعلام ثانٍ. الخطوات:
-1. يخزّن قيمة نظيفة (`sv1clean`) في الحقل → يقيس الصفحات (بلا أخطاء).
-2. يخزّن `sv1'` في نفس الحقل.
-3. يزور حتى 6 صفحات (بما فيها صفحات النماذج) ويبحث عن بصمة خطأ قاعدة
-   بيانات **جديدة** ما كانت في الأساس.
-4. يظهر الخطأ → نتيجة `CRITICAL` بدليل: الحقل، صفحة التخزين، صفحة الخطأ.
-5. مرحلة replay تفتح صفحة الخطأ وتتأكد أن الخطأ باقٍ.
 
-الحدود: نموذج واحد لكل حقل، بايلود واحد، حتى 6 نماذج و6 صفحات. يكتب
-بيانات في الهدف مثل `--stored`.
+The injection is stored now and executed later in a second query. Steps:
 
-كل نتيجة تطلع لك: الهدف، الباراميتر، **طريقة الكشف** (`technique`)، البايلود،
-مستوى الخطورة، درجة الثقة، وسطر الدليل.
+1. Stores a clean value (`sv1clean`) in the field → measures the pages (no errors).
+2. Stores `sv1'` in the same field.
+3. Visits up to 6 pages (including the form pages) looking for a database error
+   signature that was **not** in the baseline.
+4. Error appears → `CRITICAL` finding with evidence: the field, the storage page,
+   the error page.
+5. The replay stage opens the error page and confirms the error persists.
+
+Limits: one form per field, one payload, up to 6 forms and 6 pages. Writes data to
+the target, like `--stored`.
+
+Every finding shows: target, parameter, **detection technique** (`technique`),
+payload, severity, confidence grade, and one line of evidence.
 
 ---
 
-## قياس على المختبر
+## Measured on the lab
 
-صفحة `/account` تتغير كل طلب (nonce عشوائي) وفيها حقن منطقي حقيقي.
-المقارنة بين المنطق القديم (بايتات، طلب واحد) والمحرك الحالي:
+The `/account` page changes on every request (random nonce) and contains a real
+logical injection. Comparing the old logic (bytes, one request) with the current
+engine:
 
 ```
-real injection on /account   old 0/5   sv1 5/5     ← القديم كان يفوّت
+real injection on /account   old 0/5   sv1 5/5     ← the old one missed it
 false positives on /noisy    old 0/5   sv1 0/5
 ```
 
-السبب: ضجيج 2% يكسر مقارنة البايتات تماماً. SV1 يقيس الضجيج ويقارن البنية.
+Cause: 2% noise completely breaks byte comparison. SV1 measures the noise and
+compares structure.
 
 ---
 
-## بنية المشروع
+## Project structure
 
 ```
 sv1/
-├── sv1.py              نقطة التشغيل والـ CLI
+├── sv1.py              entry point and CLI
 ├── sv1lib/
-│   ├── config.py       كل الأرقام والثوابت
-│   ├── models.py       البيانات (Finding, InjectionPoint ...)
-│   ├── net.py          عميل HTTP + حد معدل متكيّف مع 429
-│   ├── identity.py     بصمة ثابتة للنتيجة (history/SARIF)
-│   ├── history.py      SQLite: جلسات، نتائج، diff، retest
-│   ├── scope.py        allowlist للنطاقات/المسارات
-│   ├── policy.py       عتبة fail-on وكود الخروج
-│   ├── sarif.py        تصدير SARIF 2.1.0
-│   ├── crawl.py        زاحف + مستخرج النماذج (stdlib)
-│   ├── baseline.py     قياس الضجيج وهوية الصفحة (difflib)
-│   ├── context.py      تحليل سياق الحقن + بناء البايلود
-│   ├── payloads.py     البايلودات وبصمات أخطاء DB
-│   ├── xss.py          كاشف XSS منعكس
-│   ├── domxss.py       تحليل مصدر→حوض + إثبات في المتصفح
-│   ├── stored.py       حقن في النماذج ثم زيارة الصفحات
-│   ├── hidden.py       اكتشاف باراميترات مخفية (بحث ثنائي)
-│   ├── jsparse.py      استخراج نقاط الحقن من JavaScript
-│   ├── spa.py          زحف SPA + التقاط XHR/fetch
-│   ├── openapi.py      استيراد نقاط الحقن من OpenAPI JSON
-│   ├── secondorder.py  SQLi من الدرجة الثانية (تخزين ثم زيارة)
-│   ├── oob.py          سيرفر callback + توكنات + تسجيل hits
-│   ├── blind.py        Blind XSS: حقن ثم انتظار التنفيذ
-│   ├── ssrf.py         SSRF عبر نفس الـ callback
-│   ├── sqli.py         كاشف SQLi (error/boolean/time/union)
-│   ├── union.py        عدّ الأعمدة + الاستخراج + dump
-│   ├── dberrors.py     بصمات أخطاء قواعد البيانات
-│   ├── tamper.py       صياغات بديلة عند وجود فلتر
-│   ├── browser.py      Chromium + هوك alert + screenshots
-│   ├── verify.py       إعادة تشغيل النتائج
-│   ├── banner.py       المقدمة المتحركة
-│   └── report.py       العرض والتصدير (نص/JSON/CSV/HTML)
-├── lab/server.py       هدف محلي مصاب للتدريب
-├── tests/test_p5.py    اختبارات الوحدة (scope/history/SARIF/rate/fail-on)
+│   ├── config.py       every number and constant
+│   ├── models.py       data types (Finding, InjectionPoint ...)
+│   ├── net.py          HTTP client + adaptive 429 rate limit
+│   ├── identity.py     stable finding fingerprint (history/SARIF)
+│   ├── history.py      SQLite: sessions, findings, diff, retest
+│   ├── scope.py        host/path allowlist
+│   ├── policy.py       fail-on threshold and exit code
+│   ├── sarif.py        SARIF 2.1.0 export
+│   ├── crawl.py        crawler + form extractor (stdlib)
+│   ├── baseline.py     noise measurement and page identity (difflib)
+│   ├── context.py      injection context analysis + payload building
+│   ├── payloads.py     payloads and DB error signatures
+│   ├── xss.py          reflected XSS detector
+│   ├── domxss.py       source→sink analysis + browser proof
+│   ├── stored.py       inject into forms, then visit pages
+│   ├── hidden.py       hidden parameter discovery (binary search)
+│   ├── jsparse.py      extract injection points from JavaScript
+│   ├── spa.py          SPA crawl + XHR/fetch capture
+│   ├── openapi.py      import injection points from OpenAPI JSON
+│   ├── secondorder.py  second-order SQLi (store, then visit)
+│   ├── oob.py          callback server + tokens + hit log
+│   ├── blind.py        Blind XSS: inject, then wait for execution
+│   ├── ssrf.py         SSRF over the same callback
+│   ├── sqli.py         SQLi detector (error/boolean/time/union)
+│   ├── union.py        column counting + extraction + dump
+│   ├── dberrors.py     database error signatures
+│   ├── tamper.py       alternate shapes when a filter is present
+│   ├── browser.py      Chromium + alert hook + screenshots
+│   ├── verify.py       finding replay
+│   ├── banner.py       animated banner
+│   └── report.py       rendering and export (text/JSON/CSV/HTML)
+├── lab/server.py       local vulnerable target for practice
+├── tests/test_p5.py    unit tests (scope/history/SARIF/rate/fail-on)
 ├── .github/workflows/ci.yml
 ├── LICENSE             MIT
-├── CHANGELOG.md        سجل الإصدارات
-├── ROADMAP.md          خارطة التطوير
+├── CHANGELOG.md        release log
+├── ROADMAP.md          development roadmap
 ├── requirements.txt
 └── run.bat
 ```
 
 ---
 
-## مختبر محلي
+## Local lab
 
-هدف مصاب جاهز على `127.0.0.1` فقط، ما يطلع للشبكة:
+A ready vulnerable target on `127.0.0.1` only; it never leaves the network:
 
 ```powershell
-# نافذة 1
+# window 1
 python lab\server.py 8099
 
-# نافذة 2
+# window 2
 python sv1.py -u http://127.0.0.1:8099/ --crawl --no-banner
 ```
 
-الفحص الكامل مع تغطية P3 + P3.1 + P4 + P5:
+Full scan with P3 + P3.1 + P4 + P5 coverage:
 
 ```powershell
-# ملف النطاق مرة واحدة
+# scope file, once
 "127.0.0.1:8099" | Set-Content scope-lab.txt
 
 python sv1.py -u http://127.0.0.1:8099/ --crawl --stored --js --second-order --dump `
@@ -497,67 +536,71 @@ python sv1.py -u http://127.0.0.1:8099/ --crawl --stored --js --second-order --d
   --fail-on high --html report.html
 ```
 
-النتيجة: **27 نتيجة، 27 أعادت التشغيل، 0 unstable** — CRITICAL 9، HIGH 16،
-MEDIUM 2، 19 صفحة، 25 نقطة حقن، 780 طلباً، 149.2 ثانية (مع Chromium).
+Result: **27 findings, 27 replayed, 0 unstable** — CRITICAL 9, HIGH 16, MEDIUM 2,
+19 pages, 25 injection points, 780 requests, 149.2 s (with Chromium).
 
-- **XSS (14):** 13 مؤكدة بالتنفيذ داخل Chromium (`/search`, `/feedback` حقلان،
-  `/js`, `/attr`, `/waf`, `/api/fetch`, `/api/spa`, `/dynamic`)، DOM في `/dom`
-  عبر `location.hash → innerHTML`، مخزّن في `/guestbook` (اسم + رسالة)،
-  و Blind XSS في `/blind-admin`، وانعكاس مشفّر في `/safe` ينزل `MEDIUM`.
-- **SQLi (12):** خطأ MySQL في `/search` و `/union` و `/waf` و `/upload`
-  و `/api/fetch` و `/api/spa` و `/dynamic`، حقن منطقي في `/item` و `/api/item`،
-  و`/account` ينزل `MEDIUM` لأن صفحته متغيرة (ضجيج)، استخراج UNION من
-  `/union`: `3 columns, column 1 echoes back; version() -> 8.0.36-lab`، وحقن
-  من الدرجة الثانية في `/profile` (`sv1'` تُخزَّن ثم تنكسر عند العرض).
-- **SSRF (1):** `/fetch?url=` طلب عنوان الـ callback فعلياً، والنتيجة
-  `HIGH` + `CONFIRMED` مع وقت الوصول والـ User-Agent. الاختبار لا يتبع
-  redirects، فالـ hit من الهدف نفسه.
-- **`--blind`:** 14 بايلوداً في 5 نماذج (شكلان لكل حقل). الصفحة
-  `/blind-admin` غير مربوطة بالفهرس — لا يراها الزاحف. بعد الحقن فتحها
-  `--blind-visit`، فطلب السكربت من `/t` ثم نفّذ صورة `/e` وأرسل صفحة العرض
-  في `p`. الحقل نفسه في `/blind` انكشف مرة واحدة بعد إزالة التكرار.
-- **`--ssrf`:** نقطة URL واحدة في `/fetch`؛ الطلب وصل للـ listener من
-  `urllib` داخل المختبر، وليس من متصفح الفحص.
-- **`--dump`:** يضيف للنتيجة قيم القاعدة:
+- **XSS (14):** 13 confirmed by execution inside Chromium (`/search`, `/feedback`
+  two fields, `/js`, `/attr`, `/waf`, `/api/fetch`, `/api/spa`, `/dynamic`), DOM
+  in `/dom` via `location.hash → innerHTML`, stored in `/guestbook` (name +
+  message), and Blind XSS in `/blind-admin`; an encoded reflection in `/safe`
+  drops to `MEDIUM`.
+- **SQLi (12):** MySQL error in `/search`, `/union`, `/waf`, `/upload`,
+  `/api/fetch`, `/api/spa`, `/dynamic`; logical injection in `/item` and
+  `/api/item`; `/account` drops to `MEDIUM` because its page is volatile (noise);
+  UNION extraction from `/union`: `3 columns, column 1 echoes back; version() -> 8.0.36-lab`;
+  second-order injection in `/profile` (`sv1'` is stored, then breaks on render).
+- **SSRF (1):** `/fetch?url=` actually requested the callback address, result
+  `HIGH` + `CONFIRMED` with arrival time and User-Agent. The test does not follow
+  redirects, so the hit comes from the target itself.
+- **`--blind`:** 14 payloads across 5 forms (two shapes per field). The
+  `/blind-admin` page is not linked from the index — the crawler never sees it.
+  After injection `--blind-visit` opened it, so the script was requested from
+  `/t`, then executed the `/e` image and sent the rendering page in `p`. The same
+  field in `/blind` was discovered once after dedupe.
+- **`--ssrf`:** one URL point in `/fetch`; the request reached the listener from
+  `urllib` inside the lab, not from the scanner browser.
+- **`--dump`:** adds the database values to the finding:
   ```
   data    user    sv1@localhost
   data    db      sv1lab
   data    tables  users,notes,accounts
   ```
-- **`--js`:** نقطتان من سكربت `/js-endpoints`:
-  `/api/fetch?id=1&name=test` — XSS مؤكد بالتنفيذ و SQLi خطأ.
-- **`--spa`:** 4 صفحات محمّلة، استدعاءا XHR، رابط ديناميكي، 6 نقاط. يلتقط
-  `/api/spa?id=1&name=test` المبني بالمتغيرات (لا يراه `--js`) → XSS مؤكد
-  بالتنفيذ و SQLi خطأ. ويلتقط رابط `<a>` الذي بناه السكربت نحو
-  `/dynamic?id=1&name=test` → النتيجتان نفسهما. `/api/fetch` ذُكر أصلاً فما
-  تكرر (dedupe بالمفتاح).
-- **`--openapi`:** 4 نقاط من `/openapi.json`؛ `/api/item` JSON أضاف حقناً
-  منطقياً واحداً. نقاط `/api/fetch` طابقت نقاط `--js` فما تكررت.
-- **`--second-order`:** يخزّن `sv1clean` ثم `sv1'` في `/profile`، يقيس
-  الصفحات، ويكشف الخطأ الجديد عند العرض.
-- **`--params`** على `-u http://127.0.0.1:8099/hidden`: يكتشف `debug` و
-  `export` ويطلع نتيجتا XSS مؤكدتان بالتنفيذ.
-- `--json http://127.0.0.1:8099/api/item`: +1 (حقن منطقي JSON).
-- `--headers` على `-u .../header`: +1، `--cookies --cookie sid=abc` على
+- **`--js`:** two points from the `/js-endpoints` script:
+  `/api/fetch?id=1&name=test` — XSS confirmed by execution and SQLi error.
+- **`--spa`:** 4 pages loaded, 2 XHR calls, one dynamic link, 6 points. It catches
+  `/api/spa?id=1&name=test` built from variables (`--js` cannot see it) → XSS
+  confirmed by execution and SQLi error. It also catches the `<a>` link the script
+  built toward `/dynamic?id=1&name=test` → the same two findings. `/api/fetch` was
+  already listed so it did not repeat (dedupe by key).
+- **`--openapi`:** 4 points from `/openapi.json`; `/api/item` JSON added one
+  logical injection. `/api/fetch` points matched `--js` points so they did not repeat.
+- **`--second-order`:** stores `sv1clean` then `sv1'` in `/profile`, measures the
+  pages, and detects the new error on render.
+- **`--params`** on `-u http://127.0.0.1:8099/hidden`: discovers `debug` and
+  `export` and yields two XSS findings confirmed by execution.
+- `--json http://127.0.0.1:8099/api/item`: +1 (JSON logical injection).
+- `--headers` on `-u .../header`: +1; `--cookies --cookie sid=abc` on
   `-u .../cookie`: +1.
 
-`--stored` و `--second-order` و `--blind` يكتبون بيانات في الهدف.
-`--ssrf` يخلي الهدف يطلب عنوان الـ callback. المختبر يضيف `/blind`
-و`/fetch` كصفحات عادية، بينما `/blind-admin` مقصود أن يبقى غير مربوط.
+`--stored`, `--second-order` and `--blind` write data to the target.
+`--ssrf` makes the target request the callback address. The lab adds `/blind`
+and `/fetch` as normal pages, while `/blind-admin` is intentionally left unlinked.
 
-- **`--scope`:** ملف `127.0.0.1:8099` سمح بالهدف؛ هدف خارج الملف يرجع 2 قبل
-  أي طلب. الزحف لا يخرج عن النطاق، ونقاط OpenAPI تُفلتر.
-- **`--db --diff`:** الجلسة الأولى `#1` بلا سابق؛ إعادة الفحص بنفس الهدف
-  تعطي `+0 new · 27 open · -0 fixed` (نُفّذت في القبول).
-- **`--retest`:** من جلسة الـ 27: 21 open، 0 fixed، 6 skipped — تخطّى
-  Blind وSSRF وStored وDOM وUNION. لم يزحف ولم يفتح متصفحاً.
-- **SARIF:** 27 نتيجة، بصمة ثابتة لكل نتيجة، وملف يمرّ schema الرسمي
-  SARIF 2.1.0.
-- **`--fail-on`:** `none` = 0، `high` = 1، `critical` = 1 على المختبر،
-  وهدف نظيف مع `high` = 0.
+- **`--scope`:** the file `127.0.0.1:8099` allowed the target; a target outside
+  the file returns 2 before any request. The crawl never leaves scope, and
+  OpenAPI points are filtered.
+- **`--db --diff`:** the first session is `#1` with no predecessor; re-scanning
+  the same target gives `+0 new · 27 open · -0 fixed` (verified in acceptance).
+- **`--retest`:** from the 27-finding session: 21 open, 0 fixed, 6 skipped —
+  Blind, SSRF, Stored, DOM and UNION were skipped. It did not crawl and did not
+  open a browser.
+- **SARIF:** 27 findings, a stable fingerprint per finding, and a file that passes
+  the official SARIF 2.1.0 schema.
+- **`--fail-on`:** `none` = 0, `high` = 1, `critical` = 1 on the lab, and a clean
+  target with `high` = 0.
 
-`/waf` يرفض أي طلب فيه مسافة بـ 403. SV1 يتجاوزها بـ `/**/` ويحفظ الصياغة
-الناجحة في النتيجة:
+`/waf` rejects any request containing a space with 403. SV1 bypasses it with
+`/**/` and stores the successful shape in the finding:
 
 ```
 vector  error
@@ -568,53 +611,55 @@ note    database error surfaced (MySQL) - error based injection
 
 ---
 
-## حدود الأداة
+## Limits
 
-- XSS يغطي المنعكس و DOM والمخزّن عند تشغيل Chromium. بدونه: انعكاس فقط.
-- كشف DOM يعتمد على أزواج مصدر→حوض داخل `<script>` المضمّن. `--spa` ينفّذ
-  الصفحات لكنه ما يحلل نصوص الـ bundles الخارجية.
-- `--js` يقرأ الروابط المكتوبة كنص داخل السكربت (سكربت مضمّن + ملفات خارجية
-  بنفس الأصل). إذا الرابط يُبنى بالمتغيرات (`'/api/' + id`) ما ينكشف — هنا
-  يجي `--spa` ويلتقطه من الطلب الفعلي.
-- `--spa`: حتى 6 صفحات، انتظار 1.8 ثانية للطلبات المتأخرة، ويلتقط GET query
-  فقط (مو جسم POST للـ XHR). يحتاج Chromium؛ مع `--no-browser` يُتخطى.
-- `--openapi`: JSON فقط (YAML يُصدَّر JSON)، يقرأ `servers[0]` و`paths`،
-  ما يحقن `{param}` داخل المسار، وبحد 80 نقطة و6 حقول لكل عملية.
-- `--params` يفحص عنوان الهدف نفسه، مو كل صفحة زحفتها.
-- `--second-order` يجرّب بايلود واحد (`sv1'`) وحتى 6 نماذج و6 صفحات؛
-  الحقول المفلترة على الإدخال ما راح تنكشف.
-- `--blind`: نماذج POST فقط، حتى 6 نماذج وحقلان لكل نموذج وشكلان لكل حقل.
-  `--blind-visit` يحتاج Chromium؛ بدونه ينتظر مشرفاً حقيقياً. CSP قوي ممكن
-  يمنع الصورة (`/e`) فتطلع النتيجة `MEDIUM` رغم أن السكربت انجلب.
-- `--ssrf`: يعتمد على اسم الباراميتر أو قيمة URL كاملة؛ بحد 15 نقطة،
-  وبروتوكول HTTP(S) فقط. ما يجرّب `file/gopher` حالياً. allowlist أو مصادقة
-  على نقطة الهدف تعني false negative.
-- الـ callback لازم يكون قابلاً للوصول من الهدف. الافتراضي `127.0.0.1` للهدف
-  المحلي فقط؛ للهدف البعيد استخدم `--oob` عام + نفق/فتح منفذ + `--oob-bind`.
-  ما فيه DNS/SMB OOB، ولا OOB SQLi عبر `xp_dirtree`/`UTL_HTTP` بعد.
-- multipart يغطي الحقول النصية داخل النموذج، مو محتوى الملفات المرفوعة.
-- SQLi: error/boolean/time + UNION extraction. UNION يحتاج عموداً نصياً
-  و`ORDER BY`/`UNION` غير محجوبين. `--dump` يقرأ الهوية وأسماء الجداول فقط،
-  مو صفوفاً كاملة؛ أوراكل بلا dump حالياً.
-- `--headers` و `--cookies` يفحصان عنوان الهدف نفسه، مو كل صفحة زحفتها.
-- WAF/flood protection ممكن يقلب النتائج. نزّل `--rps` عند الحاجة.
-- الفحص الزمني بطيء بطبيعته: كل بايلود ينتظر عدة ثواني.
-- `--stored` و `--second-order` و `--blind` يكتبون بيانات في الهدف.
-- الروابط اللي تحتاج تسجيل دخول تبي `--cookie` أو `-H` (المتصفح يستخدم نفس الكوكيز).
-- `--scope` يحدد نقاط الفحص والزحف، لكن صفحات SPA قد تحمّل أصولاً خارجية
-  أثناء العرض؛ مو جدار شبكة.
-- `--retest` يعيد فحص XSS وSQLi error/boolean/time/second-order فقط. Blind،
-  SSRF، Stored، DOM، وUNION تحتاج متصفحاً أو استخراجاً كاملاً فتُتخطى.
-  الجلسة الأحدث لنفس `-u` هي المرجع.
-- `--db` ما فيه تقليم تلقائي؛ احذف الملف أو أرشف الجلسات القديمة يدوياً.
-- `--resume` ومحرك async (`httpx`) وcurl repro في HTML لسه P5.1.
+- XSS covers reflected, DOM and stored when Chromium runs. Without it: reflection only.
+- DOM detection relies on source→sink pairs inside inline `<script>`. `--spa`
+  executes pages but does not analyse external bundle text.
+- `--js` reads URLs written as text inside scripts (inline script + same-origin
+  external files). If the URL is built from variables (`'/api/' + id`) it is not
+  found — that is where `--spa` comes in and catches it from the actual request.
+- `--spa`: up to 6 pages, 1.8 s wait for late requests, and it captures GET query
+  only (not XHR POST bodies). Requires Chromium; skipped with `--no-browser`.
+- `--openapi`: JSON only (export YAML to JSON), reads `servers[0]` and `paths`,
+  does not inject `{param}` inside the path, capped at 80 points and 6 fields per operation.
+- `--params` tests the target URL itself, not every crawled page.
+- `--second-order` tries one payload (`sv1'`) and up to 6 forms and 6 pages;
+  fields filtered on input will not surface.
+- `--blind`: POST forms only, up to 6 forms, 2 fields per form, 2 shapes per field.
+  `--blind-visit` needs Chromium; without it SV1 waits for a real admin. A strong
+  CSP can block the image (`/e`) so the finding is `MEDIUM` even though the script
+  was fetched.
+- `--ssrf`: relies on the parameter name or a full URL value; capped at 15 points,
+  HTTP(S) only. `file/gopher` is not attempted yet. An allowlist or authentication
+  on the target endpoint means a false negative.
+- The callback must be reachable from the target. The default `127.0.0.1` is for a
+  local target only; for a remote target use a public `--oob` + a tunnel or opened
+  port + `--oob-bind`. There is no DNS/SMB OOB, and no OOB SQLi via
+  `xp_dirtree`/`UTL_HTTP` yet.
+- multipart covers text fields inside the form, not the contents of uploaded files.
+- SQLi: error/boolean/time + UNION extraction. UNION needs a text column and
+  unblocked `ORDER BY`/`UNION`. `--dump` reads identity and table names only, not
+  full rows; Oracle has no dump yet.
+- `--headers` and `--cookies` test the target URL itself, not every crawled page.
+- WAF/flood protection can flip results. Lower `--rps` when needed.
+- Time-based scanning is slow by nature: every payload waits several seconds.
+- `--stored`, `--second-order` and `--blind` write data to the target.
+- Pages behind a login need `--cookie` or `-H` (the browser uses the same cookies).
+- `--scope` defines scan and crawl points, but SPA pages may still load external
+  assets while rendering; it is not a network wall.
+- `--retest` replays XSS and SQLi error/boolean/time/second-order only. Blind,
+  SSRF, Stored, DOM and UNION need a browser or a full extraction, so they are
+  skipped. The latest session for the same `-u` is the reference.
+- `--db` has no automatic pruning; delete the file or archive old sessions manually.
+- `--resume`, the async engine (`httpx`) and curl repro in HTML are still P5.1.
 
 ---
 
-## الترخيص
+## License
 
-MIT — راجع ملف `LICENSE`.
+MIT — see `LICENSE`.
 
-## الإصدار
+## Version
 
-`1.1.0` — الإصدار العام الحالي (P5.0). تفاصيل التغييرات في `CHANGELOG.md`.
+`1.1.0` — current public release (P5.0). Change details in `CHANGELOG.md`.
