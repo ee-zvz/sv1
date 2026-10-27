@@ -5,11 +5,31 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.2.0`.
+SQLite session history. Release `1.2.1` hardens the 1.2.0 accuracy work:
+browser `-k` handling, same-origin form actions, thread-safe HTTP sessions,
+and duplicate-parameter SQLi baselines.
 
 أداة فحص ثغرات **XSS** و **SQL Injection** و **Blind XSS** و **SSRF** مكتوبة
 ببايثون، تشتغل على ويندوز 11. عند التشغيل تطلع مقدمة متحركة (لوقو SV1 بتدرّج
 لوني + اسم المؤلف) ثم يبدأ الفحص.
+
+### أمان وصحة (1.2.1)
+
+- **علم TLS ما عاد معكوساً.** `-k/--insecure` الحين يضبط
+  `ignore_https_errors=True` في Chromium. قبل 1.2.1 كان العلم معكوساً: `-k`
+  يبقي أخطاء الشهادة قاتلة، والافتراضي يتجاهلها بصمت.
+- **النماذج تبقى على الهدف.** إجراء النموذج لازم يكون HTTP(S) وبنفس الأصل قبل
+  تحويله لنقطة فحص، وقبل إرسال stored/second-order، وقبل إرسال المتصفح. صفحة
+  خبيثة ما تقدر تحوّل هيدرات الفحص أو البايلودات لجهة ثالثة عبر
+  `<form action>`.
+- **طلبات متوازية بلا جلسة مشتركة.** كل خيط يأخذ `requests.Session` ومجمع
+  اتصالات خاص فيه، وكل الجلسات تتشارك cookie jar واحداً آمناً للخيوط. كوكيز
+  تسجيل الدخول تنتقل، لكن حالة المحول ومجمع الاتصالات ما تنعدّل بالتزامن.
+- **أساس SQLi يستخدم التكرار المقصود.** إذا تكرر اسم المعامل
+  (`id=1&id=2`)، إعادة التشغيل تقارن قيمة `param_index` المقصودة، مو أول قيمة
+  بنفس الاسم.
+- **الدليل المنشور هو JSON النتيجة.** ملفات الصور مو أصول إصدار؛ الماركر
+  المنفّذ و`confidence` داخل النتيجة نفسها.
 
 ### دقة 1.2.0
 
@@ -28,8 +48,8 @@ SQLite session history. Release `1.2.0`.
   تكرار الاسم. المعامل الثاني مثل `?id=1&name=test` يُستبدل فعليًا بدل ما
   يُترك كما هو.
 - **إعادة إنتاج.** نتائج XSS المنعكس وSQLi وSSRF تحمل أمر `curl`، ويظهر في
-  الطرفية وHTML وJSON وCSV. إثباتات المتصفح فقط (DOM، مخزّن، أعمى) تأخذ
-  صورة والماركر المنفّذ.
+  الطرفية وHTML وJSON وCSV. إثباتات المتصفح فقط (DOM، مخزّن، أعمى) تكتب صورة
+  محلية وتسجّل الماركر المنفّذ داخل النتيجة؛ JSON هو الدليل المنشور.
 - **تقرير آمن.** ANSI ووحدات التحكم وبادئات صيغ CSV والوسوم تُعقَّم قبل العرض.
 - **غير HTML/XML ليس XSS.** ردود `text/plain` وJSON وغيرها ليست مرشحة لـ XSS.
 
@@ -257,8 +277,8 @@ python sv1.py -u https://site.tld --crawl --db sv1.db --diff
 سليماً. `--rps 0` يبقى بلا حد.
 
 > 1.3.0 لاحقاً: محرك async بـ `httpx` و`--resume`.
-> الإصدار 1.2.0 يضيف دقة السياق وإثبات الإطارات وأمانة المعاملات وcurl repro،
-> فوق SARIF وfail-on وscope وSQLite diff/retest وتكيّف 429.
+> الإصدار 1.2.1 يشدّد أمان TLS وإجراءات النماذج وجلسات HTTP والمعاملات المكررة،
+> فوق دقة 1.2.0 وSARIF وfail-on وscope وSQLite diff/retest وتكيّف 429.
 
 ---
 
@@ -502,8 +522,8 @@ sv1/
 ├── lab/server.py       هدف محلي مصاب للتدريب
 ├── tests/test_p5.py    اختبارات الوحدة (scope/history/SARIF/rate/fail-on)
 ├── tests/test_1_2.py   أمانة الطلب، قواعد السياق، سياسة الإثبات
-├── docs/REALWORLD.md   التحقق الميداني 1.2.0
-├── docs/evidence/      أدلة JSON وصورة من الفحص العام
+├── docs/REALWORLD.md   التحقق الميداني 1.2.1
+├── docs/evidence/      أدلة JSON من الفحص العام
 ├── .github/workflows/ci.yml
 ├── LICENSE             MIT
 ├── CHANGELOG.md        سجل الإصدارات
@@ -514,25 +534,27 @@ sv1/
 
 ---
 
-## تحقق ميداني (1.2.0)
+## تحقق ميداني (1.2.1)
 
 أهداف عامة مصابة عمدًا فقط. الأوامر والأدلة الخام: [`docs/REALWORLD.md`](docs/REALWORLD.md).
 
 | الهدف | النطاق | النتيجة |
 |---|---|---|
-| Google Firing Range — منعكس | 49 صفحة، 47 نقطة | 42 نتيجة — **40 HIGH** مثبتة في Chromium، 2 MEDIUM |
+| Google Firing Range — منعكس | 49 صفحة، 47 نقطة | 42 نتيجة — **40 HIGH** مثبتة في Chromium، 2 MEDIUM؛ إعادة تشغيل 42/42، 0 unstable |
 | Google Firing Range — DOM | 25 صفحة زحف، 20 معروضة | **15 HIGH** DOM، 0 أخطاء |
 | Altoro Mutual — بحث | معامل GET واحد | **1 HIGH** XSS منعكس، مؤكد |
 | المختبر المحلي | تغطية كاملة | **27/27** نتيجة أعادت التشغيل، 0 unstable |
 
-Firing Range: 508 طلبات، 0 أخطاء، حوالي 220 ثانية. الحالتان `MEDIUM` هما
+Firing Range: 512 طلباً، 0 أخطاء، حوالي 247 ثانية. الحالتان `MEDIUM` هما
 `/url/css_import` (رابط stylesheet لا ينفّذ `javascript:` في Chromium الحالي)
 و`/url/object_data` (مثبّت على نوع Flash plugin المحذوف)؛ الصفحتان ترفضان
-`<`/`>` في المعامل. سُجّلتا كانعكاس فقط، بدون رفعها إلى `HIGH`.
+`<`/`>` في المعامل. سُجّلتا كانعكاس فقط، بدون رفعها إلى `HIGH`. إعادة
+التشغيل أعادت إرسال 42 نتيجة وأثبتت 42.
 
-قبول المختبر: CRITICAL 9 / HIGH 16 / MEDIUM 2، 19 صفحة، 25 نقطة، 853 طلبًا،
-حوالي 165 ثانية. إصلاح المعاملات المتعددة يظهر في `/api/fetch` و`/api/spa`
-و`/dynamic`: المعامل الثاني (`name`) صار يُحقن فعلًا، ورجعت نتائج XSS الثلاث.
+قبول المختبر في 1.2.1: 27/27 أعادت التشغيل، 0 unstable — CRITICAL 9 /
+HIGH 16 / MEDIUM 2، 19 صفحة، 25 نقطة، 853 طلباً، 163.4 ثانية. إصلاح
+المعاملات المتعددة يظهر في `/api/fetch` و`/api/spa` و`/dynamic`: المعامل
+الثاني (`name`) صار يُحقن فعلًا، ونتائج XSS الثلاث موجودة.
 
 ---
 
@@ -675,7 +697,7 @@ note    database error surfaced (MySQL) - error based injection
   SSRF، Stored، DOM، وUNION تحتاج متصفحاً أو استخراجاً كاملاً فتُتخطى.
   الجلسة الأحدث لنفس `-u` هي المرجع.
 - `--db` ما فيه تقليم تلقائي؛ احذف الملف أو أرشف الجلسات القديمة يدوياً.
-- `--resume` ومحرك async (`httpx`) مؤجلان إلى 1.3.0. curl repro داخل 1.2.0.
+- `--resume` ومحرك async (`httpx`) مؤجلان إلى 1.3.0. curl repro موجود منذ 1.2.0.
 
 ---
 
@@ -685,5 +707,6 @@ MIT — راجع ملف `LICENSE`.
 
 ## الإصدار
 
-`1.2.0` — الإصدار العام الحالي. دقة السياق وأمانة الطلب والتحقق الميداني؛
-async/resume إلى 1.3.0. تفاصيل التغييرات في `CHANGELOG.md`.
+`1.2.1` — الإصدار العام الحالي. إصلاح أمان وصحة فوق دقة 1.2.0: علم TLS،
+إجراءات النماذج بنفس الأصل، جلسات HTTP لكل خيط، وأساس SQLi للمعاملات المكررة.
+تفاصيل التغييرات في `CHANGELOG.md`.

@@ -96,6 +96,25 @@ def normalize(url: str, base: str) -> str:
     return urllib.parse.urlunsplit(cleaned)
 
 
+def form_endpoint(page_url: str, form: Form) -> str:
+    """Return a same-origin HTTP(S) form target, or empty when it is unsafe.
+
+    A scanned page must not choose where the scanner sends its headers. Without
+    this gate a hostile page can point a form at a third-party origin and make
+    the scan leak custom headers or probe a host outside the target.
+    """
+    raw = (form.action or page_url).strip()
+    if raw.lower().startswith(SKIP_PAGE_SCHEMES):
+        return ""
+    action = normalize(raw, page_url)
+    parts = urllib.parse.urlsplit(action)
+    if parts.scheme not in ("http", "https"):
+        return ""
+    if not net.same_origin(action, page_url):
+        return ""
+    return urllib.parse.urlunsplit(parts._replace(query=""))
+
+
 def crawl(client: net.Client, start_url: str, max_pages: int, max_depth: int,
           allows=None) -> list[Page]:
     seen: set[str] = set()
@@ -155,9 +174,9 @@ def points_from_page(page: Page) -> list[InjectionPoint]:
             )
 
     for form in page.forms:
-        action = normalize(form.action or page.url, page.url)
-        action_parts = urllib.parse.urlsplit(action)
-        action = urllib.parse.urlunsplit(action_parts._replace(query=""))
+        action = form_endpoint(page.url, form)
+        if not action:
+            continue
         method = "POST" if form.method == "post" else "GET"
         source = "multipart" if "multipart" in form.enctype else "form"
         fields = form.fields[: config.MAX_FORM_FIELDS]

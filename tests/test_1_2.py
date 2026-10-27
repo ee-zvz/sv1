@@ -5,10 +5,12 @@ from __future__ import annotations
 import os
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 
 import sv1
-from sv1lib import context, domxss, net, openapi, report, xss
+from sv1lib import browser as browser_mod
+from sv1lib import context, crawl, domxss, net, openapi, report, secondorder, sqli, stored, xss
 from sv1lib.models import Finding, InjectionPoint, Response
 from sv1lib.net import Client
 
@@ -140,6 +142,112 @@ class RequestFidelityTests(unittest.TestCase):
         command = net.curl(point, "1 AND 1=1|1 AND 1=2")
         self.assertIn("1+AND+1%3D1", command)
         self.assertNotIn("1%3D2", command)
+
+    def test_original_value_uses_the_injected_occurrence(self) -> None:
+        point = query_point()
+        point = InjectionPoint(
+            url=point.url,
+            method=point.method,
+            params=point.params,
+            param=point.param,
+            source=point.source,
+            param_index=1,
+        )
+        self.assertEqual(point.original(), "2")
+        self.assertEqual(sqli.original_value(point), "2")
+
+    def test_sessions_are_thread_local_but_share_cookies(self) -> None:
+        client = Client(rps=0)
+        try:
+            main = client._session()
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                worker = pool.submit(client._session).result()
+            self.assertIsNot(main, worker)
+            self.assertIs(client.cookies, main.cookies)
+            self.assertIs(client.cookies, worker.cookies)
+        finally:
+            client.close()
+
+
+class BrowserConfigTests(unittest.TestCase):
+    def test_insecure_flag_maps_to_browser_certificate_errors(self) -> None:
+        default = sv1.make_browser(
+            sv1.parse_args(["-u", "https://example.com"]), "https://example.com"
+        )
+        insecure = sv1.make_browser(
+            sv1.parse_args(["-u", "https://example.com", "-k"]), "https://example.com"
+        )
+        self.assertFalse(default.ignore_https)
+        self.assertTrue(insecure.ignore_https)
+
+
+class FormOriginTests(unittest.TestCase):
+    def test_cross_origin_form_action_is_not_an_injection_point(self) -> None:
+        page = crawl.parse_page(
+            "https://example.com/page",
+            200,
+            '<form action="https://evil.test/collect" method="post">'
+            '<input name="q" value="1"></form>',
+        )
+        self.assertEqual(crawl.points_from_page(page), [])
+
+    def test_same_origin_form_action_is_still_an_injection_point(self) -> None:
+        page = crawl.parse_page(
+            "https://example.com/page",
+            200,
+            '<form action="/search" method="post">'
+            '<input name="q" value="1"></form>',
+        )
+        points = crawl.points_from_page(page)
+        self.assertEqual(len(points), 1)
+        self.assertEqual(points[0].url, "https://example.com/search")
+        self.assertEqual(points[0].param, "q")
+
+    def test_stored_and_second_order_skip_cross_origin_forms(self) -> None:
+        page = crawl.parse_page(
+            "https://example.com/page",
+            200,
+            '<form action="https://evil.test/collect" method="post">'
+            '<input name="q" value="1"></form>',
+        )
+
+        class Engine:
+            enabled = True
+            submitted: list = []
+
+            def submit_form(self, *args, **kwargs):
+                self.submitted.append((args, kwargs))
+                raise AssertionError("cross-origin form must not be submitted")
+
+        class HttpClient:
+            calls: list = []
+
+            def request(self, *args, **kwargs):
+                self.calls.append((args, kwargs))
+                raise AssertionError("cross-origin form must not be posted")
+
+            def fetch(self, *args, **kwargs):
+                raise AssertionError("cross-origin form must not be revisited")
+
+        engine = Engine()
+        client = HttpClient()
+        self.assertEqual(stored.run(engine, [page], ""), [])
+        self.assertEqual(secondorder.run(client, [page]), [])
+        self.assertEqual(engine.submitted, [])
+        self.assertEqual(client.calls, [])
+
+    def test_browser_submit_blocks_cross_origin_form(self) -> None:
+        page = crawl.parse_page(
+            "https://example.com/page",
+            200,
+            '<form action="https://evil.test/collect" method="post">'
+            '<input name="q" value="1"></form>',
+        )
+        engine = browser_mod.Browser(ignore_https=True)
+        engine.enabled = True
+        engine._context = object()
+        visit = engine.submit_form(page.url, page.forms[0], "<svg/onload=alert(1)>", "q")
+        self.assertIn("cross-origin", visit.error)
 
 
 class ContextTests(unittest.TestCase):

@@ -1,11 +1,13 @@
-# SV1 1.2.0 — real-world validation
+# SV1 1.2.1 — real-world validation
 
-Date: 2026-10-26
-Build: `1.2.0`
+Date: 2026-10-27
+Build: `1.2.1`
 Platform: Windows 11, Python 3.14.6, Playwright Chromium (headless)
 
-This document records what SV1 1.2.0 actually found and proved outside the local
-lab. The targets are public, intentionally vulnerable demo applications:
+This document records what SV1 actually found and proved outside the local lab.
+The reflected Firing Range run and the local regression were repeated on 1.2.1
+with replay enabled; the DOM and Altoro runs remain from 1.2.0, which shares the
+same detection engine. The targets are public, intentionally vulnerable demo applications:
 
 - **Google Firing Range** (`public-firing-range.appspot.com`) — reflected and DOM
   XSS test corpus.
@@ -29,15 +31,17 @@ Raw evidence:
 ```powershell
 python sv1.py -u https://public-firing-range.appspot.com/reflected/ `
   --crawl --depth 1 --pages 60 --xss --threads 4 --rps 4 `
-  --no-banner --no-verify `
-  -o fr-reflected-1.2.0.json `
-  --html fr-reflected-1.2.0.html `
-  --artifacts fr-artifacts-1.2.0
+  --no-banner `
+  -o docs/evidence/firing-range-reflected.json `
+  --html fr-reflected-1.2.1.html `
+  --artifacts fr-artifacts-1.2.1
 ```
 
-`--rps 4` keeps the request rate polite. `--no-verify` skips the HTTP replay stage;
-the browser execution stage still runs. A finding is `HIGH` only after Chromium
-executes the marker.
+`--rps 4` keeps the request rate polite. Replay is enabled (there is no
+`--no-verify`): every reported finding is sent again, and a finding that does
+not reproduce is marked unstable. The browser execution stage still runs. A
+finding is `HIGH` only after Chromium executes the marker; an exact reflection
+that cannot execute stays `MEDIUM`.
 
 ### Result
 
@@ -45,12 +49,19 @@ executes the marker.
 |---|---:|
 | Pages crawled | 49 |
 | Injection points | 47 |
-| HTTP requests | 508 |
+| HTTP requests | 512 |
 | Errors | 0 |
 | Findings | 42 |
-| `HIGH` + browser-confirmed | 40 |
+| `HIGH` (execution-confirmed) | 40 |
 | `MEDIUM` (reflection only) | 2 |
-| Duration | 220 s |
+| Replay reproduced / verified | 42/42 |
+| Replay unstable | 0 |
+| Duration | 247 s |
+
+The JSON records `meta.replay: true`, `stats.verified: 42` and
+`stats.unverified: 0`; 42 equals the 42 findings. The 40 `HIGH` findings are
+execution-confirmed in Chromium; the 2 `MEDIUM` findings are reflection-only and
+are still replayed successfully.
 
 The two `MEDIUM` cases are not inflated to `HIGH`:
 
@@ -80,12 +91,13 @@ The two `MEDIUM` cases are not inflated to `HIGH`:
 | `parameter/attribute_script` | closing `</script>` then markup | script element ended |
 | `escapedparameter` variants | context-specific, quote-safe | exact reflection plus execution |
 
-One execution screenshot: [`evidence/firing-range-js-eval.png`](evidence/firing-range-js-eval.png).
+Execution evidence is recorded inside the finding itself: proof: executed in chromium. Screenshot artifacts are not published — a captured page without the marker proves nothing.
 
 This is the accuracy gain over 1.1.0 on the same corpus. The 1.1.0 JSON
 confirmed 18 payloads but still printed 26 reflections the browser did not
-execute as `HIGH`. 1.2.0 confirms 40 and leaves only the two non-executable
-cases at `MEDIUM`; the other unproven reflections are no longer inflated.
+execute as `HIGH`. 1.2.1 confirms 40 and leaves only the two non-executable
+cases at `MEDIUM`; the other unproven reflections are no longer inflated. The
+replay pass re-sent all 42 findings and reproduced all 42.
 
 ---
 
@@ -155,7 +167,7 @@ payload  <svg/onload=alert('sv1a041d253')>sv1a041d253
 proof    executed in chromium: alert:sv1a041d253
 ```
 
-The HTML artifact is [`evidence/altoro-xss.png`](evidence/altoro-xss.png).
+The JSON evidence is [`evidence/altoro-search.json`](evidence/altoro-search.json); the finding records `confidence: CONFIRMED`.
 
 ---
 
@@ -175,10 +187,10 @@ python sv1.py -u http://127.0.0.1:8099/ `
   --crawl --stored --js --second-order --dump `
   --spa --openapi http://127.0.0.1:8099/openapi.json `
   --blind --blind-visit http://127.0.0.1:8099/blind-admin --ssrf `
-  --scope scope-lab.txt --db lab-history.db --diff `
-  --sarif lab-1.2.0.sarif --fail-on high `
-  --html lab-1.2.0.html --no-banner `
-  -o lab-1.2.0.json --artifacts lab-artifacts-1.2.0
+  --scope scope-lab.txt --db lab-1.2.1.db --diff `
+  --sarif docs/evidence/local-lab.sarif --fail-on high `
+  --html lab-1.2.1.html --no-banner `
+  -o docs/evidence/local-lab.json --artifacts lab-artifacts-1.2.1
 ```
 
 ### Result
@@ -194,13 +206,15 @@ python sv1.py -u http://127.0.0.1:8099/ `
 | Pages | 19 |
 | Injection points | 25 |
 | Requests | 853 |
-| Duration | ~165 s |
+| Errors | 0 |
+| Duration | 163.4 s |
 
-Breakdown: 14 XSS, 12 SQLi, 1 SSRF. The 1.2.0 request-fidelity fix is visible
-in the multi-parameter results: `/api/fetch`, `/api/spa` and `/dynamic` now
-inject the second parameter (`name`) instead of leaving it at its original value.
-Those three reflected XSS findings were missing from the first 1.2.0 lab run and
-returned after the fix.
+Breakdown: 14 XSS, 12 SQLi, 1 SSRF. The 1.2.1 run still reports 27/27 and 0
+unstable after the thread-local HTTP session and same-origin form changes. The
+request-fidelity fix is visible in the multi-parameter results: `/api/fetch`,
+`/api/spa` and `/dynamic` now inject the second parameter (`name`) instead of
+leaving it at its original value. Those three reflected XSS findings were missing
+from the first 1.2.0 lab run and returned after the fix.
 
 ---
 

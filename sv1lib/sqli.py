@@ -20,6 +20,10 @@ from .models import Finding, Response
 
 
 def original_value(point) -> str:
+    """Use the exact occurrence, not the first value with the same name."""
+    getter = getattr(point, "original", None)
+    if callable(getter):
+        return getter()
     for name, value in point.params:
         if name == point.param:
             return value

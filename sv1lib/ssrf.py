@@ -28,6 +28,9 @@ URL_HINTS = ("redirect", "callback", "webhook", "destination")
 
 
 def _original(point: InjectionPoint) -> str:
+    getter = getattr(point, "original", None)
+    if callable(getter):
+        return getter()
     for name, value in point.params:
         if name == point.param:
             return value

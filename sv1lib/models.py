@@ -60,6 +60,13 @@ class InjectionPoint:
             seen += 1
         return -1
 
+    def original(self) -> str:
+        """The untouched value at the exact occurrence the scanner injects."""
+        position = self.position()
+        if 0 <= position < len(self.params):
+            return self.params[position][1]
+        return ""
+
     def label(self) -> str:
         return f"{self.method} {self.url} [{self.param}]"
 

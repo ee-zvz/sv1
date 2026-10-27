@@ -2,6 +2,47 @@
 
 All notable changes to SV1. Format follows Keep a Changelog.
 
+## 1.2.1 - 2026-10-27
+
+Security and correctness hotfix on top of 1.2.0. No new vulnerability categories;
+XSS (reflected, DOM, stored, blind), SQLi and SSRF remain the scope.
+
+### Fixed
+
+- **Inverted browser TLS flag.** `-k/--insecure` now maps to Playwright
+  `ignore_https_errors=True`. Before this fix `-k` kept certificate errors fatal
+  while the default silently ignored them.
+- **Cross-origin form actions.** A form action must be same-origin HTTP(S) before
+  it becomes an injection point, before stored/second-order submission, and
+  before the browser submits it. A hostile page can no longer redirect scanner
+  headers or payloads to a third-party origin through `<form action>`.
+- **Shared `requests.Session` across workers.** Each thread now gets its own
+  session and adapter pool; all sessions share one thread-safe cookie jar. Login
+  cookies still propagate, but session/adapter state is not mutated concurrently.
+- **Duplicate-name SQLi baseline.** Replay reads the value at the exact
+  `param_index` occurrence, not the first value with the same name
+  (`id=1&id=2` now uses `2` when position 1 is injected).
+
+### Evidence
+
+- Removed the unpublished screenshot artifacts. Execution evidence is recorded
+  in the finding JSON itself (`evidence` plus `confidence`); the Altoro reference
+  now points at `docs/evidence/altoro-search.json` and its `confidence:
+  CONFIRMED` record.
+
+### Validation
+
+- Unit tests: 49 pass; `compileall` clean.
+- **Google Firing Range reflected, replay enabled:** 49 pages, 47 points, 512
+  requests, 0 errors, 42 findings — 40 `HIGH` browser-confirmed, 2 `MEDIUM`
+  reflection-only. Replay `42/42` reproduced, 0 unstable, 247 s.
+  - The two `MEDIUM` cases remain `/url/css_import` (stylesheet link) and
+    `/url/object_data` (removed Flash plugin type).
+- **Local lab, 1.2.1:** 19 pages, 25 points, 853 requests, 0 errors, 27 findings
+  — CRITICAL 9 / HIGH 16 / MEDIUM 2; replay `27/27`, 0 unstable, 163.4 s.
+- Raw JSON and commands: `docs/REALWORLD.md`, `docs/evidence/`.
+- Version `1.2.1`.
+
 ## 1.2.0 - 2026-10-26
 
 Accuracy and reproducibility. No new vulnerability categories: XSS (reflected,

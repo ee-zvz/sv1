@@ -7,9 +7,9 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.2.0` focuses on accuracy and reproducibility:
-context-accurate payloads, frame-aware browser proof, duplicate-parameter
-fidelity, and curl reproduction.
+SQLite session history. Release `1.2.1` hardens the 1.2.0 accuracy work:
+browser `-k` handling, same-origin form actions, thread-safe HTTP sessions,
+and duplicate-parameter SQLi baselines.
 
 A vulnerability scanner for **XSS**, **SQL Injection**, **Blind XSS** and **SSRF**
 written in Python, running on Windows 11. On start it prints an animated banner
@@ -163,6 +163,25 @@ python sv1.py -u https://site.tld --blind --oob https://cb.example.tld `
 Exit codes: `0` = no findings (or `--fail-on none`), `1` = a finding at or above
 the `--fail-on` threshold, `2` = the target did not respond or a file could not be opened.
 
+### Security and correctness (1.2.1)
+
+- **No inverted TLS flag.** `-k/--insecure` now sets Chromium
+  `ignore_https_errors=True`. Before 1.2.1 the value was inverted, so `-k` kept
+  certificate errors fatal and the default silently ignored them.
+- **Forms stay on the target.** A form action must be same-origin HTTP(S) before
+  the crawler turns it into a point, before stored/second-order submission, and
+  before the browser submits it. A hostile page cannot redirect scanner headers
+  or payloads to a third-party origin through `<form action>`.
+- **Parallel requests do not share a `requests.Session`.** Each worker gets its
+  own session and adapter pool; all sessions share one thread-safe cookie jar.
+  Login cookies still propagate, but adapter state and connection pools are not
+  mutated concurrently.
+- **SQLi baseline uses the injected occurrence.** When a query or form repeats a
+  name (`id=1&id=2`), replay compares against the value at `param_index`, not the
+  first value with that name.
+- **Published evidence is the finding JSON.** Screenshot files are not release
+  assets; the executed marker and `confidence` live in the finding itself.
+
 ### Accuracy and reproducibility (1.2.0)
 
 - **Grammar, not payload lists.** A single HTML state machine reads the point:
@@ -182,7 +201,8 @@ the `--fail-on` threshold, `2` = the target did not respond or a file could not 
   `?id=1&name=test` is actually replaced instead of being left untouched.
 - **Reproduce it.** Reflected XSS, SQLi and SSRF findings carry a `curl` command;
   the same string is in the console, HTML, JSON and CSV output. Browser-only
-  proofs (DOM, stored, blind) ship a screenshot and the executed marker.
+  proofs (DOM, stored, blind) write a local screenshot and record the executed
+  marker in the finding; the JSON is the authoritative published evidence.
 - **Reports stay safe.** ANSI escapes, control bytes, CSV formula prefixes and
   markup are neutralised before rendering.
 - **Non-markup is not XSS.** `text/plain`, JSON and other non-HTML/XML responses are
@@ -267,8 +287,9 @@ python sv1.py -u https://site.tld --crawl --db sv1.db --diff
 after 20 healthy responses. `--rps 0` stays unlimited.
 
 > 1.3.0 later: async engine on `httpx` and `--resume`.
-> Release 1.2.0 adds context accuracy, frame-aware proof, request fidelity and
-> curl repro on top of SARIF, fail-on, scope, SQLite diff/retest and 429 adaptation.
+> Release 1.2.1 hardens TLS handling, form origins, parallel HTTP sessions and
+> duplicate-parameter baselines on top of 1.2.0 accuracy and the SARIF/scope/
+> SQLite/429 work.
 
 ---
 
@@ -507,28 +528,29 @@ compares structure.
 
 ---
 
-## Real-world validation (1.2.0)
+## Real-world validation (1.2.1)
 
 Public, intentionally vulnerable demo targets only. Raw evidence and the exact
 commands: [`docs/REALWORLD.md`](docs/REALWORLD.md).
 
 | Target | Scope | Result |
 |---|---|---|
-| Google Firing Range, reflected | 49 pages, 47 points | 42 findings — **40 HIGH** confirmed in Chromium, 2 MEDIUM |
+| Google Firing Range, reflected | 49 pages, 47 points | 42 findings — **40 HIGH** confirmed in Chromium, 2 MEDIUM; replay 42/42, 0 unstable |
 | Google Firing Range, DOM | 25 pages crawled, 20 rendered | **15 HIGH** DOM findings, 0 errors |
 | Altoro Mutual search | one GET parameter | **1 HIGH** reflected XSS, confirmed |
 | Local lab | full coverage | **27/27** findings replayed, 0 unstable |
 
-Firing Range ended with 508 requests, 0 errors and 220 s. The two `MEDIUM`
+Firing Range ended with 512 requests, 0 errors and 247 s. The two `MEDIUM`
 cases are `/url/css_import` (a stylesheet `<link>` cannot execute `javascript:` in
 current Chromium) and `/url/object_data` (pinned to the removed Flash plugin
 type); neither page accepts `<`/`>` in the parameter. They are reported as
-reflection-only, not inflated to `HIGH`.
+reflection-only, not inflated to `HIGH`. Replay re-sent all 42 findings and
+reproduced all 42.
 
-The lab acceptance run: CRITICAL 9 / HIGH 16 / MEDIUM 2, 19 pages, 25 points,
-853 requests, ~165 s. The multi-parameter fix is visible in `/api/fetch`,
-`/api/spa` and `/dynamic`: the second parameter (`name`) is now injected and the
-three reflected XSS findings are back.
+The 1.2.1 lab acceptance run: 27/27 replayed, 0 unstable — CRITICAL 9 / HIGH 16 /
+MEDIUM 2, 19 pages, 25 points, 853 requests, 163.4 s. The multi-parameter fix is
+visible in `/api/fetch`, `/api/spa` and `/dynamic`: the second parameter (`name`)
+is injected and the three reflected XSS findings are present.
 
 ---
 
@@ -572,8 +594,8 @@ sv1/
 ├── lab/server.py       local vulnerable target for practice
 ├── tests/test_p5.py    unit tests (scope/history/SARIF/rate/fail-on)
 ├── tests/test_1_2.py   request fidelity, context grammar, proof policy
-├── docs/REALWORLD.md   real-world 1.2.0 validation
-├── docs/evidence/      JSON/screenshot evidence from public demo runs
+├── docs/REALWORLD.md   real-world 1.2.1 validation
+├── docs/evidence/      JSON evidence from public demo runs
 ├── .github/workflows/ci.yml
 ├── LICENSE             MIT
 ├── CHANGELOG.md        release log
@@ -730,7 +752,7 @@ note    database error surfaced (MySQL) - error based injection
   skipped. The latest session for the same `-u` is the reference.
 - `--db` has no automatic pruning; delete the file or archive old sessions manually.
 - `--resume` and the async engine (`httpx`) are deferred to 1.3.0. Curl
-  reproduction is included in 1.2.0.
+  reproduction is included since 1.2.0.
 
 ---
 
@@ -740,5 +762,7 @@ MIT — see `LICENSE`.
 
 ## Version
 
-`1.2.0` — current public release. Accuracy, request fidelity and real-world
-validation; async/resume move to 1.3.0. Change details in `CHANGELOG.md`.
+`1.2.1` — current public release. Security and correctness hotfix on top of the
+1.2.0 accuracy work: TLS flag mapping, same-origin form actions, thread-local
+HTTP sessions, and duplicate-parameter SQLi baselines. Change details in
+`CHANGELOG.md`.

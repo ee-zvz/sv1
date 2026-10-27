@@ -7,9 +7,7 @@ the baseline is clean, then store the payload and walk the site again.
 
 from __future__ import annotations
 
-import urllib.parse
-
-from . import config
+from . import config, crawl
 from .dberrors import match_error
 from .models import Finding, InjectionPoint
 
@@ -53,21 +51,23 @@ def run(client, pages) -> list[tuple[Finding, InjectionPoint]]:
     forms = []
     for page in pages:
         for form in page.forms:
-            if form.method == "post" and _fields(form):
+            if form.method == "post" and _fields(form) and crawl.form_endpoint(page.url, form):
                 forms.append((page.url, form))
     forms = forms[: config.SECOND_ORDER_FORMS]
     if not forms:
         return []
 
     actions = [
-        urllib.parse.urljoin(page_url, form.action or page_url)
+        crawl.form_endpoint(page_url, form)
         for page_url, form in forms
     ]
     revisit = _revisit(pages, actions)
 
     results: list[tuple[Finding, InjectionPoint]] = []
     for page_url, form in forms:
-        action = urllib.parse.urljoin(page_url, form.action or page_url)
+        action = crawl.form_endpoint(page_url, form)
+        if not action:
+            continue
         for field in _fields(form):
             client.request("POST", action, data=_data(form, field.name, CLEAN))
             baseline: dict[str, str] = {}

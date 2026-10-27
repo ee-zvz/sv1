@@ -12,7 +12,7 @@ import urllib.parse
 from dataclasses import dataclass, field
 from html import escape
 
-from . import config
+from . import config, net
 from .models import Explore
 
 INIT_SCRIPT = """
@@ -433,6 +433,9 @@ class Browser:
         if not self.enabled or self._context is None:
             return Visit(url=page_url, error=self.reason or "browser disabled")
         action = urllib.parse.urljoin(page_url, form.action or page_url)
+        parts = urllib.parse.urlsplit(action)
+        if parts.scheme not in ("http", "https") or not net.same_origin(action, page_url):
+            return Visit(url=page_url, error="cross-origin form action blocked")
         inputs = []
         for item in form.fields[: config.STORED_MAX_FIELDS]:
             value = payload if item.name == field else (item.value or "test")

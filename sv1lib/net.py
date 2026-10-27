@@ -79,7 +79,7 @@ class RateLimiter:
 
 
 class Client:
-    """One session, one cookie jar, one rate budget."""
+    """One cookie jar, one rate budget, one requests session per thread."""
 
     def __init__(
         self,
@@ -93,17 +93,41 @@ class Client:
         self.timeout = timeout
         self.verify = verify
         self.limiter = RateLimiter(rps)
-        self.session = requests.Session()
-        self.session.headers.update(config.DEFAULT_HEADERS)
+        self.headers = dict(config.DEFAULT_HEADERS)
         if headers:
-            self.session.headers.update(headers)
+            self.headers.update(headers)
+        self.cookies = requests.cookies.RequestsCookieJar()
         if cookies:
-            self.session.cookies.update(cookies)
+            self.cookies.update(cookies)
+        self.proxies: dict[str, str] = {}
         if proxy:
-            self.session.proxies.update({"http": proxy, "https": proxy})
+            self.proxies = {"http": proxy, "https": proxy}
+        self._local = threading.local()
+        self._session_lock = threading.Lock()
+        self._sessions: list[requests.Session] = []
+        self.session = self._session()
         self._stat_lock = threading.Lock()
         self.requests_sent = 0
         self.errors = 0
+
+    # -- sessions ----------------------------------------------------------
+    def _new_session(self) -> requests.Session:
+        session = requests.Session()
+        session.headers.update(self.headers)
+        session.cookies = self.cookies
+        if self.proxies:
+            session.proxies.update(self.proxies)
+        return session
+
+    def _session(self) -> requests.Session:
+        """A session is an adapter pool, not a shared mutable request object."""
+        session = getattr(self._local, "session", None)
+        if session is None:
+            session = self._new_session()
+            self._local.session = session
+            with self._session_lock:
+                self._sessions.append(session)
+        return session
 
     # -- counters ----------------------------------------------------------
     def _tick(self) -> None:
@@ -133,7 +157,7 @@ class Client:
             self.limiter.wait()
             self._tick()
             try:
-                raw = self.session.request(
+                raw = self._session().request(
                     method=method,
                     url=url,
                     params=params,
@@ -250,10 +274,15 @@ class Client:
         return self.request("GET", url)
 
     def close(self) -> None:
-        try:
-            self.session.close()
-        except Exception:
-            pass
+        with self._session_lock:
+            sessions = list(self._sessions)
+            self._sessions.clear()
+        for session in sessions:
+            try:
+                session.close()
+            except Exception:
+                pass
+        self._local.session = None
 
 
 def with_scheme(url: str) -> str:

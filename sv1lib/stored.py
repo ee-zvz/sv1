@@ -8,7 +8,7 @@ whether the marker fired there.
 from __future__ import annotations
 
 from . import browser as browser_mod
-from . import config
+from . import config, crawl
 from .models import Finding, Page
 
 TEXT_TYPES = ("text", "search", "url", "email", "tel", "textarea", "select", "")
@@ -48,7 +48,7 @@ def run(engine: browser_mod.Browser, pages: list[Page], artifacts: str) -> list[
     forms = []
     for page in pages:
         for form in page.forms:
-            if form.method == "post" and _fields(form):
+            if form.method == "post" and _fields(form) and crawl.form_endpoint(page.url, form):
                 forms.append((page.url, form))
     forms = forms[: config.STORED_MAX_FORMS]
     if not forms:

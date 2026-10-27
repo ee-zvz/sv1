@@ -174,7 +174,7 @@ def make_browser(args: argparse.Namespace, target: str):
         headers=parse_headers(args.header),
         cookies=parse_cookies(args.cookie),
         proxy=args.proxy,
-        ignore_https=not args.insecure,
+        ignore_https=args.insecure,
         base_url=target,
         artifacts=args.artifacts,
         timeout_ms=config.BROWSER_TIMEOUT_MS,
