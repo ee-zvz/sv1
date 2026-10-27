@@ -11,6 +11,7 @@ import json
 import os
 import re
 import urllib.parse
+from typing import Any
 
 from . import config, crawl
 from .models import InjectionPoint
@@ -58,7 +59,7 @@ def _deref(spec: dict, node):
         ref = str(node["$ref"])
         if not ref.startswith("#/"):
             return node
-        target = spec
+        target: Any = spec
         for part in ref[2:].split("/"):
             if not isinstance(target, dict):
                 return node

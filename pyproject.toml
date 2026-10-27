@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sv1"
-version = "1.3.1"
+dynamic = ["version"]
 description = "XSS, SQL injection, blind XSS and SSRF scanner with Chromium execution proof"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -25,3 +25,31 @@ py-modules = ["sv1"]
 
 [tool.setuptools.packages.find]
 include = ["sv1lib*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "sv1lib.version.__version__"}
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+exclude = ["build", "dist", "*.egg-info", "sv1-artifacts", "altoro-artifacts"]
+
+[tool.ruff.lint]
+select = ["E9", "F"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["sv1.py", "sv1lib"]
+check_untyped_defs = true
+ignore_missing_imports = true
+warn_unused_ignores = true
+exclude = ["^build/", "^tests/", "^lab/"]
+
+[tool.coverage.run]
+source = ["sv1", "sv1lib"]
+branch = true
+omit = ["tests/*", "lab/*", "build/*"]
+
+[tool.coverage.report]
+show_missing = true
+precision = 1

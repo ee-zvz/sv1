@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace

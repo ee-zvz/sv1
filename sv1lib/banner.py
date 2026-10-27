@@ -103,8 +103,11 @@ def setup_console() -> None:
     """ANSI + UTF-8 before any glyph touches the terminal."""
     enable_vt()
     for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
         try:
-            stream.reconfigure(encoding="utf-8", errors="replace")
+            reconfigure(encoding="utf-8", errors="replace")
         except Exception:
             pass
 

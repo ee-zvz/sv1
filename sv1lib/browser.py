@@ -11,6 +11,7 @@ import os
 import urllib.parse
 from dataclasses import dataclass, field
 from html import escape
+from typing import Any
 
 from . import config, net
 from .models import CapturedRequest, Explore
@@ -115,9 +116,9 @@ class Browser:
         self.timeout_ms = timeout_ms
         self.enabled = False
         self.reason = ""
-        self._pw = None
-        self._browser = None
-        self._context = None
+        self._pw: Any = None
+        self._browser: Any = None
+        self._context: Any = None
 
     # -- lifecycle ---------------------------------------------------------
     def start(self) -> bool:

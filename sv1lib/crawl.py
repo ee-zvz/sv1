@@ -74,7 +74,8 @@ class PageParser(HTMLParser):
                 self._field = FormField(
                     name=self._field.name, value=text[:200], type=self._field.type
                 )
-                self._form.fields[-1] = self._field
+                if self._form is not None:
+                    self._form.fields[-1] = self._field
             self._field = None
             self._buffer = []
 
@@ -182,7 +183,7 @@ def points_from_page(page: Page) -> list[InjectionPoint]:
         fields = form.fields[: config.MAX_FORM_FIELDS]
         if not fields:
             continue
-        pairs = tuple((f.name, f.value) for f in fields)
+        form_pairs = tuple((f.name, f.value) for f in fields)
         counts = {}
         for field in fields:
             occurrence = counts.get(field.name, 0)
@@ -191,7 +192,7 @@ def points_from_page(page: Page) -> list[InjectionPoint]:
                 InjectionPoint(
                     url=action,
                     method=method,
-                    params=pairs,
+                    params=form_pairs,
                     param=field.name,
                     source=source,
                     param_index=occurrence,

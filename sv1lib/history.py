@@ -204,6 +204,8 @@ class History:
                         _dump_json(_stats_dict(stats)),
                     ),
                 )
+                if cursor.lastrowid is None:
+                    raise HistoryError("sqlite did not return a session id")
                 session_id = int(cursor.lastrowid)
                 for finding in findings:
                     point = point_by_finding.get(id(finding))

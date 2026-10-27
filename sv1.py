@@ -567,6 +567,10 @@ def run(args: argparse.Namespace) -> int:
     )
 
     if args.retest:
+        if history is None:
+            report.bad("retest - history is not available")
+            client.close()
+            return 2
         code = retest_run(args, target, client, history, scope_rules, stats)
         client.close()
         history.close()

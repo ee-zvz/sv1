@@ -1,8 +1,13 @@
-# SV1 1.3.1 — real-world validation
+# SV1 1.3.2 - real-world validation
 
 Date: 2026-10-27
-Build: `1.3.1`
+Build: `1.3.2`; public evidence retained from `1.3.1`
 Platform: Windows 11, Python 3.14.6, Playwright Chromium (headless)
+
+> `1.3.2` does not change the detection engine. Its full-lab rerun is 31/31 at
+> 186.0 s, and the same-target dalfox/sqlmap comparison is in
+> [`COMPARISON.md`](COMPARISON.md). This document keeps the 1.3.1 public
+> evidence and adds no new public scan.
 
 This document records what SV1 actually found and proved outside the local lab.
 The reflected Firing Range and DOM runs remain from 1.2.1/1.2.0; Altoro was
@@ -28,6 +33,7 @@ Raw evidence:
 - [External JS evidence](evidence/local-external-js.json)
 - [Local HAR import evidence](evidence/local-har.json) and [HAR fixture](evidence/local-nested.har)
 - [Public HAR import evidence](evidence/firing-range-har.json) and [HAR fixture](evidence/firing-range-har.har)
+- [Same-target dalfox/sqlmap comparison](COMPARISON.md) and [quality gates](QUALITY.md)
 
 Live-site validation totals: **4 runs, 76 pages, 49 injection points, 560 HTTP
 requests, 59 findings, 59/59 verified, 0 errors**. The replay counts are 42/42
@@ -35,9 +41,10 @@ for reflected Firing Range, 1/1 for Altoro, 1/1 for the public HAR import, and
 15/15 execution-confirmed for DOM (the DOM run was generated with
 `--no-verify`).
 
-Automated tests: **75 discovered, 73 pass by default**. The Chromium XHR test
-and the full-lab acceptance test are opt-in locally and run in CI; both pass on
-a fresh lab process.
+Automated tests on the current 1.3.2 tree: **86 discovered, 84 pass by default**.
+The Chromium XHR test and the full-lab acceptance test are opt-in locally and
+run in CI; both pass on a fresh lab process. Quality gates and coverage:
+[`QUALITY.md`](QUALITY.md).
 
 ---
 
@@ -273,7 +280,7 @@ It records `meta.replay: true`, `stats.verified: 1`, `stats.unverified: 0`, and
 
 ---
 
-## 4. Local lab regression (1.3.1)
+## 4. Local lab regression (1.3.2)
 
 The lab is the controlled acceptance target. It contains reflected, stored, DOM,
 external-script DOM, blind, second-order, SQLi and SSRF paths, plus a JSON POST
@@ -290,10 +297,10 @@ python sv1.py -u http://127.0.0.1:8099/ `
   --crawl --stored --js --second-order --dump `
   --spa --external-js --openapi http://127.0.0.1:8099/openapi.json `
   --blind --blind-visit http://127.0.0.1:8099/blind-admin --ssrf `
-  --scope scope-lab.txt --db lab-1.3.1.db --diff `
+  --scope scope-lab.txt --db lab-1.3.2.db --diff `
   --sarif docs/evidence/local-lab.sarif --fail-on high `
-  --html lab-1.3.1.html --no-banner `
-  -o docs/evidence/local-lab.json --artifacts lab-artifacts-1.3.1
+  --html lab-1.3.2.html --no-banner `
+  -o docs/evidence/local-lab.json --artifacts lab-artifacts-1.3.2
 ```
 
 ### Result
@@ -310,7 +317,7 @@ python sv1.py -u http://127.0.0.1:8099/ `
 | Injection points | 29 |
 | Requests | 966 |
 | Errors | 0 |
-| Duration | 185.4 s |
+| Duration | 186.0 s |
 
 Breakdown: 17 XSS, 13 SQLi, 1 SSRF. The run is `stats.verified: 31`,
 `stats.unverified: 0`, so the release gate (`verified == findings`) passes. The

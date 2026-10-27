@@ -65,16 +65,16 @@ def run(engine: browser_mod.Browser, pages: list[Page], artifacts: str) -> list[
             payload = _payloads(token)[0]
             engine.submit_form(page_url, form, payload, item.name)
 
-            for page in revisit:
+            for visit_url in revisit:
                 shot_path = _shot_path(artifacts, len(findings) + 1) if artifacts else ""
-                visit = engine.visit(page, shot_path=shot_path)
+                visit = engine.visit(visit_url, shot_path=shot_path)
                 if not visit.fired(token):
                     continue
                 findings.append(
                     Finding(
                         kind="XSS",
                         severity="HIGH",
-                        url=page,
+                        url=visit_url,
                         method="GET",
                         param=item.name,
                         payload=payload,

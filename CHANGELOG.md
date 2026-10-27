@@ -2,6 +2,57 @@
 
 All notable changes to SV1. Format follows Keep a Changelog.
 
+## 1.3.2 - 2026-10-27
+
+Quality gates and a same-target external comparison. The detection engine and
+the vulnerability scope are unchanged: XSS, SQLi and SSRF; reflection-only
+stays `MEDIUM`.
+
+### Added
+
+- `sv1lib/version.py` is the only version string. `pyproject.toml` uses a dynamic
+  version, `config.TOOL_VERSION` imports it, and the user agent is built from it.
+  `tests/test_version.py` guards the package metadata.
+- `requirements-dev.txt` pins `coverage==7.17.0`, `mypy==2.4.0` and
+  `ruff==0.17.3`. The new `quality` CI job runs ruff, mypy and branch coverage.
+- `docs/QUALITY.md` records the 42.5% branch baseline and the modules that need
+  the live lab (`sqli`, `verify`, `ssrf`, `browser`).
+- `tests/test_quality_1_3_2.py` covers UNION payload/column/marker/extract paths
+  and blind form/sink submission without a network.
+- `lab/real_sql.py`: a small SQLite-backed comparison target. It exists only for
+  `docs/COMPARISON.md`; the 31-case emulator remains the release gate.
+- `docs/COMPARISON.md` and `docs/evidence/comparison-2026-10-27.json`: same-day
+  runs of SV1 `1.3.2`, dalfox `3.2.4` and sqlmap `1.10.10.27#dev`.
+
+### Changed
+
+- `pyproject.toml` gained ruff, mypy and coverage configuration and a dynamic
+  version. Generated `build/`, `dist/`, `.coverage` and egg-info are ignored.
+- `config.USER_AGENT` now follows `TOOL_VERSION` instead of duplicating `1.3.1`.
+
+### Fixed
+
+- Mypy findings in `history.py`, `banner.py`, `crawl.py`, `openapi.py`,
+  `browser.py`, `stored.py` and the retest guard in `sv1.py`.
+- Unused imports in `net.py` and `tests/test_1_2.py`; ruff `E9`/`F` is clean.
+
+### Validation
+
+- Unit tests: 86 discovered, 84 pass and 2 opt-in browser/lab tests are skipped
+  by default; `compileall` clean. Both opt-in tests pass.
+- `python -m ruff check .`: all checks passed.
+- `python -m mypy`: no issues in 36 source files.
+- `coverage`: 42.5% branch over `sv1.py` and `sv1lib`; `union.py` 48.9% and
+  `blind.py` 46.7% after the focused tests.
+- Full lab: 31 findings, 31/31 replayed, 0 unstable, 10 `CRITICAL` / 18 `HIGH` /
+  3 `MEDIUM`, 21 pages, 29 points, 966 requests, 0 errors, 186.0 s. Evidence:
+  `docs/evidence/local-lab.json`.
+- Comparison on one real SQLite target: SV1 confirmed 3 XSS + 2 SQLi plus 2
+  reflection-only `MEDIUM`; dalfox confirmed 3 XSS; sqlmap confirmed 2 SQLi. All
+  three had 0 confirmed false positives. Evidence:
+  `docs/evidence/comparison-2026-10-27.json`.
+- Version `1.3.2`.
+
 ## 1.3.1 - 2026-10-27
 
 Packaging, evidence and CI hardening for the 1.3.0 feature set. Vulnerability
