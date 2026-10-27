@@ -52,6 +52,10 @@ class RedirectHandler(BaseHTTPRequestHandler):
         for name, value in (headers or {}).items():
             self.send_header(name, value)
         self.send_header("Content-Length", str(len(body)))
+        # This loopback server serves one redirect chain per connection. A
+        # stale HTTP/1.1 keep-alive socket can turn the client's own redirect
+        # cap into a platform-specific RemoteDisconnected.
+        self.send_header("Connection", "close")
         self.end_headers()
         if body:
             self.wfile.write(body)
