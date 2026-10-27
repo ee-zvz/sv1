@@ -2,6 +2,70 @@
 
 All notable changes to SV1. Format follows Keep a Changelog.
 
+## 1.3.0 - 2026-10-27
+
+Real-application inputs. The vulnerability scope is unchanged: XSS (reflected,
+DOM, stored, blind), SQLi and SSRF. Async and `--resume` move to 1.4.0.
+
+### Added
+
+- **HAR import** (`--har FILE`): same-origin cookies, headers and request bodies
+  become a session and injection points. Query, form-urlencoded, JSON and raw
+  bodies are imported. CLI headers/cookies override the file.
+- **Raw HTTP request import** (`--request FILE`): method, path, headers, cookies
+  and body from one request; relative paths resolve against the `-u` origin.
+- **Nested JSON bodies**: `--json`, `--har`, `--request`, `--spa` and OpenAPI
+  flatten objects and arrays into leaf paths (`user.name`, `items[0].id`) and
+  rebuild the original template for every request.
+- **Raw bodies and explicit methods**: `--data` accepts a JSON document or a raw
+  template whose first `*` is the marker; `--method` and `--content-type` control
+  both `--data` and `--json`. Form points now honour PUT/PATCH instead of always POST.
+- **XHR/fetch POST capture in `--spa`**: method, body and content type are
+  recorded in Chromium. JSON and form-urlencoded bodies become points; raw
+  bodies with `*` are accepted. Body cap 200 KB, 40 points per pass.
+- **External JavaScript analysis** (`--external-js`): up to four same-origin
+  `<script src>` bundles per page (1.5 MB each) are scanned for DOM source/sink
+  pairs and proved in Chromium.
+- **Nested OpenAPI JSON bodies**: requestBody schemas are expanded through nested
+  objects and arrays; form/multipart bodies remain top-level.
+- **Playwright CI job** with a Chromium XHR POST integration test against the
+  local lab.
+
+### Fixed
+
+- Reflected XSS is emitted as `MEDIUM`/`MEDIUM` until Chromium executes it. If
+  the browser is unavailable, every reflected finding is explicitly downgraded
+  with a `reflection only` note; the console no longer prints `HIGH` before a
+  later downgrade.
+- `--json` points and imported JSON points preserve sibling fields and array
+  order instead of sending only top-level keys.
+- Imported session data is filtered to the target origin and is not written to
+  the console or report metadata.
+
+### Validation
+
+- Unit tests: 72 discovered, 71 pass and 1 opt-in browser test is skipped by
+  default; `compileall` clean. The opt-in Chromium test passes with
+  `SV1_BROWSER_TESTS=1`.
+- Browser integration: Chromium captures the `/xhr-post` POST JSON body and
+  produces `user.name` and `q` points.
+- Local lab focused checks:
+  - `/external --external-js`: 1 `HIGH` DOM XSS confirmed in Chromium
+    (`location.hash -> innerHTML` in `/external.js`), 2 requests.
+  - `/xhr-post --spa`: 1 XHR POST call with body, 2 points, 1 `MEDIUM`
+    reflection (no JSON browser execution path), 14 requests.
+  - `/api/nested --json`: nested `user.name` and `q` points, 1 `MEDIUM`
+    reflection, 14 requests.
+  - HAR import: same-origin session plus nested JSON points, 1 `MEDIUM`
+    reflection, 14 requests.
+- Full local lab with `--external-js`: 31 findings, 31/31 replayed, 0 unstable,
+  10 `CRITICAL` / 18 `HIGH` / 3 `MEDIUM`, 21 pages, 29 points, 966 requests,
+  0 errors, 183.8 s. Evidence: `docs/evidence/local-lab.json`.
+- Public HAR import on Firing Range: 1 imported GET point, 1 `HIGH` +
+  `CONFIRMED` reflected XSS, replay 1/1, 12 requests, 0 errors, 17.9 s.
+  Evidence: `docs/evidence/firing-range-har.json`.
+- Version `1.3.0`.
+
 ## 1.2.1 - 2026-10-27
 
 Security and correctness hotfix on top of 1.2.0. No new vulnerability categories;

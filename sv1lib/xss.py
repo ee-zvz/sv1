@@ -90,15 +90,15 @@ def scan_point(client, point) -> list[Finding]:
         return [
             Finding(
                 kind="XSS",
-                severity="HIGH",
+                severity="MEDIUM",
                 url=point.url,
                 method=point.method,
                 param=point.param,
                 payload=payload_text,
-                confidence="HIGH",
+                confidence="MEDIUM",
                 evidence=evidence,
                 technique=f"reflected/{site.kind}",
-                detail=site.summary(),
+                detail=f"reflection confirmed; execution not yet proven ({site.summary()})",
                 alternatives=alternatives,
             )
         ]

@@ -33,6 +33,8 @@ INDEX = """<!doctype html>
   <p><a href="/hidden">hidden</a></p>
   <p><a href="/js-endpoints">js api</a></p>
   <p><a href="/spa">spa</a></p>
+  <p><a href="/xhr-post">xhr post</a></p>
+  <p><a href="/external">external js</a></p>
   <p><a href="/upload">upload</a></p>
   <p><a href="/profile">profile</a></p>
   <p><a href="/blind">blind</a></p>
@@ -185,10 +187,11 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):  # keep the console quiet
         pass
 
-    def _send(self, body: str, status: int = 200) -> None:
+    def _send(self, body: str, status: int = 200,
+              content_type: str = "text/html; charset=utf-8") -> None:
         payload = body.encode("utf-8", errors="replace")
         self.send_response(status)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
         self.wfile.write(payload)
@@ -514,6 +517,35 @@ class Handler(BaseHTTPRequestHandler):
             self._send(f"<html><body><h1>slow</h1><div>{term}</div></body></html>")
             return
 
+        if parts.path == "/xhr-post":                     # POST body only after render
+            self._send(
+                "<html><body><h1>xhr post</h1><div id='out'></div>"
+                "<script>"
+                "fetch('/api/xhr', {"
+                "method: 'POST',"
+                "headers: {'Content-Type': 'application/json'},"
+                "body: JSON.stringify({user: {name: 'hello'}, q: 'hello'})"
+                "}).then(r => r.text())"
+                ".then(t => { document.getElementById('out').innerHTML = t; });"
+                "</script></body></html>"
+            )
+            return
+
+        if parts.path == "/external":                     # external bundle source/sink
+            self._send(
+                "<html><body><h1>external</h1><div id='out'></div>"
+                "<script src='/external.js'></script></body></html>"
+            )
+            return
+
+        if parts.path == "/external.js":
+            self._send(
+                "const raw = decodeURIComponent(location.hash.slice(1));"
+                "if (raw) { document.getElementById('out').innerHTML = raw; }",
+                content_type="application/javascript; charset=utf-8",
+            )
+            return
+
         self._send("<html><body>404</body></html>", 404)
 
     def do_POST(self) -> None:
@@ -533,6 +565,16 @@ class Handler(BaseHTTPRequestHandler):
                     self._send("<html><body><h1>item</h1><p>not found</p></body></html>")
                 else:
                     self._send(UNION_PAGE)
+                return
+            if path in ("/api/xhr", "/api/nested"):
+                value = payload.get("q", "")
+                user = payload.get("user")
+                if isinstance(user, dict):
+                    value = str(user.get("name", value))
+                self._send(
+                    "<html><body><h1>api body</h1>"
+                    f"<div>{value}</div></body></html>"
+                )
                 return
             self._send(f"<html><body><pre>{json.dumps(payload)}</pre></body></html>")
             return

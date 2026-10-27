@@ -63,6 +63,9 @@ def point_to_dict(point: InjectionPoint) -> dict:
         "param": point.param,
         "source": point.source,
         "param_index": point.param_index,
+        "body": point.body,
+        "content_type": point.content_type,
+        "path": list(point.path),
     }
 
 
@@ -74,6 +77,9 @@ def point_from_dict(raw: dict) -> InjectionPoint:
         param=str(raw.get("param", "")),
         source=str(raw.get("source", "query")),
         param_index=int(raw.get("param_index", 0) or 0),
+        body=str(raw.get("body", "") or ""),
+        content_type=str(raw.get("content_type", "") or ""),
+        path=tuple(raw.get("path", []) or []),
     )
 
 

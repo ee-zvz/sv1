@@ -10,7 +10,7 @@ import urllib.parse
 
 import requests
 
-from . import config
+from . import config, jsonbody
 from .models import Response
 
 
@@ -254,21 +254,46 @@ class Client:
             files = [(name, (None, str(item))) for name, item in mapping]
             return self.request(point.method, point.url, files=files)
         if source == "json":
-            payload = {}
-            for name, item in mapping:
-                payload[name] = item
+            body = getattr(point, "body", "")
+            path = tuple(getattr(point, "path", ()) or ())
+            payload: object
+            if body:
+                template, error = jsonbody.parse(body)
+                if error:
+                    payload = {name: item for name, item in mapping}
+                else:
+                    try:
+                        payload = jsonbody.set_value(template, path, value)
+                    except (KeyError, IndexError, TypeError):
+                        payload = {name: item for name, item in mapping}
+            else:
+                payload = {name: item for name, item in mapping}
             return self.request(
                 point.method,
                 point.url,
-                data=json.dumps(payload),
+                data=jsonbody.dumps(payload),
                 headers={
-                    "Content-Type": "application/json",
+                    "Content-Type": getattr(point, "content_type", "")
+                    or "application/json",
                     "Accept": "application/json",
+                },
+            )
+        if source == "raw":
+            body = getattr(point, "body", "") or value
+            if "*" in body:
+                body = body.replace("*", value, 1)
+            return self.request(
+                point.method,
+                point.url,
+                data=body,
+                headers={
+                    "Content-Type": getattr(point, "content_type", "")
+                    or "application/octet-stream",
                 },
             )
         if source == "query" or point.method == "GET":
             return self.request(point.method, point.url, params=mapping)
-        return self.request("POST", point.url, data=mapping)
+        return self.request(point.method, point.url, data=mapping)
 
     def fetch(self, url: str) -> Response:
         return self.request("GET", url)
@@ -336,10 +361,36 @@ def curl(point, value: str) -> str:
         parts.append(shlex.quote(point.url))
         return " ".join(parts)
     if source == "json":
-        payload = json.dumps({name: item for name, item in mapping})
+        body = getattr(point, "body", "")
+        path = tuple(getattr(point, "path", ()) or ())
+        payload: object
+        if body:
+            template, error = jsonbody.parse(body)
+            if error:
+                payload = {name: item for name, item in mapping}
+            else:
+                try:
+                    payload = jsonbody.set_value(template, path, value)
+                except (KeyError, IndexError, TypeError):
+                    payload = {name: item for name, item in mapping}
+        else:
+            payload = {name: item for name, item in mapping}
         parts.extend(["-X", point.method])
-        parts.extend(["-H", shlex.quote("Content-Type: application/json")])
-        parts.extend(["--data-raw", shlex.quote(payload)])
+        parts.extend(["-H", shlex.quote(
+            f"Content-Type: {getattr(point, 'content_type', '') or 'application/json'}"
+        )])
+        parts.extend(["--data-raw", shlex.quote(jsonbody.dumps(payload))])
+        parts.append(shlex.quote(point.url))
+        return " ".join(parts)
+    if source == "raw":
+        body = getattr(point, "body", "") or value
+        if "*" in body:
+            body = body.replace("*", value, 1)
+        parts.extend(["-X", point.method])
+        parts.extend(["-H", shlex.quote(
+            f"Content-Type: {getattr(point, 'content_type', '') or 'application/octet-stream'}"
+        )])
+        parts.extend(["--data-raw", shlex.quote(body)])
         parts.append(shlex.quote(point.url))
         return " ".join(parts)
     if source == "query" or point.method == "GET":
@@ -349,7 +400,7 @@ def curl(point, value: str) -> str:
             parts.extend(["-X", point.method])
         parts.append(shlex.quote(f"{point.url}{separator}{query}"))
         return " ".join(parts)
-    parts.extend(["-X", "POST"])
+    parts.extend(["-X", point.method])
     for name, item in mapping:
         parts.extend(["--data-urlencode", shlex.quote(f"{name}={item}")])
     parts.append(shlex.quote(point.url))

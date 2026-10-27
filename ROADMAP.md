@@ -232,6 +232,44 @@ P5.0 يضيف طبقة تشغيل حقيقية: تقرير SARIF للـ CI، ب�
 
 ---
 
+## P5.0.3 — تطبيقات حقيقية 1.3.0 ✅
+
+النطاق لم يتغير: XSS وSQLi وBlind XSS وSSRF. أضيفت مدخلات التطبيقات الحقيقية
+بدل الاعتماد على روابط وصفحات بسيطة فقط.
+
+| البند | الحالة |
+|---|---|
+| استيراد HAR: كوكيز + هيدرات + نقاط query/form/JSON/raw | ✅ |
+| استيراد طلب HTTP خام (method/path/headers/body) | ✅ |
+| JSON متداخل: كل ورقة scalar تصبح نقطة، مع إعادة بناء القالب | ✅ |
+| جسم خام عبر `--data` و`*` + `--method` و`--content-type` | ✅ |
+| التقاط XHR/fetch POST من Chromium وتحويل JSON/form إلى نقاط | ✅ |
+| تحليل سكربتات خارجية same-origin لمصادر/مصارف DOM وإثباتها | ✅ |
+| OpenAPI JSON متداخل داخل requestBody | ✅ |
+| اختبار Playwright في CI يثبت التقاط POST body | ✅ |
+| عكس XSS يبدأ MEDIUM ولا يصبح HIGH إلا بتنفيذ Chromium | ✅ |
+
+**قبول 1.3.0:**
+
+- 72 اختباراً مكتشفاً: 71 ينجح و1 متصفح اختياري متخطى، و`compileall` نظيف.
+- Chromium: `/xhr-post` التقط طلب POST JSON وأنتج نقطتي `user.name` و`q`.
+- `/external --external-js`: نتيجة DOM XSS واحدة `HIGH` مؤكدة من
+  `location.hash → innerHTML` داخل `/external.js`.
+- `/xhr-post --spa`: 1 طلب XHR بجسم، 2 نقطتان، 1 `MEDIUM` (انعكاس JSON بلا
+  مسار تنفيذ في المتصفح)، 14 طلباً.
+- `/api/nested --json`: نقطتا `user.name` و`q`، 1 `MEDIUM`، 14 طلباً.
+- HAR محلي: جلسة same-origin ونقاط JSON متداخلة، 1 `MEDIUM`، 14 طلباً.
+- HAR عام على Firing Range: نقطة GET مستوردة، 1 `HIGH` + `CONFIRMED`،
+  إعادة تشغيل 1/1، 12 طلباً، 17.9 ثانية.
+- المختبر الكامل مع `--external-js`: 31 نتيجة، 31/31 أعادت التشغيل، 0 unstable،
+  CRITICAL 10 / HIGH 18 / MEDIUM 3، 21 صفحة، 29 نقطة، 966 طلباً، 183.8 ثانية.
+
+**حدود 1.3.0:** لا يوجد تسجيل دخول/تحديث CSRF تلقائي؛ HAR لقطة ثابتة. تحليل
+السكربتات الخارجية same-origin فقط وبحد 4 ملفات/1.5MB. أجسام multipart من XHR
+غير مدعومة. المحرك async و`--resume` مؤجلان إلى 1.4.0.
+
+---
+
 ## ترتيب التنفيذ المقترح
 
 ```
@@ -244,11 +282,13 @@ P4   ✅  (الأعمى و OOB: blind xss + ssrf + callback)
 P5.0 ✅  (CI: SARIF + fail-on + scope + SQLite diff/retest + 429)
 P5.0.1 ✅ (1.2.0: دقة السياق + أمانة الطلب + تحقق ميداني)
 P5.0.2 ✅ (1.2.1: TLS + same-origin forms + خيوط HTTP + تكرار SQLi)
-P5.1 ←   (1.3.0: محرك async + resume)
+P5.0.3 ✅ (1.3.0: HAR + JSON متداخل + XHR POST + سكربتات خارجية + CI متصفح)
+P5.1 ←   (1.4.0: محرك async + resume)
 ```
 
 P5.0 اكتمل: SV1 يصدّر SARIF صالحاً، يفرض نطاقاً، يحفظ الجلسات ويقارنها،
 ويعيد فحص ما يمكن إعادة فحصه. 1.2.0 أضاف دقة السياق وأمانة الطلب وcurl.
-1.2.1 شدّد TLS وإجراءات النماذج وجلسات الخيوط وأساس SQLi. الخطوة القادمة
-P5.1 (محرك async وresume) أو P4.1 لـ DNS/OOB SQLi حسب الحاجة.
+1.2.1 شدّد TLS وإجراءات النماذج وجلسات الخيوط وأساس SQLi. 1.3.0 فتح مدخلات
+التطبيقات الحقيقية: HAR وطلبات خام وJSON متداخل وXHR POST وسكربتات خارجية.
+الخطوة القادمة P5.1: محرك async و`--resume`، أو P4.1 لـ DNS/OOB SQLi حسب الحاجة.
 

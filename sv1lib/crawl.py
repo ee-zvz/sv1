@@ -6,7 +6,7 @@ import urllib.parse
 
 from html.parser import HTMLParser
 
-from . import config, net
+from . import config, jsonbody, net
 from .models import Form, FormField, InjectionPoint, Page
 
 SKIP_PAGE_SCHEMES = ("mailto:", "tel:", "javascript:", "data:", "file:", "ftp:")
@@ -248,15 +248,63 @@ def cookie_points(url: str, cookies: dict) -> list[InjectionPoint]:
     ]
 
 
-def json_points(url: str, data: dict, method: str = "POST") -> list[InjectionPoint]:
-    pairs = tuple((name, value) for name, value in data.items())
+def json_points(
+    url: str,
+    data,
+    method: str = "POST",
+    content_type: str = "application/json",
+) -> list[InjectionPoint]:
+    """Turn every scalar leaf in a JSON document into its own point.
+
+    The full document is carried on the point. A nested request rebuilds the
+    template and replaces only the selected path, so sibling fields and array
+    elements keep their original values and order.
+    """
+    leaves = jsonbody.flatten(data)
+    if not leaves:
+        return []
+    body = jsonbody.dumps(data)
+    pairs = tuple(
+        (jsonbody.label(path), str(value))
+        for path, value in leaves
+    )
     return [
         InjectionPoint(
             url=url,
             method=method,
             params=pairs,
-            param=name,
+            param=jsonbody.label(path),
             source="json",
+            body=body,
+            content_type=content_type,
+            path=path,
         )
-        for name, _value in pairs
+        for path, _value in leaves
+    ]
+
+
+def raw_point(
+    url: str,
+    body: str,
+    method: str = "POST",
+    content_type: str = "",
+) -> list[InjectionPoint]:
+    """One raw body point, using `*` as the payload marker.
+
+    A body without a marker is not silently treated as injectable: the caller
+    gets an empty list and can warn. This keeps the request that the scanner
+    claims to test identical to the request it sends.
+    """
+    if "*" not in body:
+        return []
+    return [
+        InjectionPoint(
+            url=url,
+            method=method,
+            params=(("*", body),),
+            param="*",
+            source="raw",
+            body=body,
+            content_type=content_type,
+        )
     ]

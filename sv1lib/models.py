@@ -36,17 +36,31 @@ class InjectionPoint:
 
     param_index keeps duplicate names honest: ?id=1&id=2 is two points, and
     the verifier must replace the same occurrence the scanner did.
+
+    body/path carry a JSON or raw body template. A nested JSON point owns the
+    whole document and only one leaf path; rebuilding the document on every
+    request keeps sibling fields exactly as the application sent them.
     """
 
     url: str
-    method: str                 # "GET" | "POST"
+    method: str                 # "GET" | "POST" | "PUT" | ...
     params: tuple               # tuple[(name, value), ...] - untouched inputs
     param: str                  # which key gets the payload
-    source: str                 # "query" | "form" | "header" | "cookie" | "json"
+    source: str                 # "query" | "form" | "header" | "cookie" | "json" | "raw"
     param_index: int = 0        # which occurrence of param gets the payload
+    body: str = ""              # JSON/raw body template, when source needs it
+    content_type: str = ""      # request content type for body-based points
+    path: tuple = ()            # nested JSON path, e.g. ("user", "name")
 
     def key(self) -> tuple:
-        return (self.method, self.url, self.param, self.param_index)
+        return (
+            self.method,
+            self.url,
+            self.source,
+            self.param,
+            self.param_index,
+            self.path,
+        )
 
     def position(self) -> int:
         """Absolute index in params for occurrence param_index of param."""
@@ -86,6 +100,16 @@ class Response:
 
 
 @dataclass
+class CapturedRequest:
+    """One xhr/fetch call seen by Chromium, including its wire body."""
+
+    url: str
+    method: str = "GET"
+    body: str = ""
+    content_type: str = ""
+
+
+@dataclass
 class Explore:
     """One rendered page: where it landed, what it fetched, what it links to."""
 
@@ -93,6 +117,7 @@ class Explore:
     xhr: list[str] = field(default_factory=list)
     anchors: list[str] = field(default_factory=list)
     error: str = ""
+    requests: list[CapturedRequest] = field(default_factory=list)
 
 
 @dataclass

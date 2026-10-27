@@ -7,9 +7,10 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.2.1` hardens the 1.2.0 accuracy work:
-browser `-k` handling, same-origin form actions, thread-safe HTTP sessions,
-and duplicate-parameter SQLi baselines.
+SQLite session history. Release `1.3.0` adds real-application inputs: HAR and
+raw HTTP request import, nested JSON and raw bodies, XHR/fetch POST capture,
+same-origin external JavaScript analysis, and nested OpenAPI bodies. Reflection
+alone stays `MEDIUM`; `HIGH` needs execution.
 
 A vulnerability scanner for **XSS**, **SQL Injection**, **Blind XSS** and **SSRF**
 written in Python, running on Windows 11. On start it prints an animated banner
@@ -72,13 +73,19 @@ python sv1.py -u <URL> [options]
 | `--headers` | Inject into `X-Forwarded-For`, `Referer`, `User-Agent` |
 | `--deep` | Additional headers: `X-Real-IP`, `Client-IP`, `Origin`, … |
 | `--cookies` | Inject into cookie values passed with `--cookie` |
-| `--json URL` | Test JSON body injection on a POST endpoint |
+| `--json URL` | Test JSON body injection; nested objects and arrays are flattened to leaf points |
 | `--json-data JSON` | JSON body template (default `{"id": "1", "q": "test"}`) |
+| `--data BODY` | Raw body template; use `*` as the injection marker, or pass JSON to test nested leaves |
+| `--method METHOD` | Method for `--data`/`--json` (default `POST`) |
+| `--content-type TYPE` | Content type for `--data`/`--json` bodies |
+| `--har FILE` | Import cookies, headers and injection points from a HAR file |
+| `--request FILE` | Import one raw HTTP request file (method, path, headers, body) |
+| `--external-js` | Read same-origin external scripts for DOM source/sink analysis |
 | `--params` | Discover hidden GET parameters on the target URL |
 | `--js` | Extract injection points from page scripts |
 | `--second-order` | Second-order SQLi (writes to the target) |
 | `--dump` | Pull database identity and table names after a successful UNION |
-| `--spa` | SPA crawl: load pages in Chromium and capture XHR/fetch |
+| `--spa` | SPA crawl: load pages in Chromium and capture XHR/fetch URLs and POST bodies |
 | `--openapi SPEC` | Import injection points from a local or remote OpenAPI JSON file |
 | `--blind` | Blind XSS: inject a callback script into POST forms and wait for a hit (writes to the target) |
 | `--blind-visit URL` | Open the admin page after injection, repeats (local simulation) |
@@ -124,7 +131,23 @@ python sv1.py -u https://site.tld/api/account --headers --deep --cookies --cooki
 
 # JSON endpoint (PowerShell eats inner quotes, so use backticks)
 python sv1.py -u https://site.tld/api/item --json https://site.tld/api/item `
-  --json-data "{\`"id\`": 1, \`"q\`": \`"test\`"}"
+  --json-data "{\`"id\`": 1, \`"q\`": \`"test\`", \`"user\`": {\`"name\`": \`"guest\`"}}"
+
+# Use a captured authenticated session and its requests
+python sv1.py -u https://site.tld --har session.har --xss --sqli
+
+# One raw HTTP request, including its body and headers
+python sv1.py -u https://site.tld --request request.txt
+
+# Raw body template: only the first * becomes the payload
+python sv1.py -u https://site.tld/api/search --method POST `
+  --content-type "application/x-www-form-urlencoded" --data "q=*&page=2"
+
+# SPA XHR/fetch POST body capture
+python sv1.py -u https://site.tld/app --spa --xss
+
+# External same-origin bundle source/sink analysis, with browser proof
+python sv1.py -u https://site.tld/app --external-js --xss
 
 # Hidden parameters on one page
 python sv1.py -u https://site.tld/export --params
@@ -162,6 +185,35 @@ python sv1.py -u https://site.tld --blind --oob https://cb.example.tld `
 
 Exit codes: `0` = no findings (or `--fail-on none`), `1` = a finding at or above
 the `--fail-on` threshold, `2` = the target did not respond or a file could not be opened.
+
+### Real application inputs (1.3.0)
+
+- **HAR session import.** `--har session.har` reads same-origin cookies, headers
+  (including `Authorization` and CSRF headers) and request bodies. Query, JSON,
+  form and raw body points are imported, then the normal scanners run. CLI
+  `-H`/`--cookie` values override the file.
+- **Raw request import.** `--request request.txt` accepts one HTTP request with
+  its method, path, headers and body. A relative request path is resolved against
+  the `-u` origin. The file is read once; imported session values are not printed.
+- **Nested JSON and raw bodies.** `--json`/`--json-data` recursively flattens
+  objects and arrays into leaf paths such as `user.name` and `items[0].id`.
+  `--har`, `--request`, `--spa` and OpenAPI use the same helper. Every request
+  rebuilds the template and replaces only the selected leaf. `--data` accepts a
+  JSON document or a raw template whose first `*` is the marker; `--method` and
+  `--content-type` control the request. Form points also honour non-POST methods.
+- **XHR/fetch POST capture.** `--spa` records the method, body and content type
+  of same-origin XHR/fetch calls. JSON and form-urlencoded bodies become points;
+  raw bodies with `*` are accepted. Body capture is capped at 200 KB per call and
+  40 points per SPA pass.
+- **External JavaScript.** `--external-js` reads up to four same-origin
+  `<script src>` bundles per page (1.5 MB each), looks for DOM source/sink pairs,
+  and proves the candidate in Chromium. Cross-origin bundles are skipped.
+- **Nested OpenAPI bodies.** JSON `requestBody` schemas are expanded into nested
+  objects and arrays before points are created; form and multipart bodies remain
+  top-level.
+- **Honest severity.** Reflected XSS starts at `MEDIUM` in the scan output.
+  Chromium promotion to `HIGH`/`CONFIRMED` happens only after the marker executes.
+  JSON and XHR POST reflections that have no browser execution path stay `MEDIUM`.
 
 ### Security and correctness (1.2.1)
 
@@ -286,10 +338,10 @@ python sv1.py -u https://site.tld --crawl --db sv1.db --diff
 8x, honours a numeric `Retry-After` (capped at 30s), and recovers gradually
 after 20 healthy responses. `--rps 0` stays unlimited.
 
-> 1.3.0 later: async engine on `httpx` and `--resume`.
-> Release 1.2.1 hardens TLS handling, form origins, parallel HTTP sessions and
-> duplicate-parameter baselines on top of 1.2.0 accuracy and the SARIF/scope/
-> SQLite/429 work.
+> 1.4.0 later: async engine on `httpx` and `--resume`.
+> Release 1.3.0 adds HAR/raw request import, nested JSON/raw bodies, XHR POST
+> capture, external JavaScript analysis, nested OpenAPI bodies and a Chromium
+> integration CI job.
 
 ---
 
@@ -361,7 +413,11 @@ stage tries the same shapes before declaring a finding unstable.
 - `query` and `form` — automatically from the crawl.
 - `header` (`--headers`) — the header values listed above on the target URL.
 - `cookie` (`--cookies`) — every cookie passed with `--cookie`.
-- `json` (`--json`) — every key in a JSON body, with `Content-Type: application/json`.
+- `json` (`--json`, `--har`, `--request`, `--spa`, `--openapi`) — every scalar
+  leaf in a JSON body, including nested objects and arrays. The body template is
+  rebuilt for each request.
+- `raw` (`--data`, `--request`, `--spa`) — a body template whose first `*` is
+  the marker, sent with the declared method and content type.
 - `js` (`--js`) — every URL with a query inside an inline `<script>` or a
   same-origin external script. Covers `fetch`, `axios`, `$.ajax` and any URL
   written as text.
@@ -427,13 +483,16 @@ and static files (`*.js?v=1`) are excluded.
 
 The normal crawler reads HTML only. SV1 opens up to 6 pages containing `<script>`
 in a real Chromium, listens for `xhr` and `fetch` requests, and turns every URL
-with a query into a normal injection point. It also captures `<a>` links that only
-appear after JavaScript runs: a link with a query becomes injection points, and a
-link without one is fetched as a page (capped at 4). This covers interfaces that
-build themselves in the browser.
+with a query into a normal injection point. POST/fetch bodies are captured too:
+JSON objects become nested leaf points, form-urlencoded bodies become form points,
+and a raw body with `*` becomes one raw point. It also captures `<a>` links that
+only appear after JavaScript runs: a link with a query becomes injection points,
+and a link without one is fetched as a page (capped at 4). This covers interfaces
+that build themselves in the browser.
 
-Limits: it captures GET calls with a query only, not XHR POST bodies. Requires
-Chromium; with `--no-browser` it is skipped with a warning.
+Limits: bodies are kept up to 200 KB; multipart POST bodies are skipped. Requires
+Chromium; with `--no-browser` it is skipped with a warning. JSON/XHR POST
+reflections are reported as `MEDIUM` unless another executed path proves them.
 
 **OpenAPI import** (`--openapi`)
 
@@ -528,7 +587,7 @@ compares structure.
 
 ---
 
-## Real-world validation (1.2.1)
+## Real-world validation (1.3.0)
 
 Public, intentionally vulnerable demo targets only. Raw evidence and the exact
 commands: [`docs/REALWORLD.md`](docs/REALWORLD.md).
@@ -538,19 +597,25 @@ commands: [`docs/REALWORLD.md`](docs/REALWORLD.md).
 | Google Firing Range, reflected | 49 pages, 47 points | 42 findings — **40 HIGH** confirmed in Chromium, 2 MEDIUM; replay 42/42, 0 unstable |
 | Google Firing Range, DOM | 25 pages crawled, 20 rendered | **15 HIGH** DOM findings, 0 errors |
 | Altoro Mutual search | one GET parameter | **1 HIGH** reflected XSS, confirmed |
-| Local lab | full coverage | **27/27** findings replayed, 0 unstable |
+| Firing Range, HAR import | one imported GET point | **1 HIGH** confirmed; replay 1/1 |
+| Local lab, 1.3.0 | full coverage incl. HAR/JSON/XHR/external JS | **31/31** findings replayed, 0 unstable |
 
-Firing Range ended with 512 requests, 0 errors and 247 s. The two `MEDIUM`
-cases are `/url/css_import` (a stylesheet `<link>` cannot execute `javascript:` in
-current Chromium) and `/url/object_data` (pinned to the removed Flash plugin
-type); neither page accepts `<`/`>` in the parameter. They are reported as
-reflection-only, not inflated to `HIGH`. Replay re-sent all 42 findings and
-reproduced all 42.
+The Firing Range and Altoro runs remain the 1.2.1/1.2.0 evidence; the detection
+engine is unchanged. The 1.3.0 public HAR run imported one GET request, found the
+reflected XSS at `HIGH` + `CONFIRMED`, and replayed it (12 requests, 17.9 s).
+Firing Range ended with 512 requests, 0 errors and 247 s.
+The two `MEDIUM` cases are `/url/css_import` (a stylesheet `<link>` cannot execute
+`javascript:` in current Chromium) and `/url/object_data` (pinned to the removed
+Flash plugin type); neither page accepts `<`/`>` in the parameter. They are
+reported as reflection-only, not inflated to `HIGH`. Replay re-sent all 42
+findings and reproduced all 42.
 
-The 1.2.1 lab acceptance run: 27/27 replayed, 0 unstable — CRITICAL 9 / HIGH 16 /
-MEDIUM 2, 19 pages, 25 points, 853 requests, 163.4 s. The multi-parameter fix is
-visible in `/api/fetch`, `/api/spa` and `/dynamic`: the second parameter (`name`)
-is injected and the three reflected XSS findings are present.
+The 1.3.0 lab acceptance run: 31/31 replayed, 0 unstable — CRITICAL 10 / HIGH 18 /
+MEDIUM 3, 21 pages, 29 points, 966 requests, 183.8 s. The new input paths are in
+that same run: `--external-js` confirms `/external` (`location.hash → innerHTML`
+inside `/external.js`) at `HIGH`; `--spa` captures the `/api/xhr` POST JSON body
+and reports `user.name` at `MEDIUM` (reflection only, no JSON browser execution);
+the nested-JSON and HAR focused runs each produce the same `user.name` point.
 
 ---
 
@@ -563,6 +628,8 @@ sv1/
 │   ├── config.py       every number and constant
 │   ├── models.py       data types (Finding, InjectionPoint ...)
 │   ├── net.py          HTTP client + adaptive 429 rate limit
+│   ├── jsonbody.py     nested JSON leaf paths and body rebuilding
+│   ├── imports.py      HAR / raw HTTP request import
 │   ├── identity.py     stable finding fingerprint (history/SARIF)
 │   ├── history.py      SQLite: sessions, findings, diff, retest
 │   ├── scope.py        host/path allowlist
@@ -594,8 +661,10 @@ sv1/
 ├── lab/server.py       local vulnerable target for practice
 ├── tests/test_p5.py    unit tests (scope/history/SARIF/rate/fail-on)
 ├── tests/test_1_2.py   request fidelity, context grammar, proof policy
-├── docs/REALWORLD.md   real-world 1.2.1 validation
-├── docs/evidence/      JSON evidence from public demo runs
+├── tests/test_1_3.py   HAR, nested JSON, SPA bodies, external JS
+├── tests/test_browser_1_3.py  Chromium XHR POST integration (CI)
+├── docs/REALWORLD.md   real-world validation
+├── docs/evidence/      JSON evidence from public and local runs
 ├── .github/workflows/ci.yml
 ├── LICENSE             MIT
 ├── CHANGELOG.md        release log
@@ -625,21 +694,25 @@ Full scan with P3 + P3.1 + P4 + P5 coverage:
 "127.0.0.1:8099" | Set-Content scope-lab.txt
 
 python sv1.py -u http://127.0.0.1:8099/ --crawl --stored --js --second-order --dump `
-  --spa --openapi http://127.0.0.1:8099/openapi.json `
+  --spa --external-js --openapi http://127.0.0.1:8099/openapi.json `
   --blind --blind-visit http://127.0.0.1:8099/blind-admin --ssrf `
   --scope scope-lab.txt --db lab-history.db --diff --sarif report.sarif `
   --fail-on high --html report.html
 ```
 
-Result: **27 findings, 27 replayed, 0 unstable** — CRITICAL 9, HIGH 16, MEDIUM 2,
-19 pages, 25 injection points, 853 requests, 164.4 s (with Chromium).
+Result: **31 findings, 31 replayed, 0 unstable** — CRITICAL 10, HIGH 18, MEDIUM 3,
+21 pages, 29 injection points, 966 requests, 183.8 s (with Chromium).
 
-- **XSS (14):** 13 confirmed by execution inside Chromium (`/search`, `/feedback`
-  two fields, `/js`, `/attr`, `/waf`, `/api/fetch`, `/api/spa`, `/dynamic`), DOM
-  in `/dom` via `location.hash → innerHTML`, stored in `/guestbook` (name +
-  message), and Blind XSS in `/blind-admin`; an encoded reflection in `/safe`
-  drops to `MEDIUM`.
-- **SQLi (12):** MySQL error in `/search`, `/union`, `/waf`, `/upload`,
+The lab stores guestbook, blind and profile state in memory. Restart
+`lab\server.py` before repeating the full run; otherwise `/profile` already
+contains the second-order payload and its form is replaced by the error page.
+
+- **XSS (17):** 15 confirmed by execution inside Chromium (`/search`, `/feedback`
+  two fields, `/js`, `/attr`, `/waf`, `/api/fetch`, `/api/spa`, `/dynamic`, plus
+  the external bundle at `/external`), DOM in `/dom`, stored in `/guestbook`
+  (name + message), and Blind XSS in `/blind-admin`; the encoded reflection in
+  `/safe` and the JSON POST reflection at `/api/xhr` stay `MEDIUM`.
+- **SQLi (13):** MySQL error in `/search`, `/union`, `/waf`, `/upload`,
   `/api/fetch`, `/api/spa`, `/dynamic`; logical injection in `/item` and
   `/api/item`; `/account` drops to `MEDIUM` because its page is volatile (noise);
   UNION extraction from `/union`: `3 columns, column 1 echoes back; version() -> 8.0.36-lab`;
@@ -662,11 +735,16 @@ Result: **27 findings, 27 replayed, 0 unstable** — CRITICAL 9, HIGH 16, MEDIUM
   ```
 - **`--js`:** two points from the `/js-endpoints` script:
   `/api/fetch?id=1&name=test` — XSS confirmed by execution and SQLi error.
-- **`--spa`:** 4 pages loaded, 2 XHR calls, one dynamic link, 6 points. It catches
+- **`--spa`:** captures GET and XHR POST traffic. It catches
   `/api/spa?id=1&name=test` built from variables (`--js` cannot see it) → XSS
   confirmed by execution and SQLi error. It also catches the `<a>` link the script
-  built toward `/dynamic?id=1&name=test` → the same two findings. `/api/fetch` was
-  already listed so it did not repeat (dedupe by key).
+  built toward `/dynamic?id=1&name=test` → the same two findings. The `/xhr-post`
+  page sends a JSON body to `/api/xhr`; `user.name` is captured as a POST point
+  and reported at `MEDIUM` (reflection only). `/api/fetch` was already listed so
+  it did not repeat (dedupe by key).
+- **`--external-js`:** reads `/external.js` and confirms
+  `location.hash → innerHTML` in Chromium, recording `/external` at `HIGH` +
+  `CONFIRMED`.
 - **`--openapi`:** 4 points from `/openapi.json`; `/api/item` JSON added one
   logical injection. `/api/fetch` points matched `--js` points so they did not repeat.
 - **`--second-order`:** stores `sv1clean` then `sv1'` in `/profile`, measures the
@@ -684,12 +762,11 @@ and `/fetch` as normal pages, while `/blind-admin` is intentionally left unlinke
 - **`--scope`:** the file `127.0.0.1:8099` allowed the target; a target outside
   the file returns 2 before any request. The crawl never leaves scope, and
   OpenAPI points are filtered.
-- **`--db --diff`:** the first session is `#1` with no predecessor; re-scanning
-  the same target gives `+0 new · 27 open · -0 fixed` (verified in acceptance).
-- **`--retest`:** from the 27-finding session: 21 open, 0 fixed, 6 skipped —
-  Blind, SSRF, Stored, DOM and UNION were skipped. It did not crawl and did not
-  open a browser.
-- **SARIF:** 27 findings, a stable fingerprint per finding, and a file that passes
+- **`--db --diff`:** the first session is `#1` with no predecessor; the next
+  scan of the same target is compared against it (`+N new · N open · -N fixed`).
+- **`--retest`:** rechecks replayable findings from the session and skips Blind,
+  SSRF, Stored, DOM and UNION. It does not crawl and does not open a browser.
+- **SARIF:** 31 findings, a stable fingerprint per finding, and a file that passes
   the official SARIF 2.1.0 schema.
 - **`--fail-on`:** `none` = 0, `high` = 1, `critical` = 1 on the lab, and a clean
   target with `high` = 0.
@@ -712,16 +789,27 @@ note    database error surfaced (MySQL) - error based injection
 - Non-HTML responses (`text/plain`, JSON, binary) are not XSS candidates. A
   stylesheet `link` or a removed Flash `object` can reflect a `javascript:` URL
   without executing it; those findings stay `MEDIUM`.
-- DOM detection relies on source→sink pairs inside inline `<script>`. `--spa`
-  executes pages but does not analyse external bundle text. The browser budget
-  renders 20 pages per DOM pass.
+- DOM detection relies on source→sink pairs inside inline `<script>` by default.
+  `--external-js` adds up to four same-origin bundles per page (1.5 MB each).
+  `--spa` executes pages but does not analyse external bundle text. The browser
+  budget renders 20 pages per DOM pass.
 - `--js` reads URLs written as text inside scripts (inline script + same-origin
   external files). If the URL is built from variables (`'/api/' + id`) it is not
   found — that is where `--spa` comes in and catches it from the actual request.
-- `--spa`: up to 6 pages, 1.8 s wait for late requests, and it captures GET query
-  only (not XHR POST bodies). Requires Chromium; skipped with `--no-browser`.
+- `--spa`: up to 6 pages, 1.8 s wait for late requests, captures XHR/fetch POST
+  bodies up to 200 KB. Multipart POST bodies are skipped. Requires Chromium;
+  skipped with `--no-browser`.
 - `--openapi`: JSON only (export YAML to JSON), reads `servers[0]` and `paths`,
-  does not inject `{param}` inside the path, capped at 80 points and 6 fields per operation.
+  does not inject `{param}` inside the path, capped at 80 points and 6 fields per
+  operation. JSON bodies are flattened to scalar leaves; form/multipart bodies
+  remain top-level.
+- `--har`/`--request`: same-origin session material only; cookies and headers are
+  static from the file. A rotating CSRF token or short-lived session needs a fresh
+  capture/proxy. Imported values are not printed to the console.
+- Nested JSON is bounded at 24 levels; a leaf path is sent by rebuilding the
+  original template. In a raw body, the first `*` is the injection marker.
+- `--external-js` reads same-origin scripts only; cross-origin CDN bundles are
+  skipped. It is a source/sink scan, not a full JavaScript parser.
 - `--params` tests the target URL itself, not every crawled page.
 - `--second-order` tries one payload (`sv1'`) and up to 6 forms and 6 pages;
   fields filtered on input will not surface.
@@ -751,7 +839,7 @@ note    database error surfaced (MySQL) - error based injection
   SSRF, Stored, DOM and UNION need a browser or a full extraction, so they are
   skipped. The latest session for the same `-u` is the reference.
 - `--db` has no automatic pruning; delete the file or archive old sessions manually.
-- `--resume` and the async engine (`httpx`) are deferred to 1.3.0. Curl
+- `--resume` and the async engine (`httpx`) are deferred to 1.4.0. Curl
   reproduction is included since 1.2.0.
 
 ---
@@ -762,7 +850,7 @@ MIT — see `LICENSE`.
 
 ## Version
 
-`1.2.1` — current public release. Security and correctness hotfix on top of the
-1.2.0 accuracy work: TLS flag mapping, same-origin form actions, thread-local
-HTTP sessions, and duplicate-parameter SQLi baselines. Change details in
-`CHANGELOG.md`.
+`1.3.0` — current public release. Real-application inputs: HAR/raw HTTP request
+import, nested JSON and raw bodies, XHR/fetch POST capture, external same-origin
+JavaScript analysis, nested OpenAPI bodies, and a Playwright CI job. Reflection
+alone remains `MEDIUM`. Change details in `CHANGELOG.md`.

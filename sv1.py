@@ -22,7 +22,7 @@ if sys.version_info < (3, 10):
     sys.stderr.write("SV1 needs Python 3.10 or newer\n")
     raise SystemExit(2)
 
-from sv1lib import banner, blind, config, crawl, domxss, hidden, jsparse, net, oob, openapi, report, spa, sqli, ssrf
+from sv1lib import banner, blind, config, crawl, domxss, hidden, imports as imports_mod, jsparse, net, oob, openapi, report, spa, sqli, ssrf
 from sv1lib import browser as browser_mod
 from sv1lib import history as history_mod
 from sv1lib import policy, sarif, scope as scope_mod
@@ -91,8 +91,15 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--headers", action="store_true", help="inject into x-forwarded-for, referer, user-agent")
     parser.add_argument("--deep", action="store_true", help="add more header candidates")
     parser.add_argument("--cookies", action="store_true", help="inject into the cookie values you passed")
-    parser.add_argument("--json", default="", help="json endpoint to test (POST)")
+    parser.add_argument("--json", default="", help="json endpoint to test (default POST)")
     parser.add_argument("--json-data", default='{"id": "1", "q": "test"}', help="json body template")
+    parser.add_argument("--data", default="", help="raw body template; use * as the injection marker")
+    parser.add_argument("--method", default="POST", help="method for --data/--json (default POST)")
+    parser.add_argument("--content-type", default="", help="content type for --data/--json")
+    parser.add_argument("--har", default="", metavar="FILE",
+                        help="import cookies, headers and points from a HAR file")
+    parser.add_argument("--request", default="", metavar="FILE",
+                        help="import one raw HTTP request file")
     parser.add_argument("--params", action="store_true", help="discover hidden query parameters")
     parser.add_argument("--js", action="store_true", help="mine endpoints from javascript")
     parser.add_argument("--second-order", action="store_true",
@@ -101,6 +108,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
                         help="extract current user, database and table names via union")
     parser.add_argument("--spa", action="store_true",
                         help="render pages in chromium and capture xhr endpoints")
+    parser.add_argument("--external-js", action="store_true",
+                        help="analyse same-origin external scripts for DOM XSS")
     parser.add_argument("--openapi", default="", help="openapi json spec (url or file)")
     parser.add_argument("--blind", action="store_true",
                         help="seed blind xss with callbacks (writes to the target)")
@@ -169,10 +178,11 @@ def select_scanners(args: argparse.Namespace) -> list[str]:
     return chosen
 
 
-def make_browser(args: argparse.Namespace, target: str):
+def make_browser(args: argparse.Namespace, target: str,
+                 headers: dict | None = None, cookies: dict | None = None):
     return browser_mod.Browser(
-        headers=parse_headers(args.header),
-        cookies=parse_cookies(args.cookie),
+        headers=headers if headers is not None else parse_headers(args.header),
+        cookies=cookies if cookies is not None else parse_cookies(args.cookie),
         proxy=args.proxy,
         ignore_https=args.insecure,
         base_url=target,
@@ -201,20 +211,54 @@ def merge_points(points: list, extra: list) -> None:
 
 
 def extra_points(args: argparse.Namespace, target: str, cookies: dict) -> list:
-    """Header, cookie and json points are opt in: they widen the attack surface."""
+    """Header, cookie, JSON and raw body points are opt in."""
     extra = []
     if args.headers:
         extra.extend(crawl.header_points(target, deep=args.deep))
     if args.cookies and cookies:
         extra.extend(crawl.cookie_points(target, cookies))
+
+    method = (args.method or "POST").upper()
+    content_type = args.content_type or "application/json"
     if args.json:
         try:
             data = json.loads(args.json_data)
         except json.JSONDecodeError:
-            data = {}
             report.warn("--json-data is not valid json - json point skipped")
-        if isinstance(data, dict) and data:
-            extra.extend(crawl.json_points(args.json, data))
+        else:
+            points = crawl.json_points(
+                args.json, data, method=method, content_type=content_type
+            )
+            if points:
+                extra.extend(points)
+            else:
+                report.warn("--json-data has no scalar leaves - json point skipped")
+
+    if args.data:
+        raw_type = args.content_type
+        stripped = args.data.lstrip()
+        if "json" in raw_type.lower() or stripped.startswith(("{", "[")):
+            try:
+                data = json.loads(args.data)
+            except json.JSONDecodeError as exc:
+                report.warn(f"--data is not valid json - {exc.msg}")
+            else:
+                points = crawl.json_points(
+                    target, data, method=method,
+                    content_type=raw_type or "application/json",
+                )
+                if points:
+                    extra.extend(points)
+                else:
+                    report.warn("--data has no scalar leaves - raw point skipped")
+        else:
+            points = crawl.raw_point(
+                target, args.data, method=method, content_type=raw_type
+            )
+            if points:
+                extra.extend(points)
+            else:
+                report.warn("--data needs a * marker when it is not JSON")
     return extra
 
 
@@ -292,6 +336,17 @@ def prove_xss(engine, pairs: list, args: argparse.Namespace) -> None:
                 note = f"chromium did not execute {len(candidates)} payload(s)"
             finding.detail = f"{finding.detail} | {note}".strip(" |")
             report.warn(f"{label}  not executed")
+
+
+def demote_unproven_xss(pairs: list, reason: str) -> None:
+    """Reflection without a browser is not execution proof."""
+    for finding, _point in pairs:
+        if finding.kind != "XSS" or finding.technique == "reflection-encoded":
+            continue
+        finding.severity = "MEDIUM"
+        finding.confidence = "MEDIUM"
+        note = f"reflection only: {reason}"
+        finding.detail = f"{finding.detail} | {note}".strip(" |")
 
 
 def export_reports(findings: list, stats, meta: dict, args: argparse.Namespace) -> int:
@@ -471,11 +526,42 @@ def run(args: argparse.Namespace) -> int:
             report.bad(f"history - {exc}")
             return 2
 
+    imported: list = []
+    import_notes: list[str] = []
+    if args.har:
+        requests_found, note = imports_mod.load_har(args.har)
+        if not requests_found and note.startswith(("cannot", "invalid", "HAR")):
+            report.bad(note)
+            if history is not None:
+                history.close()
+            return 2
+        imported.extend(requests_found)
+        import_notes.append(note)
+    if args.request:
+        requests_found, note = imports_mod.load_request(args.request, target)
+        if not requests_found:
+            report.bad(note)
+            if history is not None:
+                history.close()
+            return 2
+        imported.extend(requests_found)
+        import_notes.append(note)
+
+    import_headers, import_cookies = imports_mod.session(imported, target)
+    session_headers = dict(import_headers)
+    session_headers.update(parse_headers(args.header))
+    session_cookies = dict(import_cookies)
+    session_cookies.update(parse_cookies(args.cookie))
+    if imported:
+        report.info(f"import  {len(imported)} request(s) - {', '.join(import_notes)}")
+        if not import_headers and not import_cookies:
+            report.warn("import  no same-origin session material found")
+
     client = net.Client(
         timeout=args.timeout,
         rps=args.rps,
-        headers=parse_headers(args.header),
-        cookies=parse_cookies(args.cookie),
+        headers=session_headers,
+        cookies=session_cookies,
         verify=not args.insecure,
         proxy=args.proxy,
     )
@@ -525,6 +611,8 @@ def run(args: argparse.Namespace) -> int:
 
     stats.pages = len(pages)
     use_browser = bool(args.browser) or not args.no_browser
+    if args.external_js and not use_browser:
+        report.warn("external-js needs chromium - execution proof disabled")
     spa_points: list = []
     if args.spa:
         if not use_browser:
@@ -532,7 +620,9 @@ def run(args: argparse.Namespace) -> int:
         elif not browser_mod.available():
             report.warn("spa skipped - chromium not installed")
         else:
-            explorer = make_browser(args, target)
+            explorer = make_browser(
+                args, target, headers=session_headers, cookies=session_cookies
+            )
             spinner = report.Spinner("rendering pages").start()
             started = explorer.start()
             spinner.stop()
@@ -558,8 +648,16 @@ def run(args: argparse.Namespace) -> int:
     stats.pages = len(pages)
     points = crawl.collect_points(pages)
     merge_points(points, spa_points)
-    extra = extra_points(args, target, parse_cookies(args.cookie))
+    extra = extra_points(args, target, session_cookies)
     merge_points(points, extra)
+    imported_points = imports_mod.points(
+        imported,
+        target,
+        allows=scope_rules.allows if scope_rules is not None else None,
+    )
+    if imported_points:
+        report.info(f"import  {len(imported_points)} point(s) from HAR/request")
+        merge_points(points, imported_points)
     if args.params:
         hidden_points, note = hidden.discover(client, target)
         report.info(f"params  {note}")
@@ -689,7 +787,9 @@ def run(args: argparse.Namespace) -> int:
                     report.info("no callback from url-like parameters")
 
         if use_browser and (pairs or pages):
-            engine = make_browser(args, target)
+            engine = make_browser(
+                args, target, headers=session_headers, cookies=session_cookies
+            )
             spinner = report.Spinner("launching chromium").start()
             started = engine.start()
             spinner.stop()
@@ -704,7 +804,14 @@ def run(args: argparse.Namespace) -> int:
                 prove_xss(engine, pairs, args)
 
                 report.section("dom")
-                dom_findings = domxss.run(engine, pages, args.artifacts)
+                dom_findings = domxss.run(
+                    engine,
+                    pages,
+                    args.artifacts,
+                    client=client,
+                    external_js=args.external_js,
+                    allows=scope_rules.allows if scope_rules is not None else None,
+                )
                 for finding in dom_findings:
                     findings.append(finding)
                     stats.verified += 1
@@ -784,6 +891,9 @@ def run(args: argparse.Namespace) -> int:
         if callback is not None:
             callback.close()
 
+    if "xss" in scanners and engine is None:
+        demote_unproven_xss(pairs, "chromium unavailable")
+
     client.close()
     stats.requests = client.requests_sent
     stats.errors = client.errors + failures
@@ -802,6 +912,11 @@ def run(args: argparse.Namespace) -> int:
         "stored": bool(args.stored),
         "hidden": bool(args.params),
         "js": bool(args.js),
+        "external_js": bool(args.external_js),
+        "har": bool(args.har),
+        "request": bool(args.request),
+        "data": bool(args.data),
+        "json": bool(args.json),
         "second_order": bool(args.second_order),
         "dump": bool(args.dump),
         "spa": bool(args.spa),

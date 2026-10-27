@@ -5,7 +5,7 @@ from __future__ import annotations
 # --- version ---------------------------------------------------------------
 TOOL_NAME = "SV1"
 TOOL_AUTHOR = "ee.zvz"
-TOOL_VERSION = "1.2.1"
+TOOL_VERSION = "1.3.0"
 
 # --- network ---------------------------------------------------------------
 DEFAULT_TIMEOUT = 12.0          # seconds, per request
@@ -23,7 +23,7 @@ RATE_MAX_DEFER = 30.0           # cap on Retry-After, seconds
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 SV1/1.2.1"
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 SV1/1.3.0"
 )
 
 DEFAULT_HEADERS = {
@@ -117,6 +117,17 @@ SPA_MAX_PAGES = 6               # crawled pages rendered in chromium
 SPA_MAX_POINTS = 40             # endpoints captured from xhr/fetch
 SPA_MAX_NEW_PAGES = 4           # anchors that only exist after rendering
 SPA_WAIT_MS = 1800              # wait for late xhr after domcontentloaded
+SPA_MAX_BODY_BYTES = 200_000    # largest xhr/fetch body kept as a template
+
+# --- imported sessions -----------------------------------------------------
+HAR_MAX_BYTES = 20_000_000      # refuse oversized HAR files
+HAR_MAX_ENTRIES = 2000          # requests read from one HAR file
+HAR_MAX_POINTS = 160            # points imported from one HAR/raw request
+REQUEST_MAX_BYTES = 2_000_000   # raw HTTP request file cap
+
+# --- external javascript ---------------------------------------------------
+DOM_EXTERNAL_SCRIPTS = 4        # same-origin bundles read per page
+DOM_EXTERNAL_BYTES = 1_500_000  # largest bundle kept for source/sink analysis
 
 # --- openapi ---------------------------------------------------------------
 OPENAPI_MAX_BYTES = 2_000_000   # spec read cap

@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from html import escape
 
 from . import config, net
-from .models import Explore
+from .models import CapturedRequest, Explore
 
 INIT_SCRIPT = """
 (() => {
@@ -338,11 +338,33 @@ class Browser:
             return Explore(url=url, error=self.reason or "browser disabled")
         page = self._context.new_page()
         xhr: list[str] = []
+        captured: list[CapturedRequest] = []
 
         def note(request) -> None:
             try:
-                if request.resource_type in ("xhr", "fetch"):
-                    xhr.append(request.url)
+                if request.resource_type not in ("xhr", "fetch"):
+                    return
+                url = request.url
+                xhr.append(url)
+                method = str(getattr(request, "method", "GET") or "GET").upper()
+                try:
+                    body = str(getattr(request, "post_data", "") or "")
+                except Exception:
+                    body = ""
+                headers = getattr(request, "headers", {}) or {}
+                content_type = ""
+                for key, value in headers.items():
+                    if str(key).lower() == "content-type":
+                        content_type = str(value)
+                        break
+                captured.append(
+                    CapturedRequest(
+                        url=url,
+                        method=method,
+                        body=body if len(body) <= config.SPA_MAX_BODY_BYTES else "",
+                        content_type=content_type,
+                    )
+                )
             except Exception:
                 pass
 
@@ -368,7 +390,13 @@ class Browser:
             page.close()
         except Exception:
             pass
-        return Explore(url=final_url, xhr=xhr, anchors=anchors, error=error)
+        return Explore(
+            url=final_url,
+            xhr=xhr,
+            anchors=anchors,
+            error=error,
+            requests=captured,
+        )
 
     def visit_point(
         self,
@@ -400,14 +428,24 @@ class Browser:
         page = self._context.new_page()
         console: list[str] = []
         page.on("console", lambda message: console.append(f"{message.type}: {message.text}"))
-        inputs = "".join(
-            f'<input type="hidden" name="{escape(name)}" value="{escape(str(value))}">'
-            for name, value in mapping
-        )
-        form = (
-            f'<form method="POST" action="{escape(point.url)}">{inputs}</form>'
-            "<script>document.forms[0].submit();</script>"
-        )
+        source = getattr(point, "source", "query")
+        if source == "query":
+            query = urllib.parse.urlencode(mapping)
+            separator = "&" if "?" in point.url else "?"
+            action = f"{point.url}{separator}{query}"
+            form = (
+                f'<form method="POST" action="{escape(action)}"></form>'
+                "<script>document.forms[0].submit();</script>"
+            )
+        else:
+            inputs = "".join(
+                f'<input type="hidden" name="{escape(name)}" value="{escape(str(value))}">'
+                for name, value in mapping
+            )
+            form = (
+                f'<form method="POST" action="{escape(point.url)}">{inputs}</form>'
+                "<script>document.forms[0].submit();</script>"
+            )
         error = ""
         try:
             page.set_content(form)

@@ -13,12 +13,15 @@ import json
 import re
 import urllib.parse
 from dataclasses import dataclass, field
+from html import unescape
 
 from . import browser as browser_mod
-from . import config
+from . import config, net
 from .models import Finding, Page
 
 SCRIPT_RE = re.compile(r"<script\b[^>]*>(.*?)</script>", re.S | re.I)
+SCRIPT_SRC_RE = re.compile(r"""<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["']""", re.I)
+SKIP_PREFIX = ("data:", "javascript:", "mailto:", "tel:", "blob:", "#")
 
 SOURCES = (
     ("location.hash", "location.hash"),
@@ -63,11 +66,19 @@ STORAGE_KEYS = ("badValue", "payload", "data", "name", "value", "q")
 
 
 class Candidate:
-    def __init__(self, source: str, sink: str, distance: int, snippet: str) -> None:
+    def __init__(
+        self,
+        source: str,
+        sink: str,
+        distance: int,
+        snippet: str,
+        origin: str = "inline",
+    ) -> None:
         self.source = source
         self.sink = sink
         self.distance = distance
         self.snippet = snippet
+        self.origin = origin
 
     def key(self) -> tuple:
         return (self.source, self.sink)
@@ -82,10 +93,19 @@ class Vector:
     messages: tuple[str, ...] = field(default_factory=tuple)
 
 
-def analyze(page: Page) -> list[Candidate]:
+def analyze(
+    page: Page,
+    external: list[tuple[str, str]] | None = None,
+) -> list[Candidate]:
+    sources = [
+        (match.group(1), "inline")
+        for match in SCRIPT_RE.finditer(page.html)
+        if match.group(1).strip()
+    ]
+    if external:
+        sources.extend(external)
     candidates: list[Candidate] = []
-    for match in SCRIPT_RE.finditer(page.html):
-        body = match.group(1)
+    for body, origin in sources:
         lowered = body.lower()
         for source_key, source_name in SOURCES:
             start = lowered.find(source_key)
@@ -100,10 +120,45 @@ def analyze(page: Page) -> list[Candidate]:
                     continue
                 snippet = " ".join(body[max(0, start - 20): position + 60].split())
                 candidates.append(
-                    Candidate(source_name, sink_name, distance, snippet[:MAX_SNIPPET])
+                    Candidate(
+                        source_name,
+                        sink_name,
+                        distance,
+                        snippet[:MAX_SNIPPET],
+                        origin,
+                    )
                 )
                 break
     return _unique(candidates)
+
+
+def external_sources(client, page: Page, allows=None) -> list[tuple[str, str]]:
+    """Read same-origin `<script src>` bodies for source/sink analysis."""
+    if client is None:
+        return []
+    bodies: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    used = 0
+    for match in SCRIPT_SRC_RE.finditer(page.html):
+        if used >= config.DOM_EXTERNAL_SCRIPTS:
+            break
+        src = unescape(match.group(1).strip())
+        if not src or src.lower().startswith(SKIP_PREFIX):
+            continue
+        url = urllib.parse.urljoin(page.url, src)
+        if not net.same_origin(url, page.url) or url in seen:
+            continue
+        if allows is not None and not allows(url):
+            continue
+        seen.add(url)
+        used += 1
+        response = client.fetch(url)
+        if not response.ok:
+            continue
+        if len(response.text) > config.DOM_EXTERNAL_BYTES:
+            continue
+        bodies.append((response.text, url))
+    return bodies
 
 
 def _unique(candidates: list[Candidate]) -> list[Candidate]:
@@ -223,13 +278,21 @@ def _vectors(candidate: Candidate, page_url: str, token: str) -> list[Vector]:
     return vectors[: config.DOM_MAX_CANDIDATES * 6]
 
 
-def run(engine: browser_mod.Browser, pages: list[Page], artifacts: str) -> list[Finding]:
+def run(
+    engine: browser_mod.Browser,
+    pages: list[Page],
+    artifacts: str,
+    client=None,
+    external_js: bool = False,
+    allows=None,
+) -> list[Finding]:
     if not engine.enabled:
         return []
 
     findings: list[Finding] = []
     for page in pages[: config.BROWSER_MAX_PAGES]:
-        candidates = analyze(page)
+        external = external_sources(client, page, allows=allows) if external_js else []
+        candidates = analyze(page, external)
         if not candidates:
             continue
         for index, candidate in enumerate(candidates):
@@ -266,7 +329,11 @@ def run(engine: browser_mod.Browser, pages: list[Page], artifacts: str) -> list[
                     confidence="CONFIRMED",
                     evidence=f"{candidate.source} -> {candidate.sink}: {proof}",
                     technique="dom",
-                    detail=f"client side sink: {candidate.snippet}",
+                    detail=(
+                        f"client side sink: {candidate.snippet}"
+                        + (f" | script: {candidate.origin}"
+                           if candidate.origin != "inline" else "")
+                    ),
                     artifact=shot,
                 )
             )

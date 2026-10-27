@@ -1,13 +1,14 @@
-# SV1 1.2.1 — real-world validation
+# SV1 1.3.0 — real-world validation
 
 Date: 2026-10-27
-Build: `1.2.1`
+Build: `1.3.0`
 Platform: Windows 11, Python 3.14.6, Playwright Chromium (headless)
 
 This document records what SV1 actually found and proved outside the local lab.
-The reflected Firing Range run and the local regression were repeated on 1.2.1
-with replay enabled; the DOM and Altoro runs remain from 1.2.0, which shares the
-same detection engine. The targets are public, intentionally vulnerable demo applications:
+The reflected Firing Range run and the Altoro run remain from 1.2.1/1.2.0; the
+detection engine is shared. Release 1.3.0 adds focused local input-path evidence
+(HAR, nested JSON, XHR POST, external JavaScript) and a fresh full lab run. The
+public targets are intentionally vulnerable demo applications:
 
 - **Google Firing Range** (`public-firing-range.appspot.com`) — reflected and DOM
   XSS test corpus.
@@ -21,10 +22,83 @@ Raw evidence:
 - [Firing Range DOM JSON](evidence/firing-range-dom.json)
 - [Altoro search JSON](evidence/altoro-search.json)
 - [Local lab JSON](evidence/local-lab.json) and [SARIF](evidence/local-lab.sarif)
+- [Nested JSON evidence](evidence/local-nested-json.json)
+- [XHR POST evidence](evidence/local-xhr-post.json)
+- [External JS evidence](evidence/local-external-js.json)
+- [Local HAR import evidence](evidence/local-har.json) and [HAR fixture](evidence/local-nested.har)
+- [Public HAR import evidence](evidence/firing-range-har.json) and [HAR fixture](evidence/firing-range-har.har)
 
 ---
 
-## 1. Firing Range — reflected XSS
+## 0. 1.3.0 input-path regression (local lab)
+
+The local lab is the controlled target. Each focused run kept replay enabled
+unless noted, so a reflection is re-sent and the finding is removed if it does
+not reproduce.
+
+### External JavaScript
+
+```powershell
+python sv1.py -u http://127.0.0.1:8099/external `
+  --external-js --xss --no-banner `
+  -o docs/evidence/local-external-js.json
+```
+
+`/external.js` contains `location.hash → innerHTML`. Chromium executed the
+marker; the result is one `HIGH` + `CONFIRMED` DOM finding. No query/form points
+exist on this page, so it is the external source/sink path that supplies the
+finding. Stats: 1 page, 0 points, 2 requests, 0 errors, 1.58 s.
+
+### XHR/fetch POST capture
+
+```powershell
+python sv1.py -u http://127.0.0.1:8099/xhr-post `
+  --spa --xss --no-banner `
+  -o docs/evidence/local-xhr-post.json
+```
+
+The page sends `{"user":{"name":"hello"},"q":"hello"}` to `/api/xhr` after load.
+`--spa` captured the POST method, body and content type; `user.name` and `q`
+became points. The server reflects `user.name` into HTML, but there is no
+browser execution path for a JSON POST endpoint, so the finding is `MEDIUM`
+(reflection only), not inflated. Stats: 1 page, 2 points, 14 requests, 0 errors,
+4.27 s.
+
+### Nested JSON and HAR
+
+The HAR fixture (`docs/evidence/local-nested.har`) records a same-origin POST
+with a nested JSON body. It is read once; headers/cookies are not printed.
+
+```powershell
+python sv1.py -u http://127.0.0.1:8099/api/nested `
+  --har docs/evidence/local-nested.har --xss --no-browser --no-banner `
+  -o docs/evidence/local-har.json
+```
+
+The imported body is flattened to `user.name` and `q`; the nested leaf is sent
+by rebuilding the original object, not by flattening the wire body. The
+reflection is `MEDIUM` because the run has no browser. Stats: 1 page, 2 points,
+14 requests, 0 errors, 1.64 s. The `--json` variant produced the same point and
+the same `MEDIUM` result ([evidence](evidence/local-nested-json.json)).
+
+### Public HAR import (Firing Range)
+
+```powershell
+python sv1.py -u "https://public-firing-range.appspot.com/reflected/parameter/attribute_name?q=test" `
+  --har docs/evidence/firing-range-har.har --xss --threads 2 --rps 4 `
+  --no-banner -o docs/evidence/firing-range-har.json
+```
+
+The HAR supplies the request, query point, `Accept` header and browser session.
+The run produced one `HIGH` + `CONFIRMED` reflected XSS finding and replayed it
+(`stats.verified: 1`). Stats: 1 page, 1 point, 12 requests, 0 errors, 17.9 s.
+This is the public-target check for the import path; the nested-body features
+were checked on the controlled local lab because no public demo exposes a
+matching authenticated JSON request.
+
+---
+
+## 1. Firing Range — reflected XSS (1.2.1 evidence)
 
 ### Command
 
@@ -101,7 +175,7 @@ replay pass re-sent all 42 findings and reproduced all 42.
 
 ---
 
-## 2. Firing Range — DOM XSS
+## 2. Firing Range — DOM XSS (1.2.0 evidence)
 
 ### Command
 
@@ -144,7 +218,7 @@ claim that every page in the corpus is vulnerable.
 
 ---
 
-## 3. Altoro Mutual — reflected XSS
+## 3. Altoro Mutual — reflected XSS (1.2.0 evidence)
 
 ### Command
 
@@ -171,10 +245,11 @@ The JSON evidence is [`evidence/altoro-search.json`](evidence/altoro-search.json
 
 ---
 
-## 4. Local lab regression
+## 4. Local lab regression (1.3.0)
 
 The lab is the controlled acceptance target. It contains reflected, stored, DOM,
-blind, second-order, SQLi and SSRF paths.
+external-script DOM, blind, second-order, SQLi and SSRF paths, plus a JSON POST
+XHR path.
 
 ### Command
 
@@ -185,36 +260,44 @@ python lab\server.py 8099
 
 python sv1.py -u http://127.0.0.1:8099/ `
   --crawl --stored --js --second-order --dump `
-  --spa --openapi http://127.0.0.1:8099/openapi.json `
+  --spa --external-js --openapi http://127.0.0.1:8099/openapi.json `
   --blind --blind-visit http://127.0.0.1:8099/blind-admin --ssrf `
-  --scope scope-lab.txt --db lab-1.2.1.db --diff `
+  --scope scope-lab.txt --db lab-1.3.0.db --diff `
   --sarif docs/evidence/local-lab.sarif --fail-on high `
-  --html lab-1.2.1.html --no-banner `
-  -o docs/evidence/local-lab.json --artifacts lab-artifacts-1.2.1
+  --html lab-1.3.0.html --no-banner `
+  -o docs/evidence/local-lab.json --artifacts lab-artifacts-1.3.0
 ```
 
 ### Result
 
 | Metric | Value |
 |---|---:|
-| Findings | 27 |
-| Replayed | 27 |
+| Findings | 31 |
+| Replayed | 31 |
 | Unstable | 0 |
-| `CRITICAL` | 9 |
-| `HIGH` | 16 |
-| `MEDIUM` | 2 |
-| Pages | 19 |
-| Injection points | 25 |
-| Requests | 853 |
+| `CRITICAL` | 10 |
+| `HIGH` | 18 |
+| `MEDIUM` | 3 |
+| Pages | 21 |
+| Injection points | 29 |
+| Requests | 966 |
 | Errors | 0 |
-| Duration | 163.4 s |
+| Duration | 183.8 s |
 
-Breakdown: 14 XSS, 12 SQLi, 1 SSRF. The 1.2.1 run still reports 27/27 and 0
-unstable after the thread-local HTTP session and same-origin form changes. The
-request-fidelity fix is visible in the multi-parameter results: `/api/fetch`,
-`/api/spa` and `/dynamic` now inject the second parameter (`name`) instead of
-leaving it at its original value. Those three reflected XSS findings were missing
-from the first 1.2.0 lab run and returned after the fix.
+Breakdown: 17 XSS, 13 SQLi, 1 SSRF. The run is `stats.verified: 31`,
+`stats.unverified: 0`, so the release gate (`verified == findings`) passes. The
+new paths are visible in the same result: `/external` is a `HIGH` external-script
+DOM finding, and `/api/xhr` is a `MEDIUM` reflected JSON POST finding captured
+from the SPA pass. The multi-parameter behavior is unchanged: `/api/fetch`,
+`/api/spa` and `/dynamic` inject the second parameter (`name`), not only the
+first.
+
+The lab keeps its stored state in memory. Restart `lab\server.py` before a full
+acceptance run. A second full run without a restart starts with the second-order
+payload already in `/profile`; that page then renders the error state and no
+longer exposes the form, so the second-order finding is absent (30/31) even
+though every finding it did produce replayed. The 31/31 result is from a fresh
+server process.
 
 ---
 
@@ -229,7 +312,11 @@ Proved:
 - Child frames are read, so `iframe srcdoc` and injected `srcdoc` are proved,
   not guessed.
 - Duplicate and multi-parameter requests keep every value in order.
-- The local lab result is reproducible after a fresh server start: 27/27.
+- The local lab result is reproducible after a fresh server start: 31/31.
+- HAR/raw request import, nested JSON rebuilding and XHR POST capture retain the
+  actual body and method; the focused evidence files record 2 points each.
+- External same-origin JavaScript is read and its source/sink path is proved by
+  Chromium execution, not by string matching alone.
 
 Not proved:
 
@@ -237,6 +324,9 @@ Not proved:
 - Every page in Firing Range was executed; the DOM pass renders 20 pages because
   of the browser budget.
 - CSS-only injection or a removed Flash plugin is XSS. Those stay `MEDIUM`.
+- JSON/XHR POST reflections have no general browser execution path here; they
+  stay `MEDIUM` until a real execution path proves them.
+- HAR sessions are static captures; login/CSRF refresh is not automated.
 - The Altoro result is a single reflected parameter, not a full assessment.
 
 The public demos can change without notice. The JSON files under `evidence/`
