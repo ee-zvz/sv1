@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 from sv1lib import blind, union
 from sv1lib.models import Form, FormField, Page, Response
+from sv1lib.oob import Hit
 
 
 class FakeUnionClient:
@@ -148,6 +149,67 @@ class BlindTests(unittest.TestCase):
         findings, note = blind.run(None, None, [], None, [], 0)
         self.assertEqual(findings, [])
         self.assertEqual(note, "no post forms to seed")
+
+    def test_script_fetch_is_medium_and_never_confirmed(self) -> None:
+        callback = FakeBlindCallback("script")
+        client = FakeBlindClient()
+        page = Page(
+            "http://target/page",
+            200,
+            "",
+            forms=[Form("/post", "post", [FormField("q", "", "text")])],
+        )
+        findings, note = blind.run(client, None, [page], callback, [], 0)
+        self.assertEqual(len(findings), 1, note)
+        self.assertEqual(findings[0].severity, "MEDIUM")
+        self.assertEqual(findings[0].confidence, "MEDIUM")
+        self.assertIn("execution not proven", findings[0].evidence)
+
+    def test_execution_hit_is_high_and_confirmed(self) -> None:
+        callback = FakeBlindCallback("exec")
+        client = FakeBlindClient()
+        page = Page(
+            "http://target/page",
+            200,
+            "",
+            forms=[Form("/post", "post", [FormField("q", "", "text")])],
+        )
+        findings, note = blind.run(client, None, [page], callback, [], 0)
+        self.assertEqual(len(findings), 1, note)
+        self.assertEqual(findings[0].severity, "HIGH")
+        self.assertEqual(findings[0].confidence, "CONFIRMED")
+
+
+class FakeBlindCallback:
+    def __init__(self, kind: str) -> None:
+        self.kind = kind
+        self.tokens: list[str] = []
+
+    def register(self, _label: str, _kind: str) -> str:
+        token = f"token{len(self.tokens):02d}"
+        self.tokens.append(token)
+        return token
+
+    def url_for(self, token: str) -> str:
+        return f"http://callback.test/t/{token}"
+
+    def settle(self, *_args, **_kwargs) -> None:
+        return
+
+    def hits_for(self, token: str) -> list[Hit]:
+        return [
+            Hit(
+                token=token,
+                kind=self.kind,
+                path=f"/{self.kind}/{token}",
+                query="",
+                method="GET",
+                remote="127.0.0.1",
+                user_agent="test",
+                referer="http://target/page",
+                at=0.0,
+            )
+        ]
 
 
 if __name__ == "__main__":

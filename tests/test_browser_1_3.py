@@ -41,7 +41,7 @@ class ResourceHandler(BaseHTTPRequestHandler):
         self.server.records.append(
             (self.path, {name.lower(): value for name, value in self.headers.items()})
         )
-        if self.path == "/":
+        if self.path in ("/", "/cookie"):
             body = (
                 "<html><body>target"
                 f"<img src='http://127.0.0.1:{self.server.other_port}/pixel'>"
@@ -54,6 +54,8 @@ class ResourceHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
+        if self.path == "/cookie":
+            self.send_header("Set-Cookie", "sid=SERVER-SET; Path=/; HttpOnly")
         self.end_headers()
         self.wfile.write(body)
 
@@ -173,6 +175,28 @@ class BrowserCaptureTests(unittest.TestCase):
         self.assertTrue(target.records)
         _path, headers = target.records[0]
         self.assertIn("sid=SECRET", headers.get("cookie", ""))
+        self.assertEqual(other.records, [])
+
+    def test_server_set_cookie_cannot_reach_another_port(self) -> None:
+        target = start_resource_server()
+        other = start_resource_server()
+        self.addCleanup(stop_resource_server, target)
+        self.addCleanup(stop_resource_server, other)
+        target.other_port = int(other.server_address[1])
+        target_url = f"http://127.0.0.1:{target.server_address[1]}"
+        engine = browser_mod.Browser(base_url=target_url, timeout_ms=8000)
+        try:
+            self.assertTrue(engine.start(), engine.reason)
+            result = engine.visit(target_url + "/cookie")
+            cookies = engine._context.cookies(target_url)
+        finally:
+            engine.close()
+        self.assertFalse(result.error)
+        self.assertTrue(target.records)
+        self.assertTrue(any(
+            cookie.get("name") == "sid" and cookie.get("value") == "SERVER-SET"
+            for cookie in cookies
+        ))
         self.assertEqual(other.records, [])
 
 

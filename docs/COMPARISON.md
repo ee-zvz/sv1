@@ -1,59 +1,104 @@
-# SV1 1.3.2 — external comparison
+# SV1 1.3.4 - before/after and external comparison
 
 Date: 2026-10-27
-Target: [`lab/real_sql.py`](../lab/real_sql.py), a local SQLite-backed target
-(`http://127.0.0.1:8100/`, 7 pages, 6 injection points)
-SV1: `1.3.2` · dalfox: `3.2.4` · sqlmap: `1.10.10.27#dev`
 
-This is not a scoreboard. Dalfox is an XSS scanner; sqlmap is a SQL injection
-engine; SV1 scans both classes and proves browser execution. The table keeps the
-scope difference visible instead of hiding it in a single number.
+This page fixes the comparison to one day and one target process. It is not a
+scoreboard. Dalfox is an XSS scanner; sqlmap is a SQL injection engine; SV1
+crawls, scans both classes, proves browser execution and also records
+reflection-only notes. The table keeps those scope differences visible.
 
-## Results
+The release gate is the 31-case local lab. The external comparison uses a
+separate SQLite target because the lab emulates SQL errors and is not a valid
+sqlmap benchmark. Public runs use Google Firing Range and Altoro Mutual, both
+intentionally vulnerable demos.
 
-Same target and same day, with a fresh scan session per tool. Dalfox scanned
-the four XSS URLs; sqlmap scanned the two SQLi URLs; SV1 crawled the whole
-target and scanned both classes.
+## 1. Same target, 1.3.3 vs 1.3.4
+
+Target: [`lab/real_sql.py`](../lab/real_sql.py), `http://127.0.0.1:8100/`,
+7 pages, 6 injection points, SQLite in memory. Same command, fresh process for
+each version.
+
+| Build | Findings | XSS confirmed | SQLi | Reflection-only `MEDIUM` | False positives | HTTP requests | Wall time |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| SV1 1.3.3 | 7 | **3** | **2** | 2 | 0 | 213 | 47.4 s |
+| SV1 1.3.4 | 7 | **3** | **2** | 2 | 0 | 221 | 49.0 s |
+
+Result: same seven findings, no lost detection and no new false positive. The
+1.3.4 pass sent 8 more requests and took 1.6 s longer because it measured a fresh
+clean baseline before replaying the SQLi evidence. That is the intended price of
+a stronger proof. Raw JSON:
+[`sv1-real-1.3.3.json`](evidence/sv1-real-1.3.3.json) and
+[`sv1-real-1.3.4.json`](evidence/sv1-real-1.3.4.json).
+
+Full-lab comparison on the same day:
+
+| Build | Verified | Confirmed | Replayed | Requests | Wall time | Errors |
+|---|---:|---:|---:|---:|---:|---:|
+| SV1 1.3.3 | 31/31 | 17 | 14 | 966 | 184.8 s | 0 |
+| SV1 1.3.4 | 31/31 | 17 | 14 | 1012 | 240.2 s | 0 |
+
+The 1.3.4 lab run adds baseline checks across 31 findings; it does not change
+the severity mix (10 `CRITICAL`, 18 `HIGH`, 3 `MEDIUM`). Evidence:
+[`local-lab-1.3.3.json`](evidence/local-lab-1.3.3.json) and
+[`local-lab-1.3.4.json`](evidence/local-lab-1.3.4.json).
+
+## 2. External tools, same SQLite target
+
+Same target process, same day, fresh session per tool. Dalfox and sqlmap were
+downloaded for this run; Dalfox 3.2.4 and sqlmap 1.10.10.27#dev are the exact
+versions below.
 
 | Tool | Scope | Confirmed XSS | Confirmed SQLi | Reflection-only | False positives | HTTP requests | Wall time |
 |---|---|---:|---:|---:|---:|---:|---:|
-| SV1 1.3.2 | crawl 7 pages, 6 points, XSS + SQLi + dump | **3** | **2** | 2 `MEDIUM` | 0 | 213 | 47.7 s |
+| SV1 1.3.4 | crawl 7 pages, 6 points, XSS + SQLi + dump | **3** | **2** | 2 `MEDIUM` | 0 | 221 | 49.0 s |
 | dalfox 3.2.4 | 4 XSS URLs, no mining | **3** | n/a | 0 | 0 | 598 | 29.9 s |
-| sqlmap 1.10.10.27#dev | 2 SQLi URLs, level 3 / risk 2 / BEUST | n/a | **2** | 0 | 0 | 119 | 9.7 s |
+| sqlmap 1.10.10.27#dev | 2 SQLi URLs, level 3 / risk 2 / BEUST | n/a | **2** | 0 | 0 | 107 | 9.4 s |
 
-Confirmed means the tool's own verification passed and the result reproduced.
-SV1's two `MEDIUM` rows are `/safe?q=` and `/item?id=` reflection-only notes; they
-are deliberately not counted as XSS. Dalfox reported no reflection-only rows on
-this target.
+Dalfox and sqlmap do their narrow jobs with fewer requests and less time. SV1
+finds the same five exploitable issues plus two deliberate reflection-only
+`MEDIUM` notes, and its XSS proof is an actual Chromium `alert`, not only a
+parsed sink. The comparison does not hide that cost.
 
-### What each tool found
+The Dalfox Windows archive was checked against the published SHA-256
+`28100d9355a1c767facd571a180d08b87d4de61167b3db99d56e4d8a6601d69a` before it
+was executed. sqlmap was a fresh shallow clone reporting `1.10.10.27#dev`.
 
-- **SV1:** `/search`, `/attr` and `/js` XSS at `HIGH` + `CONFIRMED` after Chromium
-  execution; `/item?id=` and `/user?name=` SQLi at `CRITICAL`; two additional
-  reflection-only `MEDIUM` notes. Zero unverified findings, zero request errors.
-- **dalfox:** exactly the three executable XSS endpoints, `type: V`; no false
-  positive on `/safe`. It returned `incomplete: false` when limited to the XSS
-  URLs.
-- **sqlmap:** both SQLi parameters, with boolean-based blind, error-based and
-  UNION techniques on each; back-end DBMS identified as SQLite.
+Raw evidence: [`dalfox-real-1.3.4.json`](evidence/dalfox-real-1.3.4.json),
+[`sqlmap-item-1.3.4.txt`](evidence/sqlmap-item-1.3.4.txt),
+[`sqlmap-user-1.3.4.txt`](evidence/sqlmap-user-1.3.4.txt).
 
-### Why the 31-case lab is not in this table
+## 3. Public intentionally vulnerable demos
 
-The main lab is a deterministic emulator: it answers specific SQL fragments
-instead of running a database. It is the right release gate for SV1 because all
-31 cases are replayable, but it is not a valid sqlmap benchmark. On that lab,
-dalfox finds 7 vulnerable XSS and 1 reflection-only row; sqlmap finds 0 because
-the emulator does not implement a real SQL engine. The SQLite target above
-removes that bias. SV1's 31/31 lab evidence remains in
-[`evidence/local-lab.json`](evidence/local-lab.json).
+The same URL was given to each XSS tool on 2026-10-27. No authenticated or
+third-party target was used.
 
-## Reproduce
+| Target | Tool | Finding | Requests | Wall time | Errors |
+|---|---|---|---:|---:|---:|
+| Firing Range reflected attribute | SV1 1.3.4 | 1 `HIGH` / `CONFIRMED` XSS | 12 | 18.8 s | 0 |
+| Firing Range reflected attribute | dalfox 3.2.4 | 1 high XSS | 26 | 6.2 s | 0 |
+| Altoro Mutual search | SV1 1.3.4 | 1 `HIGH` / `CONFIRMED` XSS | 35 | 46.5 s | 0 |
+| Altoro Mutual search | dalfox 3.2.4 | 1 high XSS | 23 | 12.0 s | 0 |
+
+SV1 evidence contains the executed marker:
+`executed in chromium: alert:sv10bf9a934` (Firing Range) and
+`executed in chromium: alert:sv1bcccfe46` (Altoro). Dalfox reports a parsed
+reflection / DOM marker. Both tools agree the input is exploitable.
+
+Altoro's certificate is expired. The public Altoro run therefore uses the
+explicit `--insecure` option; this is a property of the demo, not a TLS finding.
+Raw evidence:
+[`firing-range-1.3.4.json`](evidence/firing-range-1.3.4.json),
+[`altoro-1.3.4.json`](evidence/altoro-1.3.4.json),
+[`dalfox-firing-1.3.4.json`](evidence/dalfox-firing-1.3.4.json) and
+[`dalfox-altoro-1.3.4.json`](evidence/dalfox-altoro-1.3.4.json).
+
+## 4. Exact commands
 
 ```powershell
-# target
-python lab/real_sql.py 8100 requests.log
+# local SQLite target
+python lab/real_sql.py 8100
 
-# SV1
+# SV1 1.3.3 and 1.3.4 (run from the matching source tree)
 python sv1.py -u http://127.0.0.1:8100/ --crawl --pages 10 `
   --xss --sqli --dump --threads 2 --rps 5 --fail-on none --no-banner `
   -o sv1-real.json
@@ -71,31 +116,23 @@ dalfox scan `
 python sqlmap.py -u "http://127.0.0.1:8100/item?id=1" `
   --batch --flush-session --level=3 --risk=2 --threads=4 `
   --technique=BEUST --time-sec=1 --output-dir sqlmap-item
+
 python sqlmap.py -u "http://127.0.0.1:8100/user?name=alice" `
   --batch --flush-session --level=3 --risk=2 --threads=4 `
   --technique=BEUST --time-sec=1 --output-dir sqlmap-user
+
+# public demos
+python sv1.py -u "https://public-firing-range.appspot.com/reflected/parameter/attribute_name?q=test" `
+  --xss --browser --timeout 25 --rps 2 --fail-on none --no-banner -o firing.json
+
+python sv1.py -u "https://demo.testfire.net/search.jsp?query=test" `
+  --insecure --browser --timeout 25 --rps 2 --fail-on none --no-banner -o altoro.json
 ```
 
-Raw evidence: [`realapp-sv1.json`](evidence/realapp-sv1.json),
-[`realapp-dalfox.json`](evidence/realapp-dalfox.json),
-[`realapp-sqlmap-item.txt`](evidence/realapp-sqlmap-item.txt) and
-[`realapp-sqlmap-user.txt`](evidence/realapp-sqlmap-user.txt). The summary is
-[`comparison-2026-10-27.json`](evidence/comparison-2026-10-27.json).
+## الخلاصة
 
-## الخلاصة بالعربية
-
-في 27 أكتوبر 2026 شُغّلت الأدوات الثلاث على نفس الهدف المحلي (تطبيق SQLite
-حقيقي، 7 صفحات و6 نقاط حقن):
-
-- **SV1 1.3.2:** 5 ثغرات مؤكدة (3 XSS + 2 SQLi)، وملاحظتان انعكاسيتان
-  `MEDIUM`، و0 إيجابيات كاذبة، و213 طلبًا في 47.7 ثانية. أضاف إثبات تنفيذ
-  Chromium وإعادة التحقق.
-- **dalfox 3.2.4:** 3/3 XSS مؤكدة، و0 إيجابيات كاذبة، و598 طلبًا في 29.9 ثانية.
-  تخصصه XSS فقط.
-- **sqlmap 1.10.10.27#dev:** 2/2 SQLi مؤكدة، و0 إيجابيات كاذبة، و119 طلبًا في
-  9.7 ثانية. تخصصه SQLi فقط.
-
-الأدوات المتخصصة أسرع وأرخص داخل تخصصها، وهذا متوقع. SV1 أغلى لأنه يزحف،
-يصنّف، يثبت التنفيذ، ويغطي أكثر من فئة. المقارنة لا تقول «أيهما أفضل» بل
-توضّح السؤال الذي يجيب عنه كل أداة. مختبر SV1 ذو 31 حالة يبقى بوابة الإصدار،
-ولا يُستخدم كرقم لـ sqlmap لأن SQL فيه محاكاة وليس محركًا حقيقيًا.
+على نفس الهدف ونفس اليوم: `1.3.3` و`1.3.4` أعطيا نفس السبع نتائج، لكن `1.3.4`
+أعاد قياس خط الأساس قبل تثبيت أدلة SQLi، فزاد 8 طلبات فقط. على المختبر الكامل
+بقي 31/31، والزيادة في الوقت ثمن التحقق الإضافي. dalfox وsqlmap أسرع داخل
+تخصصهما، لكن SV1 غطى الصنفين وأثبت تنفيذ XSS داخل Chromium. لا إيجابيات كاذبة
+في أي من الجولات.

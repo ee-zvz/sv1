@@ -32,6 +32,17 @@ from sv1lib.models import ScanStats
 TOKEN_RE = re.compile(r"sv1[0-9a-zA-Z]+")
 
 
+def _positive_float(value: str) -> float:
+    """Argparse type: reject zero/negative instead of crashing in requests."""
+    try:
+        number = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be a number greater than zero") from exc
+    if number <= 0:
+        raise argparse.ArgumentTypeError("must be greater than zero")
+    return number
+
+
 BANNER = r"""
   ███████╗██╗   ██╗ ██╗
   ██╔════╝██║   ██║███║
@@ -66,7 +77,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--depth", type=int, default=config.DEFAULT_MAX_DEPTH, help="crawl depth (default 2)")
     parser.add_argument("--pages", type=int, default=config.DEFAULT_MAX_PAGES, help="max pages to crawl")
     parser.add_argument("--threads", type=int, default=8, help="worker threads (default 8)")
-    parser.add_argument("--timeout", type=float, default=config.DEFAULT_TIMEOUT, help="request timeout seconds")
+    parser.add_argument("--timeout", type=_positive_float, default=config.DEFAULT_TIMEOUT,
+                        help="request timeout seconds (greater than zero)")
     parser.add_argument("--rps", type=float, default=config.DEFAULT_RPS, help="requests per second (0 = unlimited)")
     parser.add_argument("--fail-on", choices=config.FAIL_ON_CHOICES, default="any",
                         help="exit 1 at or above this severity (default any)")
@@ -864,7 +876,8 @@ def run(args: argparse.Namespace) -> int:
                 report.info(f"blind   {note}")
                 for finding in blind_findings:
                     findings.append(finding)
-                    stats.confirmed += 1
+                    if finding.confidence == "CONFIRMED":
+                        stats.confirmed += 1
                     report.print_finding(finding, len(findings))
                 if not blind_findings:
                     report.info("no blind callback fired")

@@ -7,7 +7,7 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.3.3` keeps the real-application inputs
+SQLite session history. Release `1.3.4` keeps the real-application inputs
 introduced in `1.3.0`: HAR and raw HTTP request import, nested JSON and raw
 bodies, XHR/fetch POST capture, same-origin external JavaScript analysis, and
 nested OpenAPI bodies. Reflection alone stays `MEDIUM`; `HIGH` needs execution.
@@ -15,7 +15,9 @@ nested OpenAPI bodies. Reflection alone stays `MEDIUM`; `HIGH` needs execution.
 replay-enabled Altoro evidence. `1.3.2` added one version source, ruff/mypy and
 coverage gates, a 42.5% branch baseline, and a same-target comparison against
 dalfox and sqlmap. `1.3.3` checks every redirect hop, keeps session headers and
-cookies on the target origin, and splits confirmed from replayed proof.
+cookies on the target origin, and splits confirmed from replayed proof. `1.3.4`
+adds server-set cookie isolation, baseline-aware SQLi replay, a blind
+script-only demotion, and stored-XSS payload fallback.
 
 A vulnerability scanner for **XSS**, **SQL Injection**, **Blind XSS** and **SSRF**
 written in Python, running on Windows 11. On start it prints an animated banner
@@ -237,7 +239,7 @@ the `--fail-on` threshold, `2` = the target did not respond or a file could not 
   Chromium promotion to `HIGH`/`CONFIRMED` happens only after the marker executes.
   JSON and XHR POST reflections that have no browser execution path stay `MEDIUM`.
 
-### Scope and request identity (1.3.3)
+### Scope and request identity (1.3.3, extended in 1.3.4)
 
 - **Redirects are checked before every hop.** `requests` is asked not to follow
   redirects; SV1 resolves `Location`, rejects non-HTTP(S) schemes, enforces
@@ -254,7 +256,9 @@ the `--fail-on` threshold, `2` = the target did not respond or a file could not 
   Third-party scripts, images and frames load without the operator's session.
   Top-level navigations outside scope are aborted; subresources are not used as
   a reason to send credentials. Because the browser cookie jar ignores ports,
-  any cross-origin request that would carry an imported cookie is cancelled.
+  any cross-origin request that would carry a cookie is cancelled. That includes
+  a cookie the target set during the scan, not only one imported by the
+  operator; the guard fails closed if request headers cannot be read.
 - **A refused URL sends no bytes.** Out-of-scope URLs and refused redirect hops
   return `Response(status=0, error=...)` before a socket is opened.
 - **Request identity includes the body.** Two raw or JSON templates on the same
@@ -262,6 +266,17 @@ the `--fail-on` threshold, `2` = the target did not respond or a file could not 
 - **Proof counters are honest.** `confirmed` counts browser/OOB proof,
   `replayed` counts HTTP replay, and `verified` is their sum. JSON, history and
   the console summary keep both visible.
+- **Blind script fetch is not execution.** A blind callback that only fetches a
+  script is `MEDIUM`/`MEDIUM`. It becomes `HIGH`/`CONFIRMED` only when the
+  callback's `/e` execution marker arrives, and only then increments
+  `confirmed`.
+- **SQLi replays against a fresh baseline.** Error, boolean and time findings
+  re-measure the untouched endpoint next to the payload. Second-order findings
+  require two stable fetches and reject the error recorded on the clean
+  baseline.
+- **Stored XSS tries more than one shape.** Each field is submitted with `svg`,
+  `script` and `img` shapes until one executes; revisit pages continue after a
+  non-firing payload.
 
 ### Security and correctness (1.2.1)
 
@@ -392,11 +407,12 @@ python sv1.py -u https://site.tld --crawl --db sv1.db --diff
 after 20 healthy responses. `--rps 0` stays unlimited.
 
 > 1.4.0 later: async engine on `httpx` and `--resume`.
-> Release 1.3.3 checks redirect scope hop by hop, isolates session headers and
-> cookies on the target origin, and keeps HAR/raw request import, nested JSON/raw
+> Release 1.3.4 checks redirect scope hop by hop, isolates session headers and
+> cookies on the target origin, adds server-set cookie isolation and
+> baseline-aware SQLi replay, and keeps HAR/raw request import, nested JSON/raw
 > bodies, XHR POST capture, external JavaScript analysis and nested OpenAPI
-> bodies. CI runs the Chromium integration tests, the full-lab acceptance test, ruff, mypy
-> and a 43.5% coverage floor.
+> bodies. CI runs the Chromium integration tests, the full-lab acceptance test,
+> ruff, mypy and a 47.0% coverage floor.
 
 ---
 
@@ -648,47 +664,47 @@ Public, intentionally vulnerable demo targets only. Raw evidence and the exact
 commands: [`docs/REALWORLD.md`](docs/REALWORLD.md). The same-target comparison
 against dalfox and sqlmap is in [`docs/COMPARISON.md`](docs/COMPARISON.md).
 
-Live-site validation: **4 runs, 76 pages, 49 injection points, 560 requests,
-59 findings, 59/59 verified, 0 errors**. Automated tests: **110 discovered,
-106 pass by default; the Chromium integration tests and the full-lab acceptance test run
-in CI**.
+Live-site validation: **6 runs, 78 pages, 51 injection points, 607 requests,
+61 findings, 61/61 verified, 0 errors**. Automated tests: **123 discovered,
+118 pass by default, 5 opt-in tests skipped; the Chromium integration tests and
+the full-lab acceptance test run in CI**.
 
 | Target | Scope | Result |
 |---|---|---|
-| Google Firing Range, reflected | 49 pages, 47 points | 42 findings — **40 HIGH** confirmed in Chromium, 2 MEDIUM; replay 42/42, 0 unstable |
-| Google Firing Range, DOM | 25 pages crawled, 20 rendered | **15 HIGH** DOM findings, 0 errors |
-| Altoro Mutual search | one GET parameter | **1 HIGH** reflected XSS, confirmed; replay 1/1 |
-| Firing Range, HAR import | one imported GET point | **1 HIGH** confirmed; replay 1/1 |
-| Local lab, 1.3.3 | full coverage incl. HAR/JSON/XHR/external JS | **31/31** findings, 0 unstable; scope and browser guards active |
+| Google Firing Range, reflected attribute, 1.3.4 | one GET parameter | **1 HIGH confirmed** XSS; 12 requests, 18.8 s, 0 errors |
+| Altoro Mutual search, 1.3.4 | one GET parameter, expired TLS | **1 HIGH confirmed** XSS; 35 requests, 46.5 s, 0 errors |
+| Google Firing Range, reflected, 1.2.1 | 49 pages, 47 points | 42 findings — **40 HIGH** confirmed in Chromium, 2 MEDIUM; replay 42/42, 0 unstable |
+| Google Firing Range, DOM, 1.2.0 | 25 pages crawled, 20 rendered | **15 HIGH** DOM findings, 0 errors |
+| Altoro Mutual search, 1.3.1 | one GET parameter | **1 HIGH** reflected XSS, confirmed; replay 1/1 |
+| Firing Range, HAR import, 1.3.1 | one imported GET point | **1 HIGH** confirmed; replay 1/1 |
+| Local lab, 1.3.4 | full coverage incl. HAR/JSON/XHR/external JS | **31/31** findings, 0 unstable; 1012 requests, 240.2 s |
 
-The reflected Firing Range and DOM runs remain the 1.2.1/1.2.0 evidence; the
-detection engine is unchanged. Altoro was re-run with replay enabled for 1.3.1;
-that evidence is retained.
-The 1.3.1 public HAR run imported one GET request, found the reflected XSS at
-`HIGH` + `CONFIRMED`, and replayed it (12 requests, 12.1 s).
-Firing Range ended with 512 requests, 0 errors and 247 s.
-The two `MEDIUM` cases are `/url/css_import` (a stylesheet `<link>` cannot execute
-`javascript:` in current Chromium) and `/url/object_data` (pinned to the removed
-Flash plugin type); neither page accepts `<`/`>` in the parameter. They are
-reported as reflection-only, not inflated to `HIGH`. Replay re-sent all 42
-findings and reproduced all 42.
+The two fresh 1.3.4 public runs are focused one-parameter checks: Firing Range
+reflected attribute and Altoro search, each `HIGH` confirmed with an executed
+Chromium marker. The older reflected Firing Range (1.2.1), DOM (1.2.0), Altoro
+(1.3.1) and HAR (1.3.1) runs are retained for history. The two `MEDIUM` cases in
+the retained Firing Range corpus are `/url/css_import` (a stylesheet `<link>`
+cannot execute `javascript:` in current Chromium) and `/url/object_data`
+(pinned to the removed Flash type); they stay reflection-only.
 
-The 1.3.3 lab acceptance run: 31/31 verified (17 confirmed in the browser or
+The 1.3.4 lab acceptance run: 31/31 verified (17 confirmed in the browser or
 OOB, 14 replayed over HTTP), 0 unstable — CRITICAL 10 / HIGH 18 / MEDIUM 3,
-21 pages, 29 points, 966 requests, 184.8 s, 0 errors. Evidence:
-[`docs/evidence/local-lab-1.3.3.json`](docs/evidence/local-lab-1.3.3.json). The
+21 pages, 29 points, 1012 requests, 240.2 s, 0 errors. Evidence:
+[`docs/evidence/local-lab-1.3.4.json`](docs/evidence/local-lab-1.3.4.json). The
 run uses `--scope 127.0.0.1:8099` and therefore exercises the redirect and
-browser guards. The new input paths are in that same run: `--external-js`
-confirms `/external` (`location.hash → innerHTML` inside `/external.js`) at
-`HIGH`; `--spa` captures the `/api/xhr` POST JSON body and reports `user.name`
-at `MEDIUM` (reflection only, no JSON browser execution); the nested-JSON and
-HAR focused runs each produce the same `user.name` point.
+browser guards. The 1.3.3 baseline was 966 requests and 184.8 s with the same
+31/31 result; 1.3.4 pays for baseline-aware replay. The input paths are in the
+same run: `--external-js` confirms `/external` (`location.hash → innerHTML`
+inside `/external.js`) at `HIGH`; `--spa` captures the `/api/xhr` POST JSON body
+and reports `user.name` at `MEDIUM` (reflection only, no JSON browser
+execution).
 
-External comparison on a real SQLite target, same day: SV1 confirmed 3 XSS and
-2 SQLi, dalfox confirmed 3 XSS, sqlmap confirmed 2 SQLi; all three reported zero
-false positives. SV1 added two explicit reflection-only `MEDIUM` notes. The
-specialists are faster in their lanes; SV1 costs more because it crawls, covers
-both classes and proves execution. See [`docs/COMPARISON.md`](docs/COMPARISON.md).
+External comparison on the same SQLite target and day: SV1 1.3.4 confirmed 3 XSS
+and 2 SQLi, dalfox 3.2.4 confirmed 3 XSS, sqlmap 1.10.10.27#dev confirmed 2 SQLi;
+all reported zero false positives. SV1 added two explicit reflection-only
+`MEDIUM` notes. The specialists are faster in their lanes; SV1 costs more
+because it crawls, covers both classes and proves execution. The before/after
+rows and exact commands are in [`docs/COMPARISON.md`](docs/COMPARISON.md).
 
 ---
 
@@ -778,8 +794,8 @@ python sv1.py -u http://127.0.0.1:8099/ --crawl --stored --js --second-order --d
 ```
 
 Result: **31 findings, 31 verified (17 confirmed, 14 replayed), 0 unstable** —
-CRITICAL 10, HIGH 18, MEDIUM 3, 21 pages, 29 injection points, 966 requests,
-184.8 s (with Chromium).
+CRITICAL 10, HIGH 18, MEDIUM 3, 21 pages, 29 injection points, 1012 requests,
+240.2 s (with Chromium).
 
 The lab stores guestbook, blind and profile state in memory. Restart
 `lab\server.py` before repeating the full run; otherwise `/profile` already
@@ -929,10 +945,12 @@ MIT — see `LICENSE`.
 
 ## Version
 
-`1.3.3` — current public release. Real-application inputs: HAR/raw HTTP request
+`1.3.4` — current public release. Real-application inputs: HAR/raw HTTP request
 import, nested JSON and raw bodies, XHR/fetch POST capture, external same-origin
 JavaScript analysis, nested OpenAPI bodies, exact dependency pins, a
-`pyproject.toml`, and a full-lab Playwright CI gate. `1.3.3` adds redirect-wide
+`pyproject.toml`, and a full-lab Playwright CI gate. `1.3.3` added redirect-wide
 scope enforcement, session-header isolation in HTTP and Chromium, imported-cookie
-isolation, split confirmed/replayed counters, and a 43.5% coverage floor. Reflection alone
-remains `MEDIUM`. Change details in `CHANGELOG.md`.
+isolation and split confirmed/replayed counters. `1.3.4` adds server-set cookie
+isolation, baseline-aware SQLi replay, blind script-only demotion, stored-XSS
+payload fallback, safe-method-only transport retries, and a 47.0% coverage floor.
+Reflection alone remains `MEDIUM`. Change details in `CHANGELOG.md`.

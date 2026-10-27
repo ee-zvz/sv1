@@ -2,6 +2,58 @@
 
 All notable changes to SV1. Format follows Keep a Changelog.
 
+## 1.3.4 - 2026-10-27
+
+Verification hardening after the 1.3.3 audit. Detection scope is unchanged:
+XSS, SQLi, blind XSS and SSRF; reflection-only stays `MEDIUM`. The same lab
+findings must survive stricter replay, not merely the same payload count.
+
+### Security
+
+- Chromium now rejects every cross-target request that carries a `Cookie`
+  header, including a cookie the target set during the scan. Chromium scopes
+  cookies by host, not port, so an image on another loopback port could
+  otherwise receive a server-set session. The route guard fails closed when
+  headers cannot be inspected, and a two-port server-set-cookie regression test
+  covers the exact leak.
+- Blind XSS script-only callbacks are `MEDIUM`/`MEDIUM` and are not counted as
+  confirmed. Only a `/e` execution hit is `HIGH`/`CONFIRMED`; the console's
+  `confirmed` counter follows the finding confidence.
+- SQLi replay now captures a fresh clean baseline for error, boolean and time
+  techniques. An error line present in the baseline, a false branch equal to the
+  baseline, or a delay below the baseline-relative threshold no longer
+  reproduces. Second-order replay uses two fetches of the sink, rejects the
+  clean-baseline error recorded at scan time, and requires a stable new error.
+- The scanner never retries `POST` after a transport failure; only
+  `GET`/`HEAD`/`OPTIONS` are repeated. This prevents duplicate writes from a
+  connection reset.
+- `--timeout 0` is rejected by the CLI and `net.Client` with a clean validation
+  error instead of a `requests` traceback. Origins used for cookie scope strip
+  embedded credentials; IPv6 hosts remain bracketed.
+
+### Changed
+
+- Stored XSS tries three payload shapes per field (`svg`, `script`, `img`) and
+  keeps walking revisit pages until one executes. Browser form submission
+  preserves `multipart/form-data` and `text/plain` enctypes.
+- `--insecure` suppresses the expected urllib3 warning after the operator has
+  explicitly disabled certificate validation.
+
+### Tests
+
+- Default suite: 123 discovered, 118 pass, 5 opt-in tests skipped.
+- Chromium integration: 4/4.
+- Full lab: 31/31 verified (17 confirmed, 14 replayed), 0 unstable, 0 errors;
+  10 `CRITICAL` / 18 `HIGH` / 3 `MEDIUM`, 21 pages, 29 points, 1012 requests,
+  240.2 s. Evidence: `docs/evidence/local-lab-1.3.4.json`.
+- Branch coverage: 47.9% over `sv1.py` and `sv1lib`; the CI floor is raised from
+  43.5% to 47.0%.
+- Public demos on 2026-10-27: Google Firing Range reflected attribute, 1
+  `HIGH`/`CONFIRMED` XSS (12 requests, 18.8 s); Altoro Mutual search, 1
+  `HIGH`/`CONFIRMED` XSS (35 requests, 46.5 s). Both 0 errors.
+- Real SQLite comparison target: 7 findings (3 XSS confirmed, 2 SQLi, 2
+  reflection-only `MEDIUM`), 221 requests, 49.0 s, 0 errors.
+
 ## 1.3.3 - 2026-10-27
 
 Scope and identity hardening. The vulnerability scope is unchanged: XSS, SQLi,

@@ -227,37 +227,42 @@ class Browser:
             else:
                 route.continue_()
         except Exception:
+            # A failed guard must not become a cookie leak. Allow the target
+            # origin to recover; abort anything that would cross it.
+            self._abort_cross_target(route)
+
+    def _abort_cross_target(self, route) -> None:
+        try:
+            if self.base_url and not net.same_target(route.request.url, self.base_url):
+                route.abort("blockedbyclient")
+                return
+            route.continue_()
+        except Exception:
             try:
-                route.continue_()
+                route.abort("failed")
             except Exception:
                 pass
 
     def _would_leak_cookie(self, request) -> bool:
-        """A browser cookie ignores ports; do not let it cross the target.
+        """Any cookie is session material, including one the target just set.
 
-        The limit is specific: cookies imported with --cookie/-H. Cookies the
-        target sets during the scan stay in Chromium's jar by design, but an
-        imported session cookie must never follow a subresource to another
-        port or host. Cancelling the request is the only reliable way to
-        remove a Cookie header Chromium adds after route interception.
+        Chromium scopes cookies by host, not port, so an image on another
+        loopback port receives a cookie set by the target page. Imported
+        cookies are not special: the browser jar can also hold a server-set
+        session. Allow cookies only on the target origin; abort every other
+        request that would carry a Cookie header. If headers cannot be read,
+        fail closed for the cross-target request.
         """
-        if not self.cookies or not self.base_url:
+        if not self.base_url:
             return False
         if net.same_target(request.url, self.base_url):
             return False
         try:
             headers = dict(request.all_headers())
         except Exception:
-            headers = dict(request.headers)
+            return True
         raw = headers.get("cookie") or headers.get("Cookie") or ""
-        if not raw:
-            return False
-        sent = {
-            item.split("=", 1)[0].strip()
-            for item in raw.split(";")
-            if item.strip()
-        }
-        return any(str(name) in sent for name in self.cookies)
+        return bool(raw)
 
     # -- internals ---------------------------------------------------------
     def _read(self, page) -> tuple[list[str], list[str]]:
@@ -575,8 +580,15 @@ class Browser:
             inputs.append(
                 f'<input type="hidden" name="{escape(item.name)}" value="{escape(str(value))}">'
             )
+        enctype = (getattr(form, "enctype", "") or "").strip().lower()
+        encoding = (
+            f' enctype="{escape(enctype)}"'
+            if enctype in ("multipart/form-data", "text/plain")
+            else ""
+        )
         markup = (
-            f'<form method="POST" action="{escape(action)}">{"".join(inputs)}</form>'
+            f'<form method="POST" action="{escape(action)}"{encoding}>'
+            f'{"".join(inputs)}</form>'
             "<script>document.forms[0].submit();</script>"
         )
         page = self._context.new_page()

@@ -14,6 +14,7 @@ from . import config, crawl
 from .models import Finding, Page
 
 TEXT_TYPES = ("text", "search", "url", "email", "tel", "textarea", "select", "")
+PAYLOAD_VARIANTS = 3
 
 
 def _fields(form) -> list:
@@ -32,6 +33,7 @@ def _payloads(token: str) -> list[str]:
     return [
         f"<svg/onload=alert('{token}')>",
         f'"><script>alert(\'{token}\')</script>',
+        f'"><img src=x onerror=alert(\'{token}\')>',
     ]
 
 
@@ -64,32 +66,38 @@ def run(engine: browser_mod.Browser, pages: list[Page], artifacts: str) -> list[
         revisit = [page_url] + [url for url in visited_pages if url != page_url]
         revisit = revisit[: config.STORED_MAX_PAGES]
         for field_index, item in enumerate(_fields(form)):
-            token = _token(form_index * 10 + field_index)
-            payload = _payloads(token)[0]
-            engine.submit_form(page_url, form, payload, item.name)
+            fired = False
+            for payload_index in range(PAYLOAD_VARIANTS):
+                index = (form_index * 10 + field_index) * 10 + payload_index
+                token = _token(index)
+                payload = _payloads(token)[payload_index]
+                engine.submit_form(page_url, form, payload, item.name)
 
-            for visit_url in revisit:
-                shot_path = _shot_path(artifacts, len(findings) + 1) if artifacts else ""
-                visit = engine.visit(visit_url, shot_path=shot_path)
-                if not visit.fired(token):
-                    continue
-                findings.append(
-                    Finding(
-                        kind="XSS",
-                        severity="HIGH",
-                        url=visit_url,
-                        method="GET",
-                        param=item.name,
-                        payload=payload,
-                        confidence="CONFIRMED",
-                        evidence=f"stored through POST {page_url} and executed on {visit.url}: "
-                                 f"{visit.proof(token)}",
-                        technique="stored",
-                        detail="the payload was persisted by the application and ran on another page",
-                        artifact=visit.screenshot,
+                for visit_url in revisit:
+                    shot_path = _shot_path(artifacts, len(findings) + 1) if artifacts else ""
+                    visit = engine.visit(visit_url, shot_path=shot_path)
+                    if not visit.fired(token):
+                        continue
+                    findings.append(
+                        Finding(
+                            kind="XSS",
+                            severity="HIGH",
+                            url=visit_url,
+                            method="GET",
+                            param=item.name,
+                            payload=payload,
+                            confidence="CONFIRMED",
+                            evidence=f"stored through POST {page_url} and executed on {visit.url}: "
+                                     f"{visit.proof(token)}",
+                            technique="stored",
+                            detail="the payload was persisted by the application and ran on another page",
+                            artifact=visit.screenshot,
+                        )
                     )
-                )
-                break
+                    fired = True
+                    break
+                if fired:
+                    break
     return _dedupe(findings)
 
 

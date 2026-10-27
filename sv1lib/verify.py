@@ -21,46 +21,108 @@ def _replay_xss(client, point, finding: Finding) -> bool:
     return response.ok and finding.payload in response.text
 
 
+def _baseline(client, point):
+    """The untouched endpoint, measured again next to the replay.
+
+    A database error or a page difference is only evidence against this
+    baseline. Reusing the scan's response is not enough: the target may have
+    changed between passes, and volatile pages must not be promoted.
+    """
+    return baseline.capture(client, point, sqli.original_value(point))
+
+
+def _replay_error(client, point, finding: Finding) -> bool:
+    base = _baseline(client, point)
+    if base is None:
+        return False
+    response = _replay_send(client, point, finding.payload)
+    if not response.ok:
+        return False
+    dbms, line = sqli.match_error(response.text)
+    if not dbms:
+        return False
+    if line and line in base.text:
+        return False
+    if finding.payload in base.text:
+        return False
+    return True
+
+
+def _replay_boolean(client, point, finding: Finding) -> bool:
+    branches = [part.strip() for part in finding.payload.split("|")]
+    if len(branches) != 2:
+        return False
+    base = _baseline(client, point)
+    if base is None:
+        return False
+    hot = _replay_send(client, point, branches[0])
+    cold = _replay_send(client, point, branches[1])
+    if not hot.ok or not cold.ok:
+        return False
+    if not base.matches(hot.text):
+        return False
+    if base.similarity(cold.text) >= config.PAGE_SAME:
+        return False
+    floor = min(
+        max(config.PAGE_MIN_DIFF, base.noise() * 3.0),
+        config.PAGE_MAX_FLOOR,
+    )
+    cross = baseline.text_similarity(hot.text, cold.text)
+    return cross <= 1.0 - floor
+
+
+def _replay_time(client, point, finding: Finding) -> bool:
+    base = _baseline(client, point)
+    if base is None:
+        return False
+    response = _replay_send(client, point, finding.payload)
+    if not response.ok:
+        return False
+    threshold = base.elapsed + (config.SQLI_TIME_DELAY * 0.7)
+    return response.elapsed >= threshold
+
+
+def _replay_second_order(client, finding: Finding) -> bool:
+    """Fetch the sink twice and reject the scan-time baseline error.
+
+    Re-submitting the payload is not used here: the first replay would leave a
+    second stored copy and poison the next baseline. The detection pass records
+    its clean baseline, so two fetches are enough to prove the same sink still
+    fails in the same way.
+    """
+    before = str(finding.data.get("baseline_error") or "")
+    checked = finding.data.get("baseline_checked") == "1"
+    signatures: list[str] = []
+    for _ in range(config.BASELINE_SAMPLES):
+        response = client.fetch(finding.url)
+        if not response.ok:
+            return False
+        dbms, line = sqli.match_error(response.text)
+        if not dbms:
+            return False
+        signature = line or dbms
+        if checked and before and signature == before:
+            return False
+        signatures.append(signature)
+    return len(signatures) == config.BASELINE_SAMPLES and len(set(signatures)) == 1
+
+
 def _replay_sqli(client, point, finding: Finding) -> bool:
     if finding.technique == "union":
         # the version banner was read out of the database; nothing stronger exists
         return True
 
     if finding.technique == "second-order":
-        response = client.fetch(finding.url)
-        if not response.ok:
-            return False
-        return bool(sqli.match_error(response.text)[0])
+        return _replay_second_order(client, finding)
 
     if finding.technique == "error":
-        for payload in tamper.variants(finding.payload):
-            response = client.send(point, payload)
-            if not response.ok:
-                continue
-            dbms, _line = sqli.match_error(response.text)
-            if dbms:
-                return True
-        return False
+        return _replay_error(client, point, finding)
 
     if finding.technique == "boolean":
-        branches = [part.strip() for part in finding.payload.split("|")]
-        if len(branches) != 2:
-            return False
-        hot = _replay_send(client, point, branches[0])
-        cold = _replay_send(client, point, branches[1])
-        if not hot.ok or not cold.ok:
-            return False
-        return baseline.text_similarity(hot.text, cold.text) < config.PAGE_SAME
+        return _replay_boolean(client, point, finding)
 
     if finding.technique == "time":
-        clean = client.send(point, sqli.original_value(point))
-        if not clean.ok:
-            return False
-        response = _replay_send(client, point, finding.payload)
-        if not response.ok:
-            return False
-        threshold = clean.elapsed + (config.SQLI_TIME_DELAY * 0.7)
-        return response.elapsed >= threshold
+        return _replay_time(client, point, finding)
 
     return False
 

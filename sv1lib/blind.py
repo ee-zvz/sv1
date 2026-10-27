@@ -184,10 +184,11 @@ def run(
                 "time": executed,
             }
         else:
-            severity = "HIGH"
+            severity = "MEDIUM"
             confidence = "MEDIUM"
             evidence = (f"callback script fetched at {when} from {proof.remote} "
-                        f"({agent}); /e not received, execution not proven")
+                        f"({agent}); /e not received, execution not proven; "
+                        f"severity capped at MEDIUM")
             data = {
                 "oob": "fetched",
                 "from": proof.remote,

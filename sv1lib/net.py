@@ -103,8 +103,17 @@ class Client:
         base_url: str = "",
         scope: Callable[[str], bool] | None = None,
     ) -> None:
+        if timeout <= 0:
+            raise ValueError("timeout must be greater than zero")
         self.timeout = timeout
         self.verify = verify
+        if not verify:
+            try:
+                import urllib3
+
+                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            except Exception:
+                pass
         self.limiter = RateLimiter(rps)
         self.base_url = base_url
         self.scope = scope
@@ -218,7 +227,8 @@ class Client:
                 error=f"outside scan scope: {url}",
             )
         last_error = ""
-        for attempt in range(config.MAX_RETRIES):
+        attempts = config.MAX_RETRIES if method in config.RETRY_METHODS else 1
+        for attempt in range(attempts):
             try:
                 return self._follow(
                     method, url, params, data, allow_redirects,
@@ -226,7 +236,7 @@ class Client:
                 )
             except requests.RequestException as exc:
                 last_error = str(exc)
-                if attempt < config.MAX_RETRIES - 1:
+                if attempt < attempts - 1:
                     time.sleep(0.35 * (attempt + 1))
         self._fail()
         return Response(
@@ -536,11 +546,18 @@ def _origin(url: str) -> tuple[str, str, int | None] | None:
 
 
 def origin(url: str) -> str:
-    """Return scheme://host[:port] for a URL, or an empty string."""
-    parts = urllib.parse.urlsplit(url)
-    if not parts.scheme or not parts.netloc:
+    """Return scheme://host[:port], never credentials embedded in netloc."""
+    try:
+        parts = urllib.parse.urlsplit(url)
+        port = parts.port
+    except ValueError:
         return ""
-    return f"{parts.scheme}://{parts.netloc}"
+    host = (parts.hostname or "").lower()
+    if not parts.scheme or not host:
+        return ""
+    if ":" in host:
+        host = f"[{host}]"
+    return f"{parts.scheme}://{host}{f':{port}' if port is not None else ''}"
 
 
 def same_target(a: str, b: str) -> bool:

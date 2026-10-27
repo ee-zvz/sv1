@@ -12,6 +12,7 @@ TOOL_VERSION = __version__
 # --- network ---------------------------------------------------------------
 DEFAULT_TIMEOUT = 12.0          # seconds, per request
 MAX_RETRIES = 2                 # attempts per request on transport failure
+RETRY_METHODS = ("GET", "HEAD", "OPTIONS")  # POST/PUT/DELETE are never repeated
 DEFAULT_RPS = 8.0               # requests per second cap, 0 = unlimited
 MAX_BODY_BYTES = 4_000_000      # stop reading gigantic responses
 MAX_REDIRECTS = 5

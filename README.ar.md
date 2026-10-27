@@ -5,15 +5,16 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.3.3` keeps the real-application inputs
+SQLite session history. Release `1.3.4` keeps the real-application inputs
 introduced in `1.3.0`: HAR and raw HTTP request import, nested JSON and raw
 bodies, XHR/fetch POST capture, same-origin external JavaScript analysis, and
 nested OpenAPI bodies. Reflection alone stays `MEDIUM`; `HIGH` needs execution.
 `1.3.1` added exact dependency pins, a `pyproject.toml`, a full-lab CI gate, and
 replay-enabled Altoro evidence. `1.3.2` added one version source, ruff/mypy and
 coverage gates, and a same-target comparison against dalfox and sqlmap.
-`1.3.3` hardens redirect scope, keeps session headers on the target origin, and
-splits confirmed from replayed proof.
+`1.3.3` hardened redirect scope and split confirmed from replayed proof. `1.3.4`
+adds server-set cookie isolation, baseline-aware SQLi replay, blind script-only
+demotion, and stored-XSS payload fallback.
 
 أداة فحص ثغرات **XSS** و **SQL Injection** و **Blind XSS** و **SSRF** مكتوبة
 ببايثون، تشتغل على ويندوز 11. عند التشغيل تطلع مقدمة متحركة (لوقو SV1 بتدرّج
@@ -501,8 +502,9 @@ python sv1.py -u https://site.tld --openapi https://site.tld/openapi.json
    العرض الفعلية.
 5. `--blind-visit` يفتح صفحة المشرف داخل Chromium بعد الحقن (محاكاة محلية)،
    وياخذ screenshot. بدونه ينتظر `--oob-wait` مشرفاً حقيقياً.
-6. النتيجة: `HIGH` + `CONFIRMED` عند التنفيذ، و`HIGH` + `MEDIUM` إذا انجلب
-   السكربت فقط (مثلاً CSP منع الصورة). ما تطلع نتيجة بلا hit.
+6. النتيجة: `HIGH` + `CONFIRMED` عند وصول `/e` (تنفيذ فعلي)، و`MEDIUM` +
+   `MEDIUM` إذا انجلب السكربت فقط. لا تُحتسب الثانية ضمن `confirmed`، ولا
+   تطلع نتيجة بلا hit.
 
 `--blind` يكتب بيانات في الهدف.
 
@@ -615,40 +617,38 @@ sv1/
 أهداف عامة مصابة عمدًا فقط. الأوامر والأدلة الخام: [`docs/REALWORLD.md`](docs/REALWORLD.md).
 المقارنة بنفس الهدف ضد dalfox وsqlmap: [`docs/COMPARISON.md`](docs/COMPARISON.md).
 
-تحقق المواقع الحية: **4 تشغيلات، 76 صفحة، 49 نقطة حقن، 560 طلباً، 59 نتيجة، 59/59 موثقة، 0 أخطاء**. الاختبارات: **110 مكتشفاً، 106 ينجح افتراضياً؛ اختبارات Chromium واختبار المختبر الكامل تعمل في CI**.
+تحقق المواقع الحية: **6 تشغيلات، 78 صفحة، 51 نقطة حقن، 607 طلبات، 61 نتيجة، 61/61 موثقة، 0 أخطاء**. الاختبارات: **123 مكتشفاً، 118 ينجح افتراضياً، 5 اختبارات اختيارية متجاوزة؛ اختبارات Chromium واختبار المختبر الكامل تعمل في CI**.
 
 | الهدف | النطاق | النتيجة |
 |---|---|---|
-| Google Firing Range — منعكس | 49 صفحة، 47 نقطة | 42 نتيجة — **40 HIGH** مثبتة في Chromium، 2 MEDIUM؛ إعادة تشغيل 42/42، 0 unstable |
-| Google Firing Range — DOM | 25 صفحة زحف، 20 معروضة | **15 HIGH** DOM، 0 أخطاء |
-| Altoro Mutual — بحث | معامل GET واحد | **1 HIGH** XSS منعكس، مؤكد؛ إعادة تشغيل 1/1 |
-| Firing Range — استيراد HAR | نقطة GET مستوردة | **1 HIGH** مؤكدة؛ إعادة تشغيل 1/1 |
-| المختبر المحلي 1.3.3 | تغطية كاملة + HAR/JSON/XHR/سكربت خارجي | **31/31** نتيجة، 0 unstable؛ حماية النطاق والمتصفح مفعّلة |
+| Google Firing Range — انعكاس attribute، 1.3.4 | معامل GET واحد | **1 HIGH مؤكدة** XSS؛ 12 طلباً، 18.8 ثانية، 0 أخطاء |
+| Altoro Mutual — بحث، 1.3.4 | معامل GET واحد، شهادة منتهية | **1 HIGH مؤكدة** XSS؛ 35 طلباً، 46.5 ثانية، 0 أخطاء |
+| Google Firing Range — منعكس، 1.2.1 | 49 صفحة، 47 نقطة | 42 نتيجة — **40 HIGH** مثبتة في Chromium، 2 MEDIUM؛ إعادة تشغيل 42/42، 0 unstable |
+| Google Firing Range — DOM، 1.2.0 | 25 صفحة زحف، 20 معروضة | **15 HIGH** DOM، 0 أخطاء |
+| Altoro Mutual — بحث، 1.3.1 | معامل GET واحد | **1 HIGH** XSS منعكس، مؤكد؛ إعادة تشغيل 1/1 |
+| Firing Range — استيراد HAR، 1.3.1 | نقطة GET مستوردة | **1 HIGH** مؤكدة؛ إعادة تشغيل 1/1 |
+| المختبر المحلي 1.3.4 | تغطية كاملة + HAR/JSON/XHR/سكربت خارجي | **31/31** نتيجة، 0 unstable؛ 1012 طلباً، 240.2 ثانية |
 
-Firing Range المنعكس وDOM يبقيان دليل 1.2.1/1.2.0، ومحرك الكشف نفسه.
-Altoro أُعيد فحصه مع إعادة التشغيل في 1.3.1. فحص HAR العام في 1.3.1 استورد
-طلب GET واحداً، ولقى XSS منعكس `HIGH` + `CONFIRMED`،
-وأعاد تشغيله (12 طلباً، 12.1 ثانية). Firing Range: 512 طلباً، 0 أخطاء،
-حوالي 247 ثانية. الحالتان `MEDIUM` هما
-`/url/css_import` (رابط stylesheet لا ينفّذ `javascript:` في Chromium الحالي)
-و`/url/object_data` (مثبّت على نوع Flash plugin المحذوف)؛ الصفحتان ترفضان
-`<`/`>` في المعامل. سُجّلتا كانعكاس فقط، بدون رفعها إلى `HIGH`. إعادة
-التشغيل أعادت إرسال 42 نتيجة وأثبتت 42.
+الفحصان الجديدان هما Firing Range (انعكاس attribute) وAltoro (بحث)، وكلاهما
+أثبت تنفيذ `alert` داخل Chromium. التشغيلات القديمة (1.2.0/1.2.1/1.3.1)
+محفوظة كتاريخ. الحالتان `MEDIUM` في Firing Range هما `/url/css_import`
+(رابط stylesheet لا ينفّذ `javascript:` في Chromium الحالي) و
+`/url/object_data` (نوع Flash محذوف)؛ بقيتا انعكاساً فقط بدون رفعهما إلى
+`HIGH`.
 
-قبول المختبر في 1.3.3: 31/31 موثقة (17 مؤكدة في المتصفح أو OOB، و14 أعادت
+قبول المختبر في 1.3.4: 31/31 موثقة (17 مؤكدة في المتصفح أو OOB، و14 أعادت
 الإرسال عبر HTTP)، 0 unstable — CRITICAL 10 / HIGH 18 / MEDIUM 3، 21 صفحة،
-29 نقطة، 966 طلباً، 184.8 ثانية، 0 أخطاء. الدليل:
-[`docs/evidence/local-lab-1.3.3.json`](docs/evidence/local-lab-1.3.3.json).
-التشغيل يستخدم `--scope 127.0.0.1:8099` ويمرّ على حماية التحويلات والمتصفح
-الجديدة. المسارات الجديدة ظاهرة في نفس التشغيل: `/external` نتيجة DOM خارجية
-`HIGH`، و`/api/xhr` انعكاس JSON POST `MEDIUM` من التقاط SPA. إصلاح المعاملات
-المتعددة يبقى في `/api/fetch` و`/api/spa` و`/dynamic`: المعامل الثاني (`name`)
-يُحقن.
+29 نقطة، 1012 طلباً، 240.2 ثانية، 0 أخطاء. الدليل:
+[`docs/evidence/local-lab-1.3.4.json`](docs/evidence/local-lab-1.3.4.json).
+التشغيل يستخدم `--scope 127.0.0.1:8099` ويمرّ على حماية التحويلات والمتصفح.
+مقارنة 1.3.3 كانت 966 طلباً و184.8 ثانية بنفس 31/31؛ الزيادة ثمن خط الأساس
+الإضافي. المسارات الجديدة ظاهرة في نفس التشغيل: `/external` نتيجة DOM خارجية
+`HIGH`، و`/api/xhr` انعكاس JSON POST `MEDIUM` من التقاط SPA.
 
-مقارنة خارجية على هدف SQLite حقيقي، في نفس اليوم: SV1 أكد 3 XSS و2 SQLi،
-dalfox أكد 3 XSS، وsqlmap أكد 2 SQLi؛ الثلاثة بلا إيجابيات كاذبة مؤكدة. SV1
-أضاف ملاحظتين انعكاسيتين `MEDIUM` فقط. الأدوات المتخصصة أسرع داخل تخصصها؛
-SV1 أغلى لأنه يزحف ويغطي الفئتين ويثبت التنفيذ. التفاصيل:
+مقارنة خارجية على هدف SQLite حقيقي، في نفس اليوم: SV1 1.3.4 أكد 3 XSS و2
+SQLi، dalfox 3.2.4 أكد 3 XSS، وsqlmap 1.10.10.27#dev أكد 2 SQLi؛ الثلاثة بلا
+إيجابيات كاذبة. SV1 أضاف ملاحظتين انعكاسيتين `MEDIUM` فقط. الأدوات المتخصصة
+أسرع داخل تخصصها؛ SV1 أغلى لأنه يزحف ويغطي الفئتين ويثبت التنفيذ. التفاصيل:
 [`docs/COMPARISON.md`](docs/COMPARISON.md). بوابات الجودة والتغطية:
 [`docs/QUALITY.md`](docs/QUALITY.md).
 
@@ -680,7 +680,7 @@ python sv1.py -u http://127.0.0.1:8099/ --crawl --stored --js --second-order --d
 ```
 
 النتيجة: **31 نتيجة، 31 موثقة (17 مؤكدة، 14 معادة)، 0 unstable** — CRITICAL 10،
-HIGH 18، MEDIUM 3، 21 صفحة، 29 نقطة حقن، 966 طلباً، 184.8 ثانية (مع Chromium).
+HIGH 18، MEDIUM 3، 21 صفحة، 29 نقطة حقن، 1012 طلباً، 240.2 ثانية (مع Chromium).
 
 المختبر يحتفظ بحالة guestbook وblind وprofile في الذاكرة. أعد تشغيل
 `lab\server.py` قبل تكرار الفحص الكامل؛ وإلا فإن `/profile` يحتوي بايلود
@@ -807,7 +807,8 @@ note    database error surfaced (MySQL) - error based injection
 - `--stored` و `--second-order` و `--blind` يكتبون بيانات في الهدف.
 - الروابط اللي تحتاج تسجيل دخول تبي `--cookie` أو `-H` (المتصفح يستخدم نفس الكوكيز).
 - `--scope` يحدد الفحص والتحويلات والتنقل العلوي في المتصفح. صفحات SPA قد
-  تحمّل أصولاً خارجية أثناء العرض، لكن بدون هيدرات الجلسة؛ مو جدار شبكة.
+  تحمّل أصولاً خارجية أثناء العرض، لكن بدون هيدرات الجلسة وأي كوكي، بما فيها
+  كوكي يضبطه الهدف؛ مو جدار شبكة كامل.
 - `--retest` يعيد فحص XSS وSQLi error/boolean/time/second-order فقط. Blind،
   SSRF، Stored، DOM، وUNION تحتاج متصفحاً أو استخراجاً كاملاً فتُتخطى.
   الجلسة الأحدث لنفس `-u` هي المرجع.
@@ -822,10 +823,10 @@ MIT — راجع ملف `LICENSE`.
 
 ## الإصدار
 
-`1.3.3` — الإصدار العام الحالي. مدخلات تطبيقات حقيقية: HAR وطلبات HTTP خام،
+`1.3.4` — الإصدار العام الحالي. مدخلات تطبيقات حقيقية: HAR وطلبات HTTP خام،
 JSON وأجسام خام متداخلة، التقاط XHR/fetch POST، تحليل سكربتات same-origin
 خارجية، وOpenAPI متداخل، مع إصدارات مثبتة بدقة، `pyproject.toml`، وبوابة CI
-تشغّل المختبر الكامل. يضيف 1.3.3 فحص نطاق لكل قفزة redirect، وعزل هيدرات
-الجلسة والكوكيز عن أي نطاق آخر في HTTP والمتصفح، وتقسيم عدّاد الإثبات إلى
-`confirmed` و`replayed`، وبوابة تغطية 43.5%. الانعكاس وحده يبقى `MEDIUM`.
-تفاصيل التغييرات في `CHANGELOG.md`.
+تشغّل المختبر الكامل. يضيف 1.3.4 عزل كوكيز المتصفح حتى التي يضبطها الهدف،
+وإعادة SQLi بخط أساس جديد، وتخفيض Blind الذي جلب سكربتاً فقط إلى `MEDIUM`،
+ومحاولات بايلودات مخزنة متعددة. الانعكاس وحده يبقى `MEDIUM`، وبوابة التغطية
+صارت 47.0%. تفاصيل التغييرات في `CHANGELOG.md`.

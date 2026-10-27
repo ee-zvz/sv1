@@ -328,6 +328,47 @@ class StoredTokenTests(unittest.TestCase):
         self.assertNotEqual(first, second)
         self.assertTrue(re.fullmatch(r"sv1stored[0-9a-f]{8}\d{2}", first))
 
+    def test_falls_through_payload_shapes_until_one_executes(self) -> None:
+        class Visit:
+            def __init__(self, payload: str) -> None:
+                self.url = "https://example.com/page"
+                self.screenshot = ""
+                self.payload = payload
+
+            def fired(self, marker: str) -> bool:
+                return "<img" in self.payload and marker in self.payload
+
+            def proof(self, marker: str) -> str:
+                return self.payload if marker in self.payload else ""
+
+        class Engine:
+            enabled = True
+
+            def __init__(self) -> None:
+                self.payloads: list[str] = []
+                self.current = ""
+
+            def submit_form(self, _page_url, _form, payload, _field) -> None:
+                self.payloads.append(payload)
+                self.current = payload
+
+            def visit(self, _url, shot_path: str = ""):
+                self.shot_path = shot_path
+                return Visit(self.current)
+
+        page = Page(
+            "https://example.com/page",
+            200,
+            "",
+            forms=[Form("/post", "post", [FormField("q", "", "text")])],
+        )
+        engine = Engine()
+        findings = stored.run(engine, [page], "")
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(len(engine.payloads), stored.PAYLOAD_VARIANTS)
+        self.assertEqual(findings[0].confidence, "CONFIRMED")
+        self.assertIn("<img", findings[0].payload)
+
 
 class StatsTests(unittest.TestCase):
     def test_proof_paths_stay_separate(self) -> None:

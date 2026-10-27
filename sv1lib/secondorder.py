@@ -87,9 +87,11 @@ def run(client, pages) -> list[tuple[Finding, InjectionPoint]]:
                 dbms, line = match_error(response.text)
                 if not dbms:
                     continue
-                before = " ".join(baseline.get(url, "").split())
+                raw_before = baseline.get(url, "")
+                before = " ".join(raw_before.split())
                 if line and line in before:
                     continue
+                before_dbms, before_line = match_error(raw_before)
                 point = InjectionPoint(
                     url=action,
                     method="POST",
@@ -111,6 +113,12 @@ def run(client, pages) -> list[tuple[Finding, InjectionPoint]]:
                         technique="second-order",
                         detail=f"second-order injection: the value was stored and later "
                                f"used in a query ({dbms})",
+                        data={
+                            "baseline_error": (
+                                before_line or (dbms if before_dbms else "")
+                            ),
+                            "baseline_checked": "1",
+                        },
                     ),
                     point,
                 ))

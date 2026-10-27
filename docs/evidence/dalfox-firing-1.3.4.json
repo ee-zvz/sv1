@@ -1,0 +1,42 @@
+{
+  "findings": [
+    {
+      "confidence": "high",
+      "confidence_reason": "payload reached an executable position in the parsed response",
+      "cwe": "CWE-79",
+      "data": "https://public-firing-range.appspot.com/reflected/parameter/attribute_name?q=x%20onmouseover%3Dalert%281%29%20class%3Ddlxa18dae16%20",
+      "detection_method": "reflection",
+      "evidence": "DOM verification successful for param q (DOM marker)",
+      "inject_type": "inHTML",
+      "location": "Query",
+      "message_id": 606,
+      "message_str": "Triggered XSS Payload (DOM marker): q=x onmouseover=alert(1) class=dlxa18dae16 ",
+      "method": "GET",
+      "param": "q",
+      "payload": "x onmouseover=alert(1) class=dlxa18dae16 ",
+      "severity": "High",
+      "type": "V",
+      "type_description": "Vulnerable - dalfox asserts this input is exploitable; act on it"
+    }
+  ],
+  "meta": {
+    "dalfox_version": "3.2.4",
+    "dedup_mode": "exact",
+    "failed_requests": 0,
+    "findings_count": 1,
+    "incomplete": false,
+    "scan_duration_ms": 6239,
+    "target_summary": [
+      {
+        "findings_count": 1,
+        "status": "findings",
+        "target": "https://public-firing-range.appspot.com/reflected/parameter/attribute_name?q=test"
+      }
+    ],
+    "targets": [
+      "https://public-firing-range.appspot.com/reflected/parameter/attribute_name?q=test"
+    ],
+    "targets_deduplicated": 0,
+    "total_requests": 26
+  }
+}
