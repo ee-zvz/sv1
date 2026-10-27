@@ -271,6 +271,8 @@ def _stats_dict(stats) -> dict:
         "requests": int(getattr(stats, "requests", 0)),
         "errors": int(getattr(stats, "errors", 0)),
         "verified": int(getattr(stats, "verified", 0)),
+        "confirmed": int(getattr(stats, "confirmed", 0)),
+        "replayed": int(getattr(stats, "replayed", 0)),
         "unverified": int(getattr(stats, "unverified", 0)),
         "fixed": int(getattr(stats, "fixed", 0)),
         "duration_seconds": round(float(getattr(stats, "duration", 0.0)), 2),

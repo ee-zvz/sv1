@@ -15,6 +15,7 @@ MAX_RETRIES = 2                 # attempts per request on transport failure
 DEFAULT_RPS = 8.0               # requests per second cap, 0 = unlimited
 MAX_BODY_BYTES = 4_000_000      # stop reading gigantic responses
 MAX_REDIRECTS = 5
+REDIRECT_STATUSES = (301, 302, 303, 307, 308)
 
 # --- adaptive throttling ---------------------------------------------------
 RATE_PENALTY_FACTOR = 2.0       # multiply the interval on 429/503

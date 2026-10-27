@@ -7,6 +7,8 @@ whether the marker fired there.
 
 from __future__ import annotations
 
+import secrets
+
 from . import browser as browser_mod
 from . import config, crawl
 from .models import Finding, Page
@@ -34,7 +36,8 @@ def _payloads(token: str) -> list[str]:
 
 
 def _token(index: int) -> str:
-    return f"sv1stored{index:02d}"
+    """Unique per run: a token from a previous scan must never look current."""
+    return f"sv1stored{secrets.token_hex(4)}{index:02d}"
 
 
 def _shot_path(root: str, index: int) -> str:

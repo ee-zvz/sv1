@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field, asdict
 from typing import Any
 
@@ -59,6 +60,16 @@ class InjectionPoint:
         source = self.source
         if self.method.upper() == "GET" and source in ("query", "form"):
             source = "query"
+        # Two raw/JSON points can share method, URL and parameter name while
+        # carrying different templates. The body is the request, so it belongs
+        # in the identity. Hash it instead of keeping a 4 MB string in a set.
+        body = ""
+        content_type = ""
+        if self.body:
+            body = hashlib.sha1(
+                self.body.encode("utf-8", "replace")
+            ).hexdigest()
+            content_type = self.content_type
         return (
             self.method,
             self.url,
@@ -66,6 +77,8 @@ class InjectionPoint:
             self.param,
             self.param_index,
             self.path,
+            body,
+            content_type,
         )
 
     def position(self) -> int:
@@ -170,12 +183,18 @@ class ScanStats:
     pages: int = 0
     points: int = 0
     errors: int = 0
-    verified: int = 0
+    confirmed: int = 0              # browser/OOB proof, no HTTP replay needed
+    replayed: int = 0               # reproduced by the HTTP replay pass
     unverified: int = 0
     fixed: int = 0
     retest: bool = False
     started: float = 0.0
     finished: float = 0.0
+
+    @property
+    def verified(self) -> int:
+        """Backwards-compatible total; the two proof paths stay visible."""
+        return self.confirmed + self.replayed
 
     @property
     def duration(self) -> float:

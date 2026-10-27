@@ -2,6 +2,69 @@
 
 All notable changes to SV1. Format follows Keep a Changelog.
 
+## 1.3.3 - 2026-10-27
+
+Scope and identity hardening. The vulnerability scope is unchanged: XSS, SQLi,
+blind XSS and SSRF; reflection-only stays `MEDIUM`.
+
+### Security
+
+- `net.Client` now walks redirects itself, one hop at a time. Without
+  `--scope`, only the target origin is followed, plus a plain-HTTP to HTTPS
+  upgrade on the same host and standard ports. A scope file may authorise
+  another host, but the hop is still checked before a request is sent.
+  `config.MAX_REDIRECTS` is enforced, and `file:`, `gopher:` and other
+  non-HTTP(S) redirect targets are refused.
+- Imported session headers (`Authorization`, `-H`, ...) and cookies are sent
+  only to the target origin. A cross-origin hop that `--scope` permits carries
+  no session material. The cookie jar is host-scoped, and explicit cookie
+  points override a jar value instead of producing `sid=abc; sid=payload`.
+- Chromium no longer receives session headers through `extra_http_headers`.
+  A route guard adds them per request only for the target origin, so a
+  third-party script, image or iframe cannot inherit the operator's session.
+  Top-level browser navigations obey the same scope as the HTTP client;
+  cross-origin subresources may still load without session headers. Chromium's
+  cookie jar ignores ports, so a cross-origin request that would carry an
+  imported cookie is cancelled instead of leaking it.
+- An out-of-scope URL is refused before any bytes are sent, not filtered after
+  the response arrives.
+
+### Fixed
+
+- Form actions keep their query string. `/search?lang=en` is now scanned as
+  that endpoint instead of `/search`.
+- SSRF probes rebuild nested JSON bodies from the original template, so a
+  payload in `items[1].id` no longer erases `user.name` or `items[0].id`.
+- Stored-XSS markers are unique per run. A token left in the database by an
+  earlier scan can no longer be mistaken for a fresh execution.
+- `InjectionPoint.key()` includes a hash of the raw/JSON body and its content
+  type. Two templates on the same URL and parameter are distinct points.
+- `ScanStats` separates `confirmed` (browser/OOB proof) from `replayed` (HTTP
+  replay). `verified` remains their sum for compatibility; JSON, history and
+  the console summary expose both counters.
+
+### Tests and CI
+
+- `tests/test_1_3_3.py`: 22 tests covering default scope, scoped redirects,
+  header/cookie isolation, redirect caps and schemes, cookie override,
+  browser origin scoping, form-action queries, body identity, SSRF nested
+  bodies, stored tokens and split proof counters.
+- Coverage gate: `[tool.coverage.report] fail_under = 43.5`. Default suite
+  branch coverage is 44.4% (4,554 statements).
+- Default suite: 110 discovered, 106 pass, 4 opt-in tests skipped.
+
+### Validation
+
+- `python -m ruff check .`: all checks passed.
+- `python -m mypy`: no issues in 36 source files.
+- Chromium integration tests: XHR body capture, origin-scoped session headers,
+  and imported-cookie isolation across ports all pass.
+- Full lab on Windows 11 / Python 3.14.6: 31/31 verified (17 confirmed,
+  14 replayed), 0 unstable, 10 `CRITICAL` / 18 `HIGH` / 3 `MEDIUM`, 21 pages,
+  29 points, 966 requests, 184.8 s, 0 errors. The run uses
+  `--scope 127.0.0.1:8099` and therefore exercises the new redirect and browser
+  guards. Evidence: `docs/evidence/local-lab-1.3.3.json`.
+
 ## 1.3.2 - 2026-10-27
 
 Quality gates and a same-target external comparison. The detection engine and

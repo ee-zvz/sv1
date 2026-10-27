@@ -186,6 +186,8 @@ def print_summary(findings: list, stats) -> None:
         sys.stdout.write(f"  {GREY}by type  {RESET}{detail}\n")
 
     verified = getattr(stats, "verified", 0)
+    confirmed = getattr(stats, "confirmed", 0)
+    replayed = getattr(stats, "replayed", 0)
     unverified = getattr(stats, "unverified", 0)
     fixed = getattr(stats, "fixed", 0)
     if getattr(stats, "retest", False):
@@ -195,10 +197,16 @@ def print_summary(findings: list, stats) -> None:
             f"{GREY}, {mark}{fixed} fixed{RESET}\n"
         )
     elif verified or unverified:
-        mark = GREY if unverified else GREEN
+        parts = []
+        if confirmed:
+            parts.append(f"{confirmed} confirmed")
+        if replayed:
+            parts.append(f"{replayed} replayed")
+        if unverified:
+            parts.append(f"{unverified} unstable")
+        color = GREEN if not unverified else GREY
         sys.stdout.write(
-            f"  {GREY}replay   {RESET}{mark}{verified} reproduced{RESET}"
-            f"{GREY}, {unverified} unstable{RESET}\n"
+            f"  {GREY}proof    {RESET}{color}{'  ·  '.join(parts)}{RESET}\n"
         )
 
     sys.stdout.write(
@@ -233,6 +241,8 @@ def export(path: str, findings: list, stats, meta: dict) -> str:
             "requests": stats.requests,
             "errors": stats.errors,
             "verified": stats.verified,
+            "confirmed": getattr(stats, "confirmed", 0),
+            "replayed": getattr(stats, "replayed", 0),
             "unverified": stats.unverified,
             "fixed": getattr(stats, "fixed", 0),
             "retest": bool(getattr(stats, "retest", False)),

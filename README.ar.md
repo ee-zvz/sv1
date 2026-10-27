@@ -5,13 +5,15 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.3.2` keeps the real-application inputs
+SQLite session history. Release `1.3.3` keeps the real-application inputs
 introduced in `1.3.0`: HAR and raw HTTP request import, nested JSON and raw
 bodies, XHR/fetch POST capture, same-origin external JavaScript analysis, and
 nested OpenAPI bodies. Reflection alone stays `MEDIUM`; `HIGH` needs execution.
 `1.3.1` added exact dependency pins, a `pyproject.toml`, a full-lab CI gate, and
-replay-enabled Altoro evidence. `1.3.2` adds one version source, ruff/mypy and
+replay-enabled Altoro evidence. `1.3.2` added one version source, ruff/mypy and
 coverage gates, and a same-target comparison against dalfox and sqlmap.
+`1.3.3` hardens redirect scope, keeps session headers on the target origin, and
+splits confirmed from replayed proof.
 
 أداة فحص ثغرات **XSS** و **SQL Injection** و **Blind XSS** و **SSRF** مكتوبة
 ببايثون، تشتغل على ويندوز 11. عند التشغيل تطلع مقدمة متحركة (لوقو SV1 بتدرّج
@@ -304,10 +306,13 @@ https://api.example.com/v1/*
 
 - سطر لكل قاعدة، `#` للتعليق، و`*` wildcard في المضيف أو المسار.
 - لازم الهدف نفسه يطابق قاعدة، وإلا يتوقف الفحص بكود 2.
-- الزاحف ما يجلب صفحات خارج النطاق، والنقاط المستوردة من OpenAPI/JS/SPA
-  والهيدرات/الكوكيز/JSON تُفلتر. الملف الفارغ أو غير المقروء = رفض.
+- بدون `--scope`، نطاق الهدف هو القائمة الكاملة، مع استثناء واحد: ترقية
+  same-host من HTTP إلى HTTPS. أي redirect لنطاق آخر يُرفض. مع ملف scope،
+  تُفحص كل قفزة تحويل والتنقل العلوي في المتصفح قبل الإرسال.
+- النطاق يسمح بالوصول، لا بالأسرار: هيدرات الجلسة والكوكيز المستوردة تُرسل
+  للهدف فقط. القفزة المسموحة عبر النطاق تكون بلا جلسة.
 - الملف يحدد ما يُفحص، وليس جدار شبكة: صفحات SPA قد تطلب أصولاً خارجية أثناء
-  العرض. لا تعتمد عليه للحماية الشبكية.
+  العرض، لكن بدون هيدرات الجلسة. لا تعتمد عليه للحماية الشبكية.
 
 ### قاعدة الجلسات `--db` و`--diff`
 
@@ -610,7 +615,7 @@ sv1/
 أهداف عامة مصابة عمدًا فقط. الأوامر والأدلة الخام: [`docs/REALWORLD.md`](docs/REALWORLD.md).
 المقارنة بنفس الهدف ضد dalfox وsqlmap: [`docs/COMPARISON.md`](docs/COMPARISON.md).
 
-تحقق المواقع الحية: **4 تشغيلات، 76 صفحة، 49 نقطة حقن، 560 طلباً، 59 نتيجة، 59/59 موثقة، 0 أخطاء**. الاختبارات: **86 مكتشفاً، 84 ينجح افتراضياً؛ اختبار Chromium واختبار المختبر الكامل يعملان في CI**.
+تحقق المواقع الحية: **4 تشغيلات، 76 صفحة، 49 نقطة حقن، 560 طلباً، 59 نتيجة، 59/59 موثقة، 0 أخطاء**. الاختبارات: **110 مكتشفاً، 106 ينجح افتراضياً؛ اختبارات Chromium واختبار المختبر الكامل تعمل في CI**.
 
 | الهدف | النطاق | النتيجة |
 |---|---|---|
@@ -618,7 +623,7 @@ sv1/
 | Google Firing Range — DOM | 25 صفحة زحف، 20 معروضة | **15 HIGH** DOM، 0 أخطاء |
 | Altoro Mutual — بحث | معامل GET واحد | **1 HIGH** XSS منعكس، مؤكد؛ إعادة تشغيل 1/1 |
 | Firing Range — استيراد HAR | نقطة GET مستوردة | **1 HIGH** مؤكدة؛ إعادة تشغيل 1/1 |
-| المختبر المحلي 1.3.2 | تغطية كاملة + HAR/JSON/XHR/سكربت خارجي | **31/31** نتيجة أعادت التشغيل، 0 unstable |
+| المختبر المحلي 1.3.3 | تغطية كاملة + HAR/JSON/XHR/سكربت خارجي | **31/31** نتيجة، 0 unstable؛ حماية النطاق والمتصفح مفعّلة |
 
 Firing Range المنعكس وDOM يبقيان دليل 1.2.1/1.2.0، ومحرك الكشف نفسه.
 Altoro أُعيد فحصه مع إعادة التشغيل في 1.3.1. فحص HAR العام في 1.3.1 استورد
@@ -630,11 +635,15 @@ Altoro أُعيد فحصه مع إعادة التشغيل في 1.3.1. فحص HAR
 `<`/`>` في المعامل. سُجّلتا كانعكاس فقط، بدون رفعها إلى `HIGH`. إعادة
 التشغيل أعادت إرسال 42 نتيجة وأثبتت 42.
 
-قبول المختبر في 1.3.2: 31/31 أعادت التشغيل، 0 unstable — CRITICAL 10 /
-HIGH 18 / MEDIUM 3، 21 صفحة، 29 نقطة، 966 طلباً، 186.0 ثانية. المسارات
-الجديدة ظاهرة في نفس التشغيل: `/external` نتيجة DOM خارجية `HIGH`،
-و`/api/xhr` انعكاس JSON POST `MEDIUM` من التقاط SPA. إصلاح المعاملات المتعددة
-يبقى في `/api/fetch` و`/api/spa` و`/dynamic`: المعامل الثاني (`name`) يُحقن.
+قبول المختبر في 1.3.3: 31/31 موثقة (17 مؤكدة في المتصفح أو OOB، و14 أعادت
+الإرسال عبر HTTP)، 0 unstable — CRITICAL 10 / HIGH 18 / MEDIUM 3، 21 صفحة،
+29 نقطة، 966 طلباً، 184.8 ثانية، 0 أخطاء. الدليل:
+[`docs/evidence/local-lab-1.3.3.json`](docs/evidence/local-lab-1.3.3.json).
+التشغيل يستخدم `--scope 127.0.0.1:8099` ويمرّ على حماية التحويلات والمتصفح
+الجديدة. المسارات الجديدة ظاهرة في نفس التشغيل: `/external` نتيجة DOM خارجية
+`HIGH`، و`/api/xhr` انعكاس JSON POST `MEDIUM` من التقاط SPA. إصلاح المعاملات
+المتعددة يبقى في `/api/fetch` و`/api/spa` و`/dynamic`: المعامل الثاني (`name`)
+يُحقن.
 
 مقارنة خارجية على هدف SQLite حقيقي، في نفس اليوم: SV1 أكد 3 XSS و2 SQLi،
 dalfox أكد 3 XSS، وsqlmap أكد 2 SQLi؛ الثلاثة بلا إيجابيات كاذبة مؤكدة. SV1
@@ -670,8 +679,8 @@ python sv1.py -u http://127.0.0.1:8099/ --crawl --stored --js --second-order --d
   --fail-on high --html report.html
 ```
 
-النتيجة: **31 نتيجة، 31 أعادت التشغيل، 0 unstable** — CRITICAL 10، HIGH 18،
-MEDIUM 3، 21 صفحة، 29 نقطة حقن، 966 طلبًا، 186.0 ثانية (مع Chromium).
+النتيجة: **31 نتيجة، 31 موثقة (17 مؤكدة، 14 معادة)، 0 unstable** — CRITICAL 10،
+HIGH 18، MEDIUM 3، 21 صفحة، 29 نقطة حقن، 966 طلباً، 184.8 ثانية (مع Chromium).
 
 المختبر يحتفظ بحالة guestbook وblind وprofile في الذاكرة. أعد تشغيل
 `lab\server.py` قبل تكرار الفحص الكامل؛ وإلا فإن `/profile` يحتوي بايلود
@@ -797,8 +806,8 @@ note    database error surfaced (MySQL) - error based injection
 - الفحص الزمني بطيء بطبيعته: كل بايلود ينتظر عدة ثواني.
 - `--stored` و `--second-order` و `--blind` يكتبون بيانات في الهدف.
 - الروابط اللي تحتاج تسجيل دخول تبي `--cookie` أو `-H` (المتصفح يستخدم نفس الكوكيز).
-- `--scope` يحدد نقاط الفحص والزحف، لكن صفحات SPA قد تحمّل أصولاً خارجية
-  أثناء العرض؛ مو جدار شبكة.
+- `--scope` يحدد الفحص والتحويلات والتنقل العلوي في المتصفح. صفحات SPA قد
+  تحمّل أصولاً خارجية أثناء العرض، لكن بدون هيدرات الجلسة؛ مو جدار شبكة.
 - `--retest` يعيد فحص XSS وSQLi error/boolean/time/second-order فقط. Blind،
   SSRF، Stored، DOM، وUNION تحتاج متصفحاً أو استخراجاً كاملاً فتُتخطى.
   الجلسة الأحدث لنفس `-u` هي المرجع.
@@ -813,9 +822,10 @@ MIT — راجع ملف `LICENSE`.
 
 ## الإصدار
 
-`1.3.2` — الإصدار العام الحالي. مدخلات تطبيقات حقيقية: HAR وطلبات HTTP خام،
+`1.3.3` — الإصدار العام الحالي. مدخلات تطبيقات حقيقية: HAR وطلبات HTTP خام،
 JSON وأجسام خام متداخلة، التقاط XHR/fetch POST، تحليل سكربتات same-origin
 خارجية، وOpenAPI متداخل، مع إصدارات مثبتة بدقة، `pyproject.toml`، وبوابة CI
-تشغّل المختبر الكامل. يضيف 1.3.2 مصدر إصدار واحدًا، وبوابات ruff/mypy/coverage،
-ومقارنة بنفس الهدف ضد dalfox وsqlmap. الانعكاس وحده يبقى `MEDIUM`. تفاصيل
-التغييرات في `CHANGELOG.md`.
+تشغّل المختبر الكامل. يضيف 1.3.3 فحص نطاق لكل قفزة redirect، وعزل هيدرات
+الجلسة والكوكيز عن أي نطاق آخر في HTTP والمتصفح، وتقسيم عدّاد الإثبات إلى
+`confirmed` و`replayed`، وبوابة تغطية 43.5%. الانعكاس وحده يبقى `MEDIUM`.
+تفاصيل التغييرات في `CHANGELOG.md`.

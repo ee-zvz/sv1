@@ -1,17 +1,18 @@
-# SV1 1.3.2 — quality gates
+# SV1 1.3.3 — quality gates
 
 Date: 2026-10-27
 Platform: Windows 11, Python 3.14.6
 
-The 1.3.2 patch does not change the detection engine. It removes duplicate
-version sources, measures the test surface, and puts static checks in CI.
+The 1.3.3 patch hardens scope and request identity. It does not add a new
+vulnerability class: XSS, SQLi, blind XSS and SSRF stay the surface, and
+reflection-only findings stay `MEDIUM`.
 
 ## One version source
 
 `sv1lib/version.py` is the only version string:
 
 ```python
-__version__ = "1.3.2"
+__version__ = "1.3.3"
 ```
 
 - `sv1lib/config.py` imports it and exposes `TOOL_VERSION`.
@@ -20,7 +21,7 @@ __version__ = "1.3.2"
   `sv1lib.version.__version__`.
 - `tests/test_version.py` fails if the runtime, user agent and package metadata
   drift apart.
-- `python -m pip install --dry-run --no-deps .` reports `Would install sv1-1.3.2`.
+- `python -m pip install --dry-run --no-deps .` reports `Would install sv1-1.3.3`.
 
 ## Ruff and mypy
 
@@ -42,7 +43,7 @@ python -m ruff check .          all checks passed
 python -m mypy                  success: no issues found in 36 source files
 ```
 
-Both run in the new `quality` CI job, together with coverage.
+Both run in the `quality` CI job, together with coverage.
 
 ## Coverage
 
@@ -53,30 +54,47 @@ python -m coverage run -m unittest discover -s tests
 python -m coverage report -m
 ```
 
-Result: **42.5% branch coverage** across `sv1.py` and `sv1lib` (4,342
-statements). The default suite is fast and network-free, so integration paths
-stay low:
+Result: **44.4% branch coverage** across `sv1.py` and `sv1lib` (4,554
+statements). The suite is network-free except for loopback redirect tests, so
+integration paths stay low:
 
 | Module | Coverage | Why |
 |---|---:|---|
-| `sv1lib/union.py` | 48.9% | payload/ordering tests added in 1.3.2; extraction still needs a server |
-| `sv1lib/blind.py` | 46.7% | form/sink tests added; callback wait needs a browser and an OOB listener |
-| `sv1lib/sqli.py` | 8.7% | request/response loops; exercised by the full lab, not unit tests |
+| `sv1lib/net.py` | 74.0% | redirect hops, scope refusal, cookie override and rate paths are unit-tested |
+| `sv1lib/browser.py` | 14.5% | route guard helpers are unit-tested; Playwright lifecycle needs Chromium |
+| `sv1lib/ssrf.py` | 26.1% | body rebuilding is tested; probes need a live target and listener |
+| `sv1lib/sqli.py` | 8.7% | request/response loops; exercised by the full lab |
 | `sv1lib/verify.py` | 9.2% | replay needs a live response |
-| `sv1lib/browser.py` | 12.9% | Playwright lifecycle and page execution |
-| `sv1lib/ssrf.py` | 11.9% | probes need a live target and controlled listener |
+| `sv1lib/union.py` | 48.9% | payload/ordering tests; extraction still needs a server |
+| `sv1lib/blind.py` | 46.7% | form/sink tests; callback wait needs a browser and an OOB listener |
 
-The full lab (`tests/test_lab_1_3.py`, `SV1_LAB_TESTS=1`) is the integration
-gate for those modules; it runs Chromium and the local server in CI. Coverage is
-reported, not used as a hard percentage gate, because a network-free unit suite
-and a browser lab measure different things.
+`[tool.coverage.report]` now sets `fail_under = 43.5`. The `quality` job fails
+when the default suite drops below that floor. The full lab
+(`tests/test_lab_1_3.py`, `SV1_LAB_TESTS=1`) remains the integration gate for
+the browser and live-response modules.
 
 ## Package checks
 
 - `python -m compileall -q sv1.py sv1lib lab tests`
 - `python -m pip install --dry-run --no-deps .`
-- default tests: **86 discovered, 84 pass, 2 opt-in tests skipped**.
-- opt-in Chromium XHR test and full-lab acceptance test: both pass.
+- default tests: **110 discovered, 106 pass, 4 opt-in tests skipped**.
+- opt-in Chromium integration tests and full-lab acceptance test: all pass.
+- full lab: 31/31 verified (17 confirmed, 14 replayed), 0 unstable, 0 errors,
+  21 pages, 29 points, 966 requests, 184.8 s.
+
+## Scope guarantees added in 1.3.3
+
+- The HTTP client follows redirects only inside the target origin unless
+  `--scope` explicitly allows the next host. Every hop is checked before the
+  request is prepared.
+- Session headers and cookies never follow a cross-origin hop. A scoped hop is
+  reachable, but it is anonymous.
+- The browser route guard applies the same header rule per request and blocks
+  out-of-scope top-level navigations. Cross-origin iframes/scripts can still
+  load; they do not receive the operator's headers or imported cookies. A
+  cross-origin request that would carry an imported cookie is cancelled,
+  because Chromium's cookie jar ignores ports.
+- Refused URLs return `Response(status=0, error=...)` without a socket.
 
 ## الخلاصة بالعربية
 
@@ -84,6 +102,8 @@ and a browser lab measure different things.
   و`User-Agent`، مع اختبار يمنع التباعد.
 - `ruff` يفحص أخطاء الصياغة والأسماء غير المعرفة، و`mypy` يفحص 36 ملفًا،
   والاثنان يعملان في CI.
-- تغطية الاختبارات الافتراضية 42.5% (branch). وحدات `sqli` و`verify` و`ssrf`
-  و`browser` منخفضة لأنها تحتاج هدفًا حيًا؛ المختبر الكامل في CI هو بوابتها.
-- `union` و`blind` كانا الأضعف؛ أُضيفت لهما اختبارات مباشرة في 1.3.2.
+- تغطية الاختبارات الافتراضية 44.4% (branch) مع حد أدنى 43.5% في CI.
+- في 1.3.3 صار العميل يفحص كل قفزة تحويل قبل إرسالها، ولا ترافق ترويسات
+  الجلسة أو الكوكيز أي نطاق آخر. المتصفح يطبّق القاعدة نفسها لكل طلب.
+- المختبر الكامل ما زال البوابة: 31/31 (17 مؤكدة + 14 معادة)، صفر نتائج غير
+  مستقرة، 966 طلباً، 184.8 ثانية.

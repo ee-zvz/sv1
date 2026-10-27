@@ -1,13 +1,14 @@
-# SV1 1.3.2 - real-world validation
+# SV1 - real-world validation
 
 Date: 2026-10-27
-Build: `1.3.2`; public evidence retained from `1.3.1`
+Build: `1.3.3`; public evidence retained from `1.3.1`
 Platform: Windows 11, Python 3.14.6, Playwright Chromium (headless)
 
-> `1.3.2` does not change the detection engine. Its full-lab rerun is 31/31 at
-> 186.0 s, and the same-target dalfox/sqlmap comparison is in
-> [`COMPARISON.md`](COMPARISON.md). This document keeps the 1.3.1 public
-> evidence and adds no new public scan.
+> `1.3.3` does not change the detection engine. Its full-lab rerun is 31/31 at
+> 184.8 s (17 confirmed, 14 replayed) with `--scope 127.0.0.1:8099`, so the new
+> redirect and browser guards are exercised. The same-target dalfox/sqlmap
+> comparison from 1.3.2 is in [`COMPARISON.md`](COMPARISON.md). This document
+> keeps the 1.3.1 public evidence and adds no new public scan.
 
 This document records what SV1 actually found and proved outside the local lab.
 The reflected Firing Range and DOM runs remain from 1.2.1/1.2.0; Altoro was
@@ -41,8 +42,8 @@ for reflected Firing Range, 1/1 for Altoro, 1/1 for the public HAR import, and
 15/15 execution-confirmed for DOM (the DOM run was generated with
 `--no-verify`).
 
-Automated tests on the current 1.3.2 tree: **86 discovered, 84 pass by default**.
-The Chromium XHR test and the full-lab acceptance test are opt-in locally and
+Automated tests on the current 1.3.3 tree: **110 discovered, 106 pass by default**.
+The Chromium integration tests and the full-lab acceptance test are opt-in locally and
 run in CI; both pass on a fresh lab process. Quality gates and coverage:
 [`QUALITY.md`](QUALITY.md).
 
@@ -339,6 +340,34 @@ payload already in `/profile`; that page then renders the error state and no
 longer exposes the form, so the second-order finding is absent (30/31) even
 though every finding it did produce replayed. The 31/31 result is from a fresh
 server process.
+
+### 1.3.3 rerun
+
+The 1.3.3 acceptance run on the same lab, with a fresh server and a scope file
+containing `127.0.0.1:8099`:
+
+| Metric | Value |
+|---|---:|
+| Findings | 31 |
+| Confirmed (browser/OOB) | 17 |
+| Replayed (HTTP) | 14 |
+| Unstable | 0 |
+| `CRITICAL` | 10 |
+| `HIGH` | 18 |
+| `MEDIUM` | 3 |
+| Pages | 21 |
+| Injection points | 29 |
+| Requests | 966 |
+| Errors | 0 |
+| Duration | 184.8 s |
+
+`stats.verified` remains 31 (`confirmed + replayed`). Evidence:
+[`evidence/local-lab-1.3.3.json`](evidence/local-lab-1.3.3.json). The run is the
+release gate: `tests/test_lab_1_3.py` asserts the exact counts after the redirect
+and browser guards were added. A dedicated loopback test in
+`tests/test_1_3_3.py` proves that a 302 to another port is refused by default,
+that a scoped hop carries no session headers or cookies, and that redirects to
+non-HTTP schemes are refused.
 
 ---
 

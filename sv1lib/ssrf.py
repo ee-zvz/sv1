@@ -8,10 +8,9 @@ cannot fake a result.
 
 from __future__ import annotations
 
-import json
 import time
 
-from . import config, net
+from . import config, jsonbody, net
 from .models import Finding, InjectionPoint
 from .oob import Callback
 
@@ -62,11 +61,28 @@ def _send(client, point: InjectionPoint, payload: str):
     if source == "form":
         return client.request("POST", point.url, data=mapping, allow_redirects=False)
     if source == "json":
+        body = getattr(point, "body", "")
+        path = tuple(getattr(point, "path", ()) or ())
+        document: object
+        if body:
+            template, error = jsonbody.parse(body)
+            if error:
+                document = {name: value for name, value in mapping}
+            else:
+                try:
+                    document = jsonbody.set_value(template, path, payload)
+                except (KeyError, IndexError, TypeError):
+                    document = {name: value for name, value in mapping}
+        else:
+            document = {name: value for name, value in mapping}
         return client.request(
             point.method,
             point.url,
-            data=json.dumps({name: value for name, value in mapping}),
-            headers={"Content-Type": "application/json"},
+            data=jsonbody.dumps(document),
+            headers={
+                "Content-Type": getattr(point, "content_type", "")
+                or "application/json",
+            },
             allow_redirects=False,
         )
     if source == "multipart":

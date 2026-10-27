@@ -53,3 +53,4 @@ omit = ["tests/*", "lab/*", "build/*"]
 [tool.coverage.report]
 show_missing = true
 precision = 1
+fail_under = 43.5

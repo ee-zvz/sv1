@@ -179,7 +179,8 @@ def select_scanners(args: argparse.Namespace) -> list[str]:
 
 
 def make_browser(args: argparse.Namespace, target: str,
-                 headers: dict | None = None, cookies: dict | None = None):
+                 headers: dict | None = None, cookies: dict | None = None,
+                 allows=None):
     return browser_mod.Browser(
         headers=headers if headers is not None else parse_headers(args.header),
         cookies=cookies if cookies is not None else parse_cookies(args.cookie),
@@ -188,6 +189,7 @@ def make_browser(args: argparse.Namespace, target: str,
         base_url=target,
         artifacts=args.artifacts,
         timeout_ms=config.BROWSER_TIMEOUT_MS,
+        allows=allows,
     )
 
 
@@ -452,7 +454,7 @@ def retest_run(args: argparse.Namespace, target: str, client: net.Client,
         return 2
 
     stats.points = len(rows)
-    stats.verified = len(findings)
+    stats.replayed = len(findings)
     stats.fixed = fixed
     stats.retest = True
     stats.requests = client.requests_sent
@@ -564,6 +566,8 @@ def run(args: argparse.Namespace) -> int:
         cookies=session_cookies,
         verify=not args.insecure,
         proxy=args.proxy,
+        base_url=target,
+        scope=scope_rules.allows if scope_rules is not None else None,
     )
 
     if args.retest:
@@ -625,7 +629,8 @@ def run(args: argparse.Namespace) -> int:
             report.warn("spa skipped - chromium not installed")
         else:
             explorer = make_browser(
-                args, target, headers=session_headers, cookies=session_cookies
+                args, target, headers=session_headers, cookies=session_cookies,
+                allows=scope_rules.allows if scope_rules is not None else None,
             )
             spinner = report.Spinner("rendering pages").start()
             started = explorer.start()
@@ -785,14 +790,15 @@ def run(args: argparse.Namespace) -> int:
                 report.info(f"ssrf    {note}")
                 for finding in ssrf_findings:
                     findings.append(finding)
-                    stats.verified += 1
+                    stats.confirmed += 1
                     report.print_finding(finding, len(findings))
                 if not ssrf_findings:
                     report.info("no callback from url-like parameters")
 
         if use_browser and (pairs or pages):
             engine = make_browser(
-                args, target, headers=session_headers, cookies=session_cookies
+                args, target, headers=session_headers, cookies=session_cookies,
+                allows=scope_rules.allows if scope_rules is not None else None,
             )
             spinner = report.Spinner("launching chromium").start()
             started = engine.start()
@@ -818,7 +824,7 @@ def run(args: argparse.Namespace) -> int:
                 )
                 for finding in dom_findings:
                     findings.append(finding)
-                    stats.verified += 1
+                    stats.confirmed += 1
                     report.print_finding(finding, len(findings))
                 if not dom_findings:
                     report.info("no dom injection path executed")
@@ -828,7 +834,7 @@ def run(args: argparse.Namespace) -> int:
                 stored_findings = stored.run(engine, pages, args.artifacts)
                 for finding in stored_findings:
                     findings.append(finding)
-                    stats.verified += 1
+                    stats.confirmed += 1
                     report.print_finding(finding, len(findings))
                 if not stored_findings:
                     report.info("no stored payload executed")
@@ -858,7 +864,7 @@ def run(args: argparse.Namespace) -> int:
                 report.info(f"blind   {note}")
                 for finding in blind_findings:
                     findings.append(finding)
-                    stats.verified += 1
+                    stats.confirmed += 1
                     report.print_finding(finding, len(findings))
                 if not blind_findings:
                     report.info("no blind callback fired")
@@ -877,13 +883,13 @@ def run(args: argparse.Namespace) -> int:
         if pairs and not args.no_verify:
             pending = [(f, p) for f, p in pairs if f.confidence != "CONFIRMED"]
             proven = len(pairs) - len(pending)
-            stats.verified += proven
+            stats.confirmed += proven
             if pending:
                 report.section("replay")
             for index, (finding, point) in enumerate(pending, 1):
                 label = f"{finding.kind} {point.url} [{point.param}]"
                 if verify.verify(client, point, finding):
-                    stats.verified += 1
+                    stats.replayed += 1
                     report.good(f"{index}/{len(pending)}  {label}")
                 else:
                     stats.unverified += 1

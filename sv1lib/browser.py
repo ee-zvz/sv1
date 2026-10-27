@@ -11,7 +11,7 @@ import os
 import urllib.parse
 from dataclasses import dataclass, field
 from html import escape
-from typing import Any
+from typing import Any, Callable
 
 from . import config, net
 from .models import CapturedRequest, Explore
@@ -106,6 +106,7 @@ class Browser:
         base_url: str = "",
         artifacts: str = "",
         timeout_ms: int = config.BROWSER_TIMEOUT_MS,
+        allows: Callable[[str], bool] | None = None,
     ) -> None:
         self.headers = headers or {}
         self.cookies = cookies or {}
@@ -114,6 +115,7 @@ class Browser:
         self.base_url = base_url
         self.artifacts = artifacts
         self.timeout_ms = timeout_ms
+        self.allows = allows
         self.enabled = False
         self.reason = ""
         self._pw: Any = None
@@ -133,18 +135,22 @@ class Browser:
             if self.proxy:
                 launch["proxy"] = {"server": self.proxy}
             self._browser = self._pw.chromium.launch(**launch)
+            # Session headers are applied per request by the route guard, not
+            # on the context. Context-level headers also reach third-party
+            # scripts, styles and images, which is exactly the leak we remove.
             self._context = self._browser.new_context(
                 ignore_https_errors=self.ignore_https,
-                extra_http_headers=self.headers,
                 viewport={
                     "width": config.BROWSER_VIEWPORT[0],
                     "height": config.BROWSER_VIEWPORT[1],
                 },
             )
             self._context.add_init_script(INIT_SCRIPT)
+            self._context.route("**/*", self._guard)
             if self.cookies:
+                scope_url = (net.origin(self.base_url) or "http://localhost") + "/"
                 self._context.add_cookies([
-                    {"name": name, "value": value, "url": self.base_url or "http://localhost"}
+                    {"name": name, "value": str(value), "url": scope_url}
                     for name, value in self.cookies.items()
                 ])
             self.enabled = True
@@ -170,6 +176,88 @@ class Browser:
         self._browser = None
         self._pw = None
         self.enabled = False
+
+    # -- scope and headers -------------------------------------------------
+    def session_headers_for(self, url: str) -> dict:
+        """Operator/imported headers only go to the scan origin."""
+        if not self.headers:
+            return {}
+        if self.base_url and not net.same_target(url, self.base_url):
+            return {}
+        return dict(self.headers)
+
+    def _blocks_navigation(self, url: str) -> bool:
+        """Top-level navigations obey scope; subresources may load normally."""
+        if self.allows is not None:
+            try:
+                return not self.allows(url)
+            except Exception:
+                return True
+        if self.base_url:
+            return not net.same_target(url, self.base_url)
+        return False
+
+    def _guard(self, route) -> None:
+        """Per-request route guard: scope, headers and cookie isolation."""
+        try:
+            request = route.request
+            frame = getattr(request, "frame", None)
+            main_frame = frame is not None and getattr(frame, "parent_frame", None) is None
+            navigation = False
+            try:
+                navigation = bool(request.is_navigation_request())
+            except Exception:
+                navigation = str(getattr(request, "resource_type", "")) == "document"
+            if navigation and main_frame and self._blocks_navigation(request.url):
+                route.abort("blockedbyclient")
+                return
+            if self._would_leak_cookie(request):
+                route.abort("blockedbyclient")
+                return
+            headers = self.session_headers_for(request.url)
+            if headers:
+                # playwright replaces the header set when the option is used;
+                # keep the browser's own headers (cookie, UA, accept) intact.
+                try:
+                    merged = dict(request.all_headers())
+                except Exception:
+                    merged = dict(request.headers)
+                merged.update({str(name).lower(): str(value) for name, value in headers.items()})
+                route.continue_(headers=merged)
+            else:
+                route.continue_()
+        except Exception:
+            try:
+                route.continue_()
+            except Exception:
+                pass
+
+    def _would_leak_cookie(self, request) -> bool:
+        """A browser cookie ignores ports; do not let it cross the target.
+
+        The limit is specific: cookies imported with --cookie/-H. Cookies the
+        target sets during the scan stay in Chromium's jar by design, but an
+        imported session cookie must never follow a subresource to another
+        port or host. Cancelling the request is the only reliable way to
+        remove a Cookie header Chromium adds after route interception.
+        """
+        if not self.cookies or not self.base_url:
+            return False
+        if net.same_target(request.url, self.base_url):
+            return False
+        try:
+            headers = dict(request.all_headers())
+        except Exception:
+            headers = dict(request.headers)
+        raw = headers.get("cookie") or headers.get("Cookie") or ""
+        if not raw:
+            return False
+        sent = {
+            item.split("=", 1)[0].strip()
+            for item in raw.split(";")
+            if item.strip()
+        }
+        return any(str(name) in sent for name in self.cookies)
 
     # -- internals ---------------------------------------------------------
     def _read(self, page) -> tuple[list[str], list[str]]:
@@ -285,6 +373,8 @@ class Browser:
     ) -> Visit:
         if not self.enabled or self._context is None:
             return Visit(url=url, error=self.reason or "browser disabled")
+        if self._blocks_navigation(url):
+            return Visit(url=url, error=f"outside scan scope: {url}")
         page = self._context.new_page()
         console: list[str] = []
         page.on("console", lambda message: console.append(f"{message.type}: {message.text}"))
@@ -337,6 +427,8 @@ class Browser:
         """Render a page like a user, keep the xhr calls and the links it builds."""
         if not self.enabled or self._context is None:
             return Explore(url=url, error=self.reason or "browser disabled")
+        if self._blocks_navigation(url):
+            return Explore(url=url, error=f"outside scan scope: {url}")
         page = self._context.new_page()
         xhr: list[str] = []
         captured: list[CapturedRequest] = []
@@ -408,6 +500,8 @@ class Browser:
         interact_marker: str = "",
     ) -> Visit:
         """Navigate exactly as the scanner injected, so the browser sees the same bytes."""
+        if self._blocks_navigation(point.url):
+            return Visit(url=point.url, error=f"outside scan scope: {point.url}")
         target_index = point.position()
         mapping = [
             (name, payload if index == target_index else value)

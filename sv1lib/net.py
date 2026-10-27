@@ -6,11 +6,16 @@ import shlex
 import threading
 import time
 import urllib.parse
+from typing import Callable
 
 import requests
 
 from . import config, jsonbody
 from .models import Response
+
+# A redirect may keep these headers. Everything else came from the operator or
+# the imported session and must not follow the scan to another origin.
+SAFE_REDIRECT_HEADERS = frozenset({"accept", "content-type"})
 
 
 class RateLimiter:
@@ -78,7 +83,14 @@ class RateLimiter:
 
 
 class Client:
-    """One cookie jar, one rate budget, one requests session per thread."""
+    """One cookie jar, one rate budget, one requests session per thread.
+
+    ``base_url`` is the scan origin. Session headers and the cookie jar only
+    travel there; a redirect to another origin is refused unless a ``scope``
+    predicate explicitly allows the hop, and even then the session material is
+    stripped. Without a scope predicate the default allowlist is the target
+    origin, not the whole internet.
+    """
 
     def __init__(
         self,
@@ -88,16 +100,27 @@ class Client:
         cookies: dict | None = None,
         verify: bool = True,
         proxy: str = "",
+        base_url: str = "",
+        scope: Callable[[str], bool] | None = None,
     ) -> None:
         self.timeout = timeout
         self.verify = verify
         self.limiter = RateLimiter(rps)
+        self.base_url = base_url
+        self.scope = scope
+        self.session_headers = dict(headers or {})
         self.headers = dict(config.DEFAULT_HEADERS)
-        if headers:
-            self.headers.update(headers)
+        self.headers.update(self.session_headers)
         self.cookies = requests.cookies.RequestsCookieJar()
         if cookies:
-            self.cookies.update(cookies)
+            host = urllib.parse.urlsplit(base_url).hostname if base_url else ""
+            for name, value in cookies.items():
+                # A host-only jar entry keeps imported cookies away from
+                # third-party redirects; the cookie spec itself ignores ports.
+                if host:
+                    self.cookies.set(name, value, domain=host, path="/")
+                else:
+                    self.cookies.set(name, value)
         self.proxies: dict[str, str] = {}
         if proxy:
             self.proxies = {"http": proxy, "https": proxy}
@@ -112,7 +135,9 @@ class Client:
     # -- sessions ----------------------------------------------------------
     def _new_session(self) -> requests.Session:
         session = requests.Session()
-        session.headers.update(self.headers)
+        # Operator headers are merged per request, not baked into the session:
+        # a redirect to another host must be able to drop them.
+        session.headers.update(config.DEFAULT_HEADERS)
         session.cookies = self.cookies
         if self.proxies:
             session.proxies.update(self.proxies)
@@ -127,6 +152,38 @@ class Client:
             with self._session_lock:
                 self._sessions.append(session)
         return session
+
+    # -- scope -------------------------------------------------------------
+    def _allows(self, url: str) -> bool:
+        if self.scope is not None:
+            try:
+                return bool(self.scope(url))
+            except Exception:
+                return False
+        if self.base_url:
+            return same_target(url, self.base_url)
+        return True
+
+    def _may_send_session(self, url: str) -> bool:
+        """Session headers and cookies belong to the scan origin, not to scope.
+
+        A scope file authorises reachability. It does not turn an imported
+        Authorization header into a credential for every host in the file.
+        """
+        if self.base_url:
+            return same_target(url, self.base_url)
+        return True
+
+    def _hop_headers(self, url: str, headers: dict | None) -> dict:
+        extra = dict(headers or {})
+        if not self._may_send_session(url):
+            return {
+                name: value for name, value in extra.items()
+                if name.lower() in SAFE_REDIRECT_HEADERS
+            }
+        merged = dict(self.session_headers)
+        merged.update(extra)
+        return merged
 
     # -- counters ----------------------------------------------------------
     def _tick(self) -> None:
@@ -151,40 +208,21 @@ class Client:
     ) -> Response:
         method = method.upper()
         started = time.monotonic()
+        if not self._allows(url):
+            return Response(
+                status=0,
+                text="",
+                elapsed=0.0,
+                url=url,
+                headers={},
+                error=f"outside scan scope: {url}",
+            )
         last_error = ""
         for attempt in range(config.MAX_RETRIES):
-            self.limiter.wait()
-            self._tick()
             try:
-                raw = self._session().request(
-                    method=method,
-                    url=url,
-                    params=params,
-                    data=data,
-                    headers=headers,
-                    cookies=cookies,
-                    files=files,
-                    timeout=self.timeout,
-                    verify=self.verify,
-                    allow_redirects=allow_redirects,
-                    stream=True,
-                )
-                try:
-                    body = raw.raw.read(config.MAX_BODY_BYTES, decode_content=True) or b""
-                    status = raw.status_code
-                    final_url = raw.url
-                    response_headers = dict(raw.headers)
-                    retry_after = raw.headers.get("Retry-After", "")
-                finally:
-                    raw.close()
-                text = self._decode(body, raw)
-                self._adapt(status, retry_after)
-                return Response(
-                    status=status,
-                    text=text,
-                    elapsed=time.monotonic() - started,
-                    url=final_url,
-                    headers=response_headers,
+                return self._follow(
+                    method, url, params, data, allow_redirects,
+                    headers, cookies, files, started,
                 )
             except requests.RequestException as exc:
                 last_error = str(exc)
@@ -199,6 +237,161 @@ class Client:
             headers={},
             error=last_error,
         )
+
+    def _follow(
+        self,
+        method: str,
+        url: str,
+        params: dict | list | None,
+        data: dict | list | str | None,
+        allow_redirects: bool,
+        headers: dict | None,
+        cookies: dict | None,
+        files: dict | list | None,
+        started: float,
+    ) -> Response:
+        """Send the request and walk redirects one hop at a time.
+
+        ``requests`` follows redirects inside the adapter, where the client
+        cannot see the next host before the bytes leave. Doing it here keeps
+        every hop behind the scope check and makes header stripping explicit.
+        """
+        current_url = url
+        current_method = method
+        current_params = params
+        current_data = data
+        current_files = files
+        current_headers = dict(headers or {})
+        current_cookies = cookies
+        hops = 0
+
+        while True:
+            session = self._session()
+            prepared = session.prepare_request(requests.Request(
+                method=current_method,
+                url=current_url,
+                params=current_params,
+                data=current_data,
+                headers=self._hop_headers(current_url, current_headers),
+                cookies=current_cookies,
+                files=current_files,
+            ))
+            if not self._may_send_session(current_url):
+                # CookieJar ignores ports and can match a host-only entry on a
+                # different port. Remove the prepared header for this hop.
+                prepared.headers.pop("Cookie", None)
+            elif current_cookies is not None:
+                self._override_cookies(prepared, current_cookies)
+
+            self.limiter.wait()
+            self._tick()
+            raw = session.send(
+                prepared,
+                timeout=self.timeout,
+                verify=self.verify,
+                allow_redirects=False,
+                stream=True,
+            )
+            try:
+                status = raw.status_code
+                response_headers = dict(raw.headers)
+                retry_after = raw.headers.get("Retry-After", "")
+                location = raw.headers.get("Location", "")
+                body = raw.raw.read(config.MAX_BODY_BYTES, decode_content=True) or b""
+                landed = raw.url or current_url
+            finally:
+                raw.close()
+
+            self._adapt(status, retry_after)
+            if not (allow_redirects and status in config.REDIRECT_STATUSES and location):
+                return Response(
+                    status=status,
+                    text=self._decode(body, raw),
+                    elapsed=time.monotonic() - started,
+                    url=landed,
+                    headers=response_headers,
+                )
+
+            next_url = urllib.parse.urljoin(landed, location.strip())
+            next_url = urllib.parse.urldefrag(next_url)[0]
+            scheme = urllib.parse.urlsplit(next_url).scheme.lower()
+            if scheme not in ("http", "https"):
+                return self._blocked(
+                    next_url, response_headers, started,
+                    f"redirect scheme blocked: {next_url}",
+                )
+            if hops >= config.MAX_REDIRECTS:
+                return self._blocked(
+                    next_url, response_headers, started,
+                    f"redirect limit reached ({config.MAX_REDIRECTS})",
+                )
+            if not self._allows(next_url):
+                return self._blocked(
+                    next_url, response_headers, started,
+                    f"redirect outside scan scope: {next_url}",
+                )
+
+            cross_origin = not self._may_send_session(next_url)
+            current_method, current_data, current_files = self._redirect_method(
+                status, current_method, current_data, current_files,
+            )
+            current_params = None
+            current_cookies = None
+            if cross_origin:
+                current_headers = {
+                    name: value for name, value in current_headers.items()
+                    if name.lower() in SAFE_REDIRECT_HEADERS
+                }
+            hops += 1
+            current_url = next_url
+
+    @staticmethod
+    def _blocked(url: str, headers: dict, started: float, error: str) -> Response:
+        """A refused hop is not a transport error; the URL is the evidence."""
+        return Response(
+            status=0,
+            text="",
+            elapsed=time.monotonic() - started,
+            url=url,
+            headers=headers,
+            error=error,
+        )
+
+    @staticmethod
+    def _redirect_method(
+        status: int,
+        method: str,
+        data: dict | list | str | None,
+        files: dict | list | None,
+    ) -> tuple[str, dict | list | str | None, dict | list | None]:
+        """Mirror the browser rules: 303 is GET, 301/302 turn POST into GET."""
+        if status == 303 or (status in (301, 302) and method == "POST"):
+            return "GET", None, None
+        return method, data, files
+
+    def _override_cookies(self, prepared: requests.PreparedRequest,
+                          overrides: dict) -> None:
+        """Apply a cookie point without duplicating a name from the jar.
+
+        ``requests`` merges the explicit dict and the jar, so a host-scoped
+        ``sid=abc`` plus an injected ``sid=PAY`` becomes ``sid=abc; sid=PAY``.
+        The target should see one value: the one the scanner claims to test.
+        """
+        jar = requests.cookies.merge_cookies(
+            requests.cookies.RequestsCookieJar(), self.cookies
+        )
+        for cookie in list(jar):
+            if cookie.name in overrides:
+                try:
+                    jar.clear(cookie.domain, cookie.path, cookie.name)
+                except KeyError:
+                    continue
+        for name, value in overrides.items():
+            jar.set_cookie(requests.cookies.create_cookie(name=name, value=str(value)))
+        prepared.headers.pop("Cookie", None)
+        header = requests.cookies.get_cookie_header(jar, prepared)
+        if header:
+            prepared.headers["Cookie"] = header
 
     def _adapt(self, status: int, retry_after: str) -> None:
         """Rate-limit feedback belongs in one place, not in every scanner."""
@@ -319,8 +512,57 @@ def with_scheme(url: str) -> str:
 
 
 def same_origin(a: str, b: str) -> bool:
-    pa, pb = urllib.parse.urlsplit(a), urllib.parse.urlsplit(b)
-    return (pa.scheme, pa.netloc) == (pb.scheme, pb.netloc)
+    """Compare scheme, host and effective port; ignore path and credentials."""
+    first = _origin(a)
+    return (
+        first is not None
+        and first[0] in ("http", "https")
+        and bool(first[1])
+        and first == _origin(b)
+    )
+
+
+def _origin(url: str) -> tuple[str, str, int | None] | None:
+    try:
+        parts = urllib.parse.urlsplit(url)
+        scheme = parts.scheme.lower()
+        host = (parts.hostname or "").lower()
+        port = parts.port
+    except ValueError:
+        return None
+    if port is None:
+        port = {"http": 80, "https": 443}.get(scheme)
+    return scheme, host, port
+
+
+def origin(url: str) -> str:
+    """Return scheme://host[:port] for a URL, or an empty string."""
+    parts = urllib.parse.urlsplit(url)
+    if not parts.scheme or not parts.netloc:
+        return ""
+    return f"{parts.scheme}://{parts.netloc}"
+
+
+def same_target(a: str, b: str) -> bool:
+    """Same origin, plus the one canonical hop worth trusting by default.
+
+    Plain HTTP to HTTPS on the same host and standard ports is how most sites
+    answer a bare hostname. It changes no host and only adds TLS, so following
+    it without a scope file is safe. Any other host or port change is not.
+    """
+    if same_origin(a, b):
+        return True
+    first, second = _origin(a), _origin(b)
+    if first is None or second is None:
+        return False
+    return (
+        first[0] == "http"
+        and second[0] == "https"
+        and first[1] == second[1]
+        and bool(first[1])
+        and first[2] == 80
+        and second[2] == 443
+    )
 
 
 def is_skippable(url: str) -> bool:

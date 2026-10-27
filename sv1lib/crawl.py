@@ -102,7 +102,8 @@ def form_endpoint(page_url: str, form: Form) -> str:
 
     A scanned page must not choose where the scanner sends its headers. Without
     this gate a hostile page can point a form at a third-party origin and make
-    the scan leak custom headers or probe a host outside the target.
+    the scan leak custom headers or probe a host outside the target. Query
+    parameters on the action are part of the endpoint and stay in place.
     """
     raw = (form.action or page_url).strip()
     if raw.lower().startswith(SKIP_PAGE_SCHEMES):
@@ -113,7 +114,7 @@ def form_endpoint(page_url: str, form: Form) -> str:
         return ""
     if not net.same_origin(action, page_url):
         return ""
-    return urllib.parse.urlunsplit(parts._replace(query=""))
+    return urllib.parse.urlunsplit(parts._replace(fragment=""))
 
 
 def crawl(client: net.Client, start_url: str, max_pages: int, max_depth: int,
