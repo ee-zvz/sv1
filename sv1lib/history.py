@@ -62,6 +62,7 @@ def point_to_dict(point: InjectionPoint) -> dict:
         "params": [[name, value] for name, value in point.params],
         "param": point.param,
         "source": point.source,
+        "param_index": point.param_index,
     }
 
 
@@ -72,6 +73,7 @@ def point_from_dict(raw: dict) -> InjectionPoint:
         params=tuple((str(item[0]), str(item[1])) for item in raw.get("params", [])),
         param=str(raw.get("param", "")),
         source=str(raw.get("source", "query")),
+        param_index=int(raw.get("param_index", 0) or 0),
     )
 
 

@@ -153,18 +153,17 @@ def points(spec: dict, target: str) -> list[InjectionPoint]:
             parameters = operation.get("parameters")
             if not isinstance(parameters, list):
                 parameters = []
-            if method == "get":
-                query = _query_parameters(common, parameters)
-                if query:
-                    pairs = tuple((str(item["name"]), _value(item)) for item in query)
-                    for name, _value_ in pairs:
-                        _add(out, seen, InjectionPoint(
-                            url=url,
-                            method="GET",
-                            params=pairs,
-                            param=name,
-                            source="query",
-                        ))
+            query = _query_parameters(common, parameters)
+            if query:
+                pairs = tuple((str(item["name"]), _value(item)) for item in query)
+                for name, _value_ in pairs:
+                    _add(out, seen, InjectionPoint(
+                        url=url,
+                        method=method.upper(),
+                        params=pairs,
+                        param=name,
+                        source="query",
+                    ))
 
             source, fields = _body_fields(spec, operation)
             if source and fields:
@@ -172,7 +171,7 @@ def points(spec: dict, target: str) -> list[InjectionPoint]:
                 for name in fields:
                     _add(out, seen, InjectionPoint(
                         url=url,
-                        method="POST",
+                        method=method.upper(),
                         params=pairs,
                         param=name,
                         source=source,

@@ -1,14 +1,18 @@
 """SV1 - DOM XSS. Pair sources with sinks statically, then prove it in Chromium.
 
-The server never sees the payload here: it travels in the fragment or in a
-client-side parameter. Static pairing only proposes candidates; a candidate
-becomes a finding when the browser runs our marker.
+The server never sees the payload here: it travels in the fragment, a query
+parameter, the referrer, window.name, web storage or a postMessage event.
+Static pairing only proposes candidates; a candidate becomes a finding when
+the browser runs our marker.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 import urllib.parse
+from dataclasses import dataclass, field
 
 from . import browser as browser_mod
 from . import config
@@ -25,6 +29,13 @@ SOURCES = (
     ("document.documenturi", "document.documentURI"),
     ("document.referrer", "document.referrer"),
     ("window.name", "window.name"),
+    ("localstorage.getitem", "localStorage.getItem"),
+    ("localstorage", "localStorage"),
+    ("sessionstorage.getitem", "sessionStorage.getItem"),
+    ("sessionstorage", "sessionStorage"),
+    ("addeventlistener('message'", "postMessage event"),
+    ('addeventlistener("message"', "postMessage event"),
+    ("onmessage", "postMessage event"),
     ("document.cookie", "document.cookie"),
 )
 
@@ -48,6 +59,7 @@ SINKS = (
 
 MAX_DISTANCE = 900
 MAX_SNIPPET = 150
+STORAGE_KEYS = ("badValue", "payload", "data", "name", "value", "q")
 
 
 class Candidate:
@@ -59,6 +71,15 @@ class Candidate:
 
     def key(self) -> tuple:
         return (self.source, self.sink)
+
+
+@dataclass(frozen=True)
+class Vector:
+    url: str
+    payload: str
+    referer: str = ""
+    init_script: str = ""
+    messages: tuple[str, ...] = field(default_factory=tuple)
 
 
 def analyze(page: Page) -> list[Candidate]:
@@ -105,6 +126,11 @@ def _payloads(token: str) -> list[str]:
     ]
 
 
+def _token(page_url: str, index: int) -> str:
+    digest = hashlib.sha1(page_url.encode("utf-8", "replace")).hexdigest()[:8]
+    return f"sv1dom{index}{digest}"
+
+
 def _hash_url(page_url: str, payload: str) -> str:
     parts = urllib.parse.urlsplit(page_url)
     return urllib.parse.urlunsplit(parts._replace(fragment=urllib.parse.quote(payload, safe="")))
@@ -117,15 +143,84 @@ def _search_url(page_url: str, name: str, payload: str) -> str:
     return urllib.parse.urlunsplit(parts._replace(query=urllib.parse.urlencode(query)))
 
 
-def _vectors(candidate: Candidate, page_url: str, token: str) -> list[str]:
-    urls: list[str] = []
+def _window_name_script(payload: str) -> str:
+    return f"try {{ window.name = {json.dumps(payload)}; }} catch (e) {{}}"
+
+
+def _storage_script(storage: str, payload: str) -> str:
+    lines = []
+    for key in STORAGE_KEYS:
+        lines.append(
+            f"try {{ {storage}.setItem({json.dumps(key)}, {json.dumps(payload)}); }} catch (e) {{}}"
+        )
+    return "\n".join(lines)
+
+
+def _cookie_script(payload: str) -> str:
+    encoded = urllib.parse.quote(payload, safe="")
+    return (
+        "try { document.cookie = 'sv1payload=' + " + json.dumps(encoded) +
+        " + '; path=/'; } catch (e) {}"
+    )
+
+
+def _message_payloads(payload: str) -> tuple[str, ...]:
+    structured = json.dumps({
+        "html": payload,
+        "data": payload,
+        "message": payload,
+        "value": payload,
+    })
+    return (structured, payload)
+
+
+def _vectors(candidate: Candidate, page_url: str, token: str) -> list[Vector]:
+    vectors: list[Vector] = []
     for payload in _payloads(token):
-        if "location.hash" in candidate.source:
-            urls.append(_hash_url(page_url, payload))
-        elif "location.search" in candidate.source or "location.href" in candidate.source:
+        if candidate.source == "location.hash":
+            vectors.append(Vector(_hash_url(page_url, payload), payload))
+        elif candidate.source in (
+            "location.search", "location.href", "document.URL", "document.documentURI"
+        ):
             for name in config.DOM_PARAM_GUESSES:
-                urls.append(_search_url(page_url, name, payload))
-    return urls[: config.DOM_MAX_CANDIDATES * 4]
+                vectors.append(Vector(_search_url(page_url, name, payload), payload))
+        elif candidate.source == "document.referrer":
+            vectors.append(Vector(
+                page_url,
+                payload,
+                referer=_search_url(page_url, "sv1ref", payload),
+            ))
+        elif candidate.source == "window.name":
+            vectors.append(Vector(
+                page_url,
+                payload,
+                init_script=_window_name_script(payload),
+            ))
+        elif "localStorage" in candidate.source:
+            vectors.append(Vector(
+                page_url,
+                payload,
+                init_script=_storage_script("localStorage", payload),
+            ))
+        elif "sessionStorage" in candidate.source:
+            vectors.append(Vector(
+                page_url,
+                payload,
+                init_script=_storage_script("sessionStorage", payload),
+            ))
+        elif candidate.source == "postMessage event":
+            vectors.append(Vector(
+                page_url,
+                payload,
+                messages=_message_payloads(payload),
+            ))
+        elif candidate.source == "document.cookie":
+            vectors.append(Vector(
+                page_url,
+                payload,
+                init_script=_cookie_script(payload),
+            ))
+    return vectors[: config.DOM_MAX_CANDIDATES * 6]
 
 
 def run(engine: browser_mod.Browser, pages: list[Page], artifacts: str) -> list[Finding]:
@@ -138,21 +233,27 @@ def run(engine: browser_mod.Browser, pages: list[Page], artifacts: str) -> list[
         if not candidates:
             continue
         for index, candidate in enumerate(candidates):
-            token = f"sv1dom{index}{abs(hash(page.url)) % 9973}"
-            hit_url = ""
+            token = _token(page.url, index)
+            hit: Vector | None = None
             proof = ""
             shot = ""
-            for url in _vectors(candidate, page.url, token):
+            for vector in _vectors(candidate, page.url, token):
                 shot_path = ""
                 if artifacts:
                     shot_path = _shot_path(artifacts, "dom", len(findings) + 1)
-                visit = engine.visit(url, shot_path=shot_path)
+                visit = engine.visit(
+                    vector.url,
+                    shot_path=shot_path,
+                    referer=vector.referer,
+                    init_script=vector.init_script,
+                    messages=vector.messages,
+                )
                 if visit.fired(token):
-                    hit_url = url
+                    hit = vector
                     proof = visit.proof(token)
                     shot = visit.screenshot
                     break
-            if not hit_url:
+            if hit is None:
                 continue
             findings.append(
                 Finding(
@@ -161,8 +262,7 @@ def run(engine: browser_mod.Browser, pages: list[Page], artifacts: str) -> list[
                     url=page.url,
                     method="GET",
                     param=candidate.source,
-                    payload=urllib.parse.unquote(urllib.parse.urlsplit(hit_url).fragment)
-                    or urllib.parse.unquote(urllib.parse.urlsplit(hit_url).query),
+                    payload=hit.payload,
                     confidence="CONFIRMED",
                     evidence=f"{candidate.source} -> {candidate.sink}: {proof}",
                     technique="dom",

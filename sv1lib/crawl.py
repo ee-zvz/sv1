@@ -139,7 +139,10 @@ def points_from_page(page: Page) -> list[InjectionPoint]:
     if parts.query:
         base = urllib.parse.urlunsplit(parts._replace(query=""))
         pairs = urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
+        counts: dict[str, int] = {}
         for name, _value in pairs:
+            occurrence = counts.get(name, 0)
+            counts[name] = occurrence + 1
             points.append(
                 InjectionPoint(
                     url=base,
@@ -147,6 +150,7 @@ def points_from_page(page: Page) -> list[InjectionPoint]:
                     params=tuple(pairs),
                     param=name,
                     source="query",
+                    param_index=occurrence,
                 )
             )
 
@@ -160,15 +164,18 @@ def points_from_page(page: Page) -> list[InjectionPoint]:
         if not fields:
             continue
         pairs = tuple((f.name, f.value) for f in fields)
-        names = {f.name for f in fields}
-        for name in names:
+        counts = {}
+        for field in fields:
+            occurrence = counts.get(field.name, 0)
+            counts[field.name] = occurrence + 1
             points.append(
                 InjectionPoint(
                     url=action,
                     method=method,
                     params=pairs,
-                    param=name,
+                    param=field.name,
                     source=source,
+                    param_index=occurrence,
                 )
             )
     return points

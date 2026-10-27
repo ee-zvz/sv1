@@ -172,15 +172,28 @@ class Browser:
 
     # -- internals ---------------------------------------------------------
     def _read(self, page) -> tuple[list[str], list[str]]:
+        calls: list[str] = []
+        errors: list[str] = []
         try:
-            data = page.evaluate("() => (window.__sv1 ? window.__sv1 : null)")
+            frames = list(page.frames)
         except Exception:
-            return [], []
-        if not isinstance(data, dict):
-            return [], []
-        calls = data.get("calls") or []
-        errors = data.get("errors") or []
-        return [str(item) for item in calls], [str(item) for item in errors]
+            frames = [page]
+        for frame in frames:
+            try:
+                data = frame.evaluate("() => (window.__sv1 ? window.__sv1 : null)")
+            except Exception:
+                continue
+            if not isinstance(data, dict):
+                continue
+            for item in data.get("calls") or []:
+                text = str(item)
+                if text not in calls:
+                    calls.append(text)
+            for item in data.get("errors") or []:
+                text = str(item)
+                if text not in errors:
+                    errors.append(text)
+        return calls, errors
 
     def _settle(self, page, wait_ms: int | None) -> None:
         try:
@@ -201,20 +214,91 @@ class Browser:
             return ""
 
     # -- public ------------------------------------------------------------
+    def _interact(self, page, marker: str) -> None:
+        """Trigger the event an injected handler waits for.
+
+        A payload in href/onmouseover/onfocus is real only when the browser
+        runs it. Dispatching the event is the difference between a reflection
+        and a proof; it is deliberately limited to elements that contain the
+        marker the scanner inserted.
+        """
+        if not marker:
+            return
+        script = """
+        (marker) => {
+          const nodes = Array.from(document.querySelectorAll('*'));
+          for (const el of nodes) {
+            if (el === document.documentElement || el === document.body) continue;
+            const tag = (el.tagName || '').toUpperCase();
+            if (['SCRIPT', 'STYLE', 'TITLE', 'META', 'LINK'].includes(tag)) continue;
+            let html = '';
+            try { html = el.outerHTML || ''; } catch (e) { continue; }
+            if (!html.includes(marker)) continue;
+            for (const name of ['mouseover', 'mouseenter', 'mousemove']) {
+              try {
+                el.dispatchEvent(new MouseEvent(name, {
+                  bubbles: true, cancelable: true, view: window
+                }));
+              } catch (e) {}
+            }
+            try { el.focus(); } catch (e) {}
+            for (const name of ['focus', 'focusin']) {
+              try {
+                el.dispatchEvent(new FocusEvent(name, {bubbles: true}));
+              } catch (e) {}
+            }
+            const href = String(el.href || '');
+            if (tag === 'A' && href.startsWith('javascript:')) {
+              try { el.click(); } catch (e) {}
+            } else if (el.hasAttribute && (
+              el.hasAttribute('onclick') ||
+              el.hasAttribute('onmousedown') ||
+              el.hasAttribute('onmouseup')
+            )) {
+              try { el.click(); } catch (e) {}
+            }
+          }
+        }
+        """
+        try:
+            frames = list(page.frames)
+        except Exception:
+            frames = [page]
+        for frame in frames:
+            try:
+                frame.evaluate(script, marker)
+            except Exception:
+                continue
+        page.wait_for_timeout(config.BROWSER_INTERACT_MS)
+
     def visit(
         self,
         url: str,
         wait_ms: int | None = None,
         shot_path: str = "",
         timeout_ms: int | None = None,
+        referer: str = "",
+        init_script: str = "",
+        messages: list[str] | tuple[str, ...] | None = None,
+        interact_marker: str = "",
     ) -> Visit:
         if not self.enabled or self._context is None:
             return Visit(url=url, error=self.reason or "browser disabled")
         page = self._context.new_page()
         console: list[str] = []
         page.on("console", lambda message: console.append(f"{message.type}: {message.text}"))
+        if init_script:
+            try:
+                page.add_init_script(init_script)
+            except Exception:
+                pass
         try:
-            page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms or self.timeout_ms)
+            page.goto(
+                url,
+                wait_until="domcontentloaded",
+                timeout=timeout_ms or self.timeout_ms,
+                referer=referer or None,
+            )
         except Exception as exc:
             message = str(exc).splitlines()[0] if str(exc) else "navigation failed"
             self._settle(page, 250)
@@ -223,6 +307,13 @@ class Browser:
             visit = Visit(url=url, calls=calls, errors=errors, console=console, screenshot=shot, error=message)
             page.close()
             return visit
+        for message in messages or ():
+            try:
+                page.evaluate("(msg) => window.postMessage(msg, '*')", message)
+            except Exception:
+                pass
+        if interact_marker:
+            self._interact(page, interact_marker)
         self._settle(page, wait_ms)
         calls, errors = self._read(page)
         shot = self._shot(page, shot_path)
@@ -285,13 +376,23 @@ class Browser:
         payload: str,
         wait_ms: int | None = None,
         shot_path: str = "",
+        interact_marker: str = "",
     ) -> Visit:
         """Navigate exactly as the scanner injected, so the browser sees the same bytes."""
-        mapping = {name: (payload if name == point.param else value) for name, value in point.params}
+        target_index = point.position()
+        mapping = [
+            (name, payload if index == target_index else value)
+            for index, (name, value) in enumerate(point.params)
+        ]
         if point.method == "GET":
             query = urllib.parse.urlencode(mapping)
             separator = "&" if "?" in point.url else "?"
-            return self.visit(f"{point.url}{separator}{query}", wait_ms, shot_path)
+            return self.visit(
+                f"{point.url}{separator}{query}",
+                wait_ms,
+                shot_path,
+                interact_marker=interact_marker,
+            )
 
         if not self.enabled or self._context is None:
             return Visit(url=point.url, error=self.reason or "browser disabled")
@@ -301,7 +402,7 @@ class Browser:
         page.on("console", lambda message: console.append(f"{message.type}: {message.text}"))
         inputs = "".join(
             f'<input type="hidden" name="{escape(name)}" value="{escape(str(value))}">'
-            for name, value in mapping.items()
+            for name, value in mapping
         )
         form = (
             f'<form method="POST" action="{escape(point.url)}">{inputs}</form>'
@@ -313,6 +414,8 @@ class Browser:
             page.wait_for_load_state("domcontentloaded", timeout=self.timeout_ms)
         except Exception as exc:
             error = str(exc).splitlines()[0] if str(exc) else "submit failed"
+        if interact_marker:
+            self._interact(page, interact_marker)
         self._settle(page, wait_ms)
         calls, errors = self._read(page)
         shot = self._shot(page, shot_path)

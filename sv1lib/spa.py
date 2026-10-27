@@ -22,16 +22,22 @@ def _points_from_url(url: str) -> list[InjectionPoint]:
     if not pairs:
         return []
     base = urllib.parse.urlunsplit(parts._replace(query="", fragment=""))
-    return [
-        InjectionPoint(
-            url=base,
-            method="GET",
-            params=tuple(pairs),
-            param=name,
-            source="query",
+    counts: dict[str, int] = {}
+    points: list[InjectionPoint] = []
+    for name, _value in pairs:
+        occurrence = counts.get(name, 0)
+        counts[name] = occurrence + 1
+        points.append(
+            InjectionPoint(
+                url=base,
+                method="GET",
+                params=tuple(pairs),
+                param=name,
+                source="query",
+                param_index=occurrence,
+            )
         )
-        for name, _value in pairs
-    ]
+    return points
 
 
 def capture(client, engine, pages: list[Page]) -> tuple[list[Page], list[InjectionPoint], str]:

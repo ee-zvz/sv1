@@ -18,8 +18,8 @@ import traceback
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-if sys.version_info < (3, 8):
-    sys.stderr.write("SV1 needs Python 3.8 or newer\n")
+if sys.version_info < (3, 10):
+    sys.stderr.write("SV1 needs Python 3.10 or newer\n")
     raise SystemExit(2)
 
 from sv1lib import banner, blind, config, crawl, domxss, hidden, jsparse, net, oob, openapi, report, spa, sqli, ssrf
@@ -228,37 +228,70 @@ def artifact_path(root: str, kind: str, index: int) -> str:
 
 
 def prove_xss(engine, pairs: list, args: argparse.Namespace) -> None:
-    """Turn 'the payload came back' into 'the payload ran'."""
-    targets = [
-        (finding, point)
-        for finding, point in pairs
-        if finding.kind == "XSS"
-        and finding.technique != "reflection-encoded"
-        and point.source in ("query", "form", "js")
-        and token_of(finding.payload)
-    ]
-    if not targets:
+    """Turn 'the payload came back' into 'the payload ran'.
+
+    When Chromium is available, HIGH is reserved for execution. An exact
+    reflection that the browser did not run is still useful evidence, but it
+    is MEDIUM: reflection alone is not proof.
+    """
+    xss_pairs = [(finding, point) for finding, point in pairs if finding.kind == "XSS"]
+    if not xss_pairs:
         return
     report.section("execution")
-    for index, (finding, point) in enumerate(targets, 1):
-        token = token_of(finding.payload)
-        if not token:
+    for index, (finding, point) in enumerate(xss_pairs, 1):
+        if finding.technique == "reflection-encoded":
+            continue
+        if point.source not in ("query", "form", "js") or point.method not in ("GET", "POST"):
+            finding.severity = "MEDIUM"
+            note = f"browser proof unavailable for {point.source} inputs"
+            finding.detail = f"{finding.detail} | {note}".strip(" |")
+            report.warn(f"{finding.url} [{finding.param}]  {note}")
+            continue
+        candidates: list[str] = []
+        for payload_text in [finding.payload, *finding.alternatives]:
+            if token_of(payload_text) and payload_text not in candidates:
+                candidates.append(payload_text)
+        candidates = candidates[: config.XSS_MAX_PROOFS]
+        if not candidates:
             continue
         shot = artifact_path(args.artifacts, "xss", index)
-        visit = engine.visit_point(point, finding.payload, shot_path=shot)
         label = f"{finding.url} [{finding.param}]"
-        if visit.fired(token):
+        executed = None
+        attempt = 0
+        for attempt, payload_text in enumerate(candidates, 1):
+            token = token_of(payload_text)
+            visit = engine.visit_point(
+                point,
+                payload_text,
+                shot_path=shot,
+                interact_marker=token,
+            )
+            if visit.fired(token):
+                executed = (payload_text, token, visit)
+                break
+        if executed is not None:
+            payload_text, token, visit = executed
+            finding.payload = payload_text
+            finding.curl = net.curl(point, payload_text)
+            finding.alternatives = [
+                item for item in finding.alternatives if item != payload_text
+            ]
+            finding.severity = "HIGH"
             finding.confidence = "CONFIRMED"
             finding.evidence = f"executed in chromium: {visit.proof(token)}"
             finding.detail = f"{finding.detail} | proof: alert fired".strip(" |")
+            if attempt > 1:
+                finding.detail = f"{finding.detail} | payload {attempt}/{len(candidates)}"
             finding.artifact = visit.screenshot
             report.good(f"{label}  executed")
         else:
+            finding.severity = "MEDIUM"
             finding.confidence = "MEDIUM"
             note = "chromium did not execute the payload"
+            if len(candidates) > 1:
+                note = f"chromium did not execute {len(candidates)} payload(s)"
             finding.detail = f"{finding.detail} | {note}".strip(" |")
-            suffix = f" ({visit.error})" if visit.error else ""
-            report.warn(f"{label}  not executed{suffix}")
+            report.warn(f"{label}  not executed")
 
 
 def export_reports(findings: list, stats, meta: dict, args: argparse.Namespace) -> int:
@@ -347,6 +380,7 @@ def retest_run(args: argparse.Namespace, target: str, client: net.Client,
                 report.warn(f"{label} - retest error: {exc}")
             continue
         if reproduced:
+            finding.curl = net.curl(point, finding.payload)
             finding.detail = f"{finding.detail} | retest: still open".strip(" |")
             findings.append(finding)
             report.good(f"{label}  still open")
@@ -602,6 +636,7 @@ def run(args: argparse.Namespace) -> int:
                     continue
                 for finding in found:
                     sys.stdout.write("\r\x1b[2K")
+                    finding.curl = net.curl(point, finding.payload)
                     findings.append(finding)
                     pairs.append((finding, point))
                     report.print_finding(finding, len(findings))
@@ -721,6 +756,7 @@ def run(args: argparse.Namespace) -> int:
             report.section("second-order")
             doubles = secondorder.run(client, pages)
             for finding, point in doubles:
+                finding.curl = net.curl(point, finding.payload)
                 findings.append(finding)
                 pairs.append((finding, point))
                 report.print_finding(finding, len(findings))

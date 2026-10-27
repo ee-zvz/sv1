@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import time
 
-from . import config
+from . import config, net
 from .models import Finding, InjectionPoint
 from .oob import Callback
 
@@ -48,26 +48,27 @@ def _candidate(point: InjectionPoint) -> bool:
 
 
 def _send(client, point: InjectionPoint, payload: str):
-    mapping = {
-        name: (payload if name == point.param else value)
-        for name, value in point.params
-    }
+    target_index = point.position()
+    mapping = [
+        (name, payload if index == target_index else value)
+        for index, (name, value) in enumerate(point.params)
+    ]
     source = getattr(point, "source", "query")
-    if source == "query":
+    if source == "query" or (source == "form" and point.method == "GET"):
         return client.request(point.method, point.url, params=mapping, allow_redirects=False)
     if source == "form":
         return client.request("POST", point.url, data=mapping, allow_redirects=False)
     if source == "json":
         return client.request(
-            "POST",
+            point.method,
             point.url,
-            data=json.dumps(mapping),
+            data=json.dumps({name: value for name, value in mapping}),
             headers={"Content-Type": "application/json"},
             allow_redirects=False,
         )
     if source == "multipart":
-        files = {name: (None, str(value)) for name, value in mapping.items()}
-        return client.request("POST", point.url, files=files, allow_redirects=False)
+        files = [(name, (None, str(value))) for name, value in mapping]
+        return client.request(point.method, point.url, files=files, allow_redirects=False)
     return None
 
 
@@ -118,6 +119,7 @@ def run(client, points: list[InjectionPoint], callback: Callback,
                 "agent": agent[:80],
                 "time": when,
             },
+            curl=net.curl(point, payload),
         ))
 
     note = f"{len(probes)} url-like point(s) probed, {len(findings)} callback(s)"

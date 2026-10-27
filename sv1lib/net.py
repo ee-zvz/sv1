@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 import threading
 import time
 import urllib.parse
@@ -118,12 +119,12 @@ class Client:
         self,
         method: str,
         url: str,
-        params: dict | None = None,
-        data: dict | str | None = None,
+        params: dict | list | None = None,
+        data: dict | list | str | None = None,
         allow_redirects: bool = True,
         headers: dict | None = None,
         cookies: dict | None = None,
-        files: dict | None = None,
+        files: dict | list | None = None,
     ) -> Response:
         method = method.upper()
         started = time.monotonic()
@@ -210,31 +211,39 @@ class Client:
 
     # -- helpers -----------------------------------------------------------
     def send(self, point, value: str) -> Response:
-        """Fire one injection point with `value` in place of the real input."""
-        mapping = {
-            name: (value if name == point.param else original)
-            for name, original in point.params
-        }
+        """Fire one injection point with `value` in place of the real input.
+
+        A list of pairs, not a dict: repeated names are real server inputs and
+        collapsing them changes the request the scanner claims to test.
+        """
+        target_index = point.position()
+        mapping = [
+            (name, value if index == target_index else original)
+            for index, (name, original) in enumerate(point.params)
+        ]
         source = getattr(point, "source", "query")
         if source == "header":
-            return self.request("GET", point.url, headers=mapping)
+            return self.request("GET", point.url, headers=dict(mapping))
         if source == "cookie":
-            return self.request("GET", point.url, cookies=mapping)
+            return self.request("GET", point.url, cookies=dict(mapping))
         if source == "multipart":
-            files = {name: (None, str(value)) for name, value in mapping.items()}
-            return self.request("POST", point.url, files=files)
+            files = [(name, (None, str(item))) for name, item in mapping]
+            return self.request(point.method, point.url, files=files)
         if source == "json":
+            payload = {}
+            for name, item in mapping:
+                payload[name] = item
             return self.request(
-                "POST",
+                point.method,
                 point.url,
-                data=json.dumps(mapping),
+                data=json.dumps(payload),
                 headers={
                     "Content-Type": "application/json",
                     "Accept": "application/json",
                 },
             )
-        if point.method == "GET":
-            return self.request("GET", point.url, params=mapping)
+        if source == "query" or point.method == "GET":
+            return self.request(point.method, point.url, params=mapping)
         return self.request("POST", point.url, data=mapping)
 
     def fetch(self, url: str) -> Response:
@@ -264,3 +273,55 @@ def same_origin(a: str, b: str) -> bool:
 def is_skippable(url: str) -> bool:
     path = urllib.parse.urlsplit(url).path.lower()
     return path.endswith(config.SKIP_EXTENSIONS)
+
+
+def curl(point, value: str) -> str:
+    """Build a replay command from the exact point and payload.
+
+    Boolean findings carry two branches separated by `|`; the first branch is
+    the request that actually demonstrates the difference.
+    """
+    if "|" in (value or ""):
+        value = value.split("|", 1)[0].strip()
+    target_index = point.position()
+    mapping = [
+        (name, value if index == target_index else original)
+        for index, (name, original) in enumerate(point.params)
+    ]
+    source = getattr(point, "source", "query")
+    parts = ["curl", "-sS"]
+    if source == "header":
+        for name, item in mapping:
+            parts.extend(["-H", shlex.quote(f"{name}: {item}")])
+        parts.append(shlex.quote(point.url))
+        return " ".join(parts)
+    if source == "cookie":
+        jar = "; ".join(f"{name}={item}" for name, item in mapping)
+        parts.extend(["-b", shlex.quote(jar)])
+        parts.append(shlex.quote(point.url))
+        return " ".join(parts)
+    if source == "multipart":
+        parts.extend(["-X", point.method])
+        for name, item in mapping:
+            parts.extend(["-F", shlex.quote(f"{name}={item}")])
+        parts.append(shlex.quote(point.url))
+        return " ".join(parts)
+    if source == "json":
+        payload = json.dumps({name: item for name, item in mapping})
+        parts.extend(["-X", point.method])
+        parts.extend(["-H", shlex.quote("Content-Type: application/json")])
+        parts.extend(["--data-raw", shlex.quote(payload)])
+        parts.append(shlex.quote(point.url))
+        return " ".join(parts)
+    if source == "query" or point.method == "GET":
+        query = urllib.parse.urlencode(mapping)
+        separator = "&" if "?" in point.url else "?"
+        if point.method != "GET":
+            parts.extend(["-X", point.method])
+        parts.append(shlex.quote(f"{point.url}{separator}{query}"))
+        return " ".join(parts)
+    parts.extend(["-X", "POST"])
+    for name, item in mapping:
+        parts.extend(["--data-urlencode", shlex.quote(f"{name}={item}")])
+    parts.append(shlex.quote(point.url))
+    return " ".join(parts)

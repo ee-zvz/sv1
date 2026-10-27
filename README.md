@@ -7,7 +7,9 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.1.0`.
+SQLite session history. Release `1.2.0` focuses on accuracy and reproducibility:
+context-accurate payloads, frame-aware browser proof, duplicate-parameter
+fidelity, and curl reproduction.
 
 A vulnerability scanner for **XSS**, **SQL Injection**, **Blind XSS** and **SSRF**
 written in Python, running on Windows 11. On start it prints an animated banner
@@ -161,6 +163,33 @@ python sv1.py -u https://site.tld --blind --oob https://cb.example.tld `
 Exit codes: `0` = no findings (or `--fail-on none`), `1` = a finding at or above
 the `--fail-on` threshold, `2` = the target did not respond or a file could not be opened.
 
+### Accuracy and reproducibility (1.2.0)
+
+- **Grammar, not payload lists.** A single HTML state machine reads the point:
+  tag name, attribute name/value/quote, raw text (`title`, `textarea`, `style`),
+  script string/code/regex/comment, or HTML comment. Markup inside a quoted
+  attribute (an iframe `data:` URL, for example) is not mistaken for a new tag.
+- **Context candidates.** It closes the exact attribute, tag, raw element or
+  JavaScript construct that is open. Event-handler reflections use a quote-free
+  `alert(/token/)` so servers that escape quotes cannot silently break the proof.
+- **Browser proof tries alternatives.** Up to six reflected candidates are tried
+  per point. Chromium reads the top page and every child frame, so `iframe srcdoc`
+  and injected `srcdoc` are proved rather than guessed. When Chromium is
+  available, `HIGH` requires execution; exact reflection without execution stays
+  `MEDIUM`. Without a browser the result is reflection-only.
+- **Request fidelity.** Duplicate query and form names are preserved, and
+  `param_index` means the occurrence of that name. A second parameter such as
+  `?id=1&name=test` is actually replaced instead of being left untouched.
+- **Reproduce it.** Reflected XSS, SQLi and SSRF findings carry a `curl` command;
+  the same string is in the console, HTML, JSON and CSV output. Browser-only
+  proofs (DOM, stored, blind) ship a screenshot and the executed marker.
+- **Reports stay safe.** ANSI escapes, control bytes, CSV formula prefixes and
+  markup are neutralised before rendering.
+- **Non-markup is not XSS.** `text/plain`, JSON and other non-HTML/XML responses are
+  not treated as XSS candidates.
+
+Full evidence: [`docs/REALWORLD.md`](docs/REALWORLD.md).
+
 ---
 
 ## CI and memory (P5)
@@ -237,8 +266,9 @@ python sv1.py -u https://site.tld --crawl --db sv1.db --diff
 8x, honours a numeric `Retry-After` (capped at 30s), and recovers gradually
 after 20 healthy responses. `--rps 0` stays unlimited.
 
-> P5.1 later: async engine on `httpx`, `--resume`, and curl repro inside the HTML.
-> Release 1.1.0 covers SARIF, fail-on, scope, SQLite diff/retest and 429 adaptation.
+> 1.3.0 later: async engine on `httpx` and `--resume`.
+> Release 1.2.0 adds context accuracy, frame-aware proof, request fidelity and
+> curl repro on top of SARIF, fail-on, scope, SQLite diff/retest and 429 adaptation.
 
 ---
 
@@ -260,15 +290,22 @@ loses a confidence grade.
 **XSS (reflected)**
 
 1. Sends a random token `sv1xxxxxxxx` in the parameter.
-2. If it does not come back in the response → no reflection, skip.
-3. Reads the **grammar** of the reflection point: HTML text, an attribute inside
-   a tag (and which quote), inside `<script>` (and which JS string type), or
-   inside a comment.
-4. Builds one payload that closes exactly what is open — e.g. inside
-   `<script>var x = "..."` it uses `";alert(tok)//`, and inside
-   `value='...'` it uses `'><svg/onload=...>`.
-5. Verifies the payload came back **verbatim** → `HIGH`.
-   If the token returns with the tags encoded → `MEDIUM`.
+2. If it does not come back in the response → no reflection, skip. Responses whose
+   content type is not HTML/XML are not XSS candidates.
+3. Reads the **grammar** of the reflection point: element tag name, attribute
+   name/value and its quote, raw text (`title`, `textarea`, `style`, `xmp`,
+   `noscript`), inside `<script>` (code, string, regex or comment), or inside an
+   HTML comment.
+4. Builds ordered context payloads that close exactly what is open — e.g. inside
+   `<script>var x = "..."` it uses `";alert(tok)//`; inside a block comment it
+   closes `*/` first; inside `value='...'` it closes the attribute and tag; inside
+   a raw-text attribute it closes the element before injecting markup.
+5. Waits for the token to return **verbatim**. Exact reflection proposes a
+   finding; encoded or stripped markup is `MEDIUM`.
+6. Chromium tries the primary payload and up to five exact alternatives, dispatches
+   `mouseover`/`focus`/`click` for handler payloads, and reads every frame. Only
+   an executed marker keeps `HIGH` + `CONFIRMED`; exact but non-executing payloads
+   drop to `MEDIUM` with the reason.
 
 **SQLi**
 
@@ -323,17 +360,25 @@ as sent:
 
 - An init script replaces `alert/confirm/prompt` before any page script and
   records every call with a scan-specific marker (`sv1...`).
-- A finding is only `CONFIRMED` if the marker fired inside the page.
-- No fire → drops to `MEDIUM` with an explicit note.
+- The primary payload is tried first. If it reflects but does not execute, up to
+  five alternatives are tried before the finding is downgraded.
+- The reader walks every frame, so `iframe srcdoc` and injected `srcdoc` prove
+  execution in the child document, not just the top page.
+- Event-handler payloads are exercised with `mouseover`, `focus` and `click`;
+  `javascript:` links are followed.
+- A finding is only `CONFIRMED` if the marker fired inside any frame.
+- No fire → drops to `MEDIUM` with an explicit note and the candidate count.
 - Every confirmed finding gets a screenshot in `sv1-artifacts/`.
 
 **DOM XSS**
 
 Static analysis of every `<script>`: looks for sources
-(`location.hash/search/href`, `document.referrer`, `window.name`, `document.cookie`)
-and sinks (`innerHTML`, `document.write`, `eval`, `insertAdjacentHTML`, `setTimeout` …).
-Every source→sink pair is tested in the browser: `#payload` or common parameters.
-The finding is recorded only if the browser executed the marker.
+(`location.hash/search/href`, `document.referrer`, `window.name`, `document.cookie`,
+`localStorage`, `sessionStorage`, `postMessage`) and sinks (`innerHTML`,
+`document.write`, `eval`, `insertAdjacentHTML`, `setTimeout` …). Every
+source→sink pair is tested in the browser: `#payload`, common parameters,
+referrer, `window.name`, web-storage keys or a `postMessage` event. The finding
+is recorded only if the browser executed the marker.
 
 **Stored XSS** (`--stored`)
 
@@ -462,6 +507,31 @@ compares structure.
 
 ---
 
+## Real-world validation (1.2.0)
+
+Public, intentionally vulnerable demo targets only. Raw evidence and the exact
+commands: [`docs/REALWORLD.md`](docs/REALWORLD.md).
+
+| Target | Scope | Result |
+|---|---|---|
+| Google Firing Range, reflected | 49 pages, 47 points | 42 findings — **40 HIGH** confirmed in Chromium, 2 MEDIUM |
+| Google Firing Range, DOM | 25 pages crawled, 20 rendered | **15 HIGH** DOM findings, 0 errors |
+| Altoro Mutual search | one GET parameter | **1 HIGH** reflected XSS, confirmed |
+| Local lab | full coverage | **27/27** findings replayed, 0 unstable |
+
+Firing Range ended with 508 requests, 0 errors and 220 s. The two `MEDIUM`
+cases are `/url/css_import` (a stylesheet `<link>` cannot execute `javascript:` in
+current Chromium) and `/url/object_data` (pinned to the removed Flash plugin
+type); neither page accepts `<`/`>` in the parameter. They are reported as
+reflection-only, not inflated to `HIGH`.
+
+The lab acceptance run: CRITICAL 9 / HIGH 16 / MEDIUM 2, 19 pages, 25 points,
+853 requests, ~165 s. The multi-parameter fix is visible in `/api/fetch`,
+`/api/spa` and `/dynamic`: the second parameter (`name`) is now injected and the
+three reflected XSS findings are back.
+
+---
+
 ## Project structure
 
 ```
@@ -501,6 +571,9 @@ sv1/
 │   └── report.py       rendering and export (text/JSON/CSV/HTML)
 ├── lab/server.py       local vulnerable target for practice
 ├── tests/test_p5.py    unit tests (scope/history/SARIF/rate/fail-on)
+├── tests/test_1_2.py   request fidelity, context grammar, proof policy
+├── docs/REALWORLD.md   real-world 1.2.0 validation
+├── docs/evidence/      JSON/screenshot evidence from public demo runs
 ├── .github/workflows/ci.yml
 ├── LICENSE             MIT
 ├── CHANGELOG.md        release log
@@ -537,7 +610,7 @@ python sv1.py -u http://127.0.0.1:8099/ --crawl --stored --js --second-order --d
 ```
 
 Result: **27 findings, 27 replayed, 0 unstable** — CRITICAL 9, HIGH 16, MEDIUM 2,
-19 pages, 25 injection points, 780 requests, 149.2 s (with Chromium).
+19 pages, 25 injection points, 853 requests, 164.4 s (with Chromium).
 
 - **XSS (14):** 13 confirmed by execution inside Chromium (`/search`, `/feedback`
   two fields, `/js`, `/attr`, `/waf`, `/api/fetch`, `/api/spa`, `/dynamic`), DOM
@@ -614,8 +687,12 @@ note    database error surfaced (MySQL) - error based injection
 ## Limits
 
 - XSS covers reflected, DOM and stored when Chromium runs. Without it: reflection only.
+- Non-HTML responses (`text/plain`, JSON, binary) are not XSS candidates. A
+  stylesheet `link` or a removed Flash `object` can reflect a `javascript:` URL
+  without executing it; those findings stay `MEDIUM`.
 - DOM detection relies on source→sink pairs inside inline `<script>`. `--spa`
-  executes pages but does not analyse external bundle text.
+  executes pages but does not analyse external bundle text. The browser budget
+  renders 20 pages per DOM pass.
 - `--js` reads URLs written as text inside scripts (inline script + same-origin
   external files). If the URL is built from variables (`'/api/' + id`) it is not
   found — that is where `--spa` comes in and catches it from the actual request.
@@ -652,7 +729,8 @@ note    database error surfaced (MySQL) - error based injection
   SSRF, Stored, DOM and UNION need a browser or a full extraction, so they are
   skipped. The latest session for the same `-u` is the reference.
 - `--db` has no automatic pruning; delete the file or archive old sessions manually.
-- `--resume`, the async engine (`httpx`) and curl repro in HTML are still P5.1.
+- `--resume` and the async engine (`httpx`) are deferred to 1.3.0. Curl
+  reproduction is included in 1.2.0.
 
 ---
 
@@ -662,4 +740,5 @@ MIT — see `LICENSE`.
 
 ## Version
 
-`1.1.0` — current public release (P5.0). Change details in `CHANGELOG.md`.
+`1.2.0` — current public release. Accuracy, request fidelity and real-world
+validation; async/resume move to 1.3.0. Change details in `CHANGELOG.md`.

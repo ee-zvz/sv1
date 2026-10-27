@@ -20,3 +20,19 @@ retest.sarif
 .idea/
 .DS_Store
 Thumbs.db
+
+# local benchmark output (public demo runs, not release sources)
+/fr-*
+/altoro-*
+/lab-*.json
+/lab-*.html
+/lab-*.sarif
+/lab-artifacts*/
+/tj-*
+/scan-*
+/retest-*
+
+/gandj-*
+/t-*
+/lab-*
+/scope-lab.txt

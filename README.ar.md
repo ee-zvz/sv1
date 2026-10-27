@@ -5,11 +5,35 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.1.0`.
+SQLite session history. Release `1.2.0`.
 
 أداة فحص ثغرات **XSS** و **SQL Injection** و **Blind XSS** و **SSRF** مكتوبة
 ببايثون، تشتغل على ويندوز 11. عند التشغيل تطلع مقدمة متحركة (لوقو SV1 بتدرّج
 لوني + اسم المؤلف) ثم يبدأ الفحص.
+
+### دقة 1.2.0
+
+- **فهم القواعد، مو قائمة بايلودات.** ماسح HTML واحد يقرأ موضع الانعكاس: اسم
+  الوسم، اسم الخاصية وقيمتها وعلامة الاقتباس، النص الخام (`title`, `textarea`,
+  `style`)، داخل `<script>` (كود/نص/تعبير نمطي/تعليق)، أو تعليق HTML. وجود
+  `<h1>` داخل قيمة خاصية مقتبسة ما يخدع الماسح كأنه وسم جديد.
+- **بايلودات حسب السياق.** يغلق الخاصية أو الوسم أو عنصر النص الخام أو تركيب
+  JavaScript المفتوح بالضبط. انعكاس داخل معالج حدث يستخدم `alert(/token/)`
+  بلا اقتباسات حتى لا يكسره سيرفر يهرّب علامات الاقتباس.
+- **إثبات المتصفح يجرّب بدائل.** حتى 6 بايلودات منعكسة لكل نقطة، ويقرأ الصفحة
+  وكل إطار فرعي، فـ `iframe srcdoc` و`srcdoc` المحقون يُثبتان لا يُخمّنان.
+  عند توفر Chromium، `HIGH` يحتاج تنفيذًا فعليًا؛ الانعكاس الحرفي بدون تنفيذ
+  يبقى `MEDIUM`. بدون متصفح النتيجة انعكاس فقط.
+- **أمانة الطلب.** أسماء المعاملات المكررة تبقى محفوظة، و`param_index` يعني
+  تكرار الاسم. المعامل الثاني مثل `?id=1&name=test` يُستبدل فعليًا بدل ما
+  يُترك كما هو.
+- **إعادة إنتاج.** نتائج XSS المنعكس وSQLi وSSRF تحمل أمر `curl`، ويظهر في
+  الطرفية وHTML وJSON وCSV. إثباتات المتصفح فقط (DOM، مخزّن، أعمى) تأخذ
+  صورة والماركر المنفّذ.
+- **تقرير آمن.** ANSI ووحدات التحكم وبادئات صيغ CSV والوسوم تُعقَّم قبل العرض.
+- **غير HTML/XML ليس XSS.** ردود `text/plain` وJSON وغيرها ليست مرشحة لـ XSS.
+
+الأدلة الكاملة: [`docs/REALWORLD.md`](docs/REALWORLD.md).
 
 ---
 
@@ -232,8 +256,9 @@ python sv1.py -u https://site.tld --crawl --db sv1.db --diff
 ويحترم `Retry-After` الرقمي (بحد 30 ثانية)، ثم يعود تدريجياً بعد 20 رداً
 سليماً. `--rps 0` يبقى بلا حد.
 
-> P5.1 لاحقاً: محرك async بـ `httpx`، `--resume`، وcurl repro داخل HTML.
-> الإصدار 1.1.0 يغطي SARIF وfail-on وscope وSQLite diff/retest وتكيّف 429.
+> 1.3.0 لاحقاً: محرك async بـ `httpx` و`--resume`.
+> الإصدار 1.2.0 يضيف دقة السياق وإثبات الإطارات وأمانة المعاملات وcurl repro،
+> فوق SARIF وfail-on وscope وSQLite diff/retest وتكيّف 429.
 
 ---
 
@@ -253,14 +278,19 @@ python sv1.py -u https://site.tld --crawl --db sv1.db --diff
 
 **XSS (منعكس)**
 1. يرسل توكن عشوائي `sv1xxxxxxxx` في الباراميتر.
-2. إذا ما رجع في الرد → لا انعكاس، يتخطاه.
-3. يقرأ **قواعد** موضع الانعكاس: نص HTML، خاصية داخل وسم (وأي اقتباس)،
-   داخل `<script>` (وأي نوع نص JS)، أو داخل تعليق.
-4. يبني بايلود واحداً يقفل بالضبط ما هو مفتوح — مثلاً داخل
-   `<script>var x = "..."` يستخدم `";alert(tok)//`، وداخل
-   `value='...'` يستخدم `'><svg/onload=...>`.
-5. يتحقق أن البايلود رجع **حرفياً** في الرد → `HIGH`.
-   إذا رجع التوكن والوسوم مشفّرة → `MEDIUM`.
+2. إذا ما رجع في الرد → لا انعكاس، يتخطاه. الردود غير HTML/XML ليست مرشحة.
+3. يقرأ **قواعد** موضع الانعكاس: اسم الوسم، اسم الخاصية وقيمتها واقتباسها،
+   النص الخام (`title`, `textarea`, `style`)، داخل `<script>` (كود/نص/تعبير
+   نمطي/تعليق)، أو تعليق HTML.
+4. يبني بايلودات مرتبة تقفل بالضبط ما هو مفتوح — مثلاً داخل
+   `<script>var x = "..."` يستخدم `0";alert(tok)//`؛ داخل تعليق بلوك يقفل
+   `*/` أولاً؛ داخل `value='...'` يقفل الخاصية والوسم؛ وداخل خاصية عنصر نص
+   خام يقفل العنصر قبل حقن الوسم.
+5. يتحقق أن البايلود رجع **حرفياً** في الرد. الانعكاس الحرفي يقترح نتيجة؛
+   التشفير أو حذف الوسوم → `MEDIUM`.
+6. Chromium يجرّب الأساسي وحتى 5 بدائل حرفية، ويفعّل
+   `mouseover/focus/click`، ويقرأ كل إطار. فقط الماركر المنفّذ يبقي
+   `HIGH` + `CONFIRMED`؛ الحرفي غير المنفّذ ينزل `MEDIUM` مع السبب.
 
 **SQLi**
 1. **Error-based** — بايلودات كاسرة + بصمات أخطاء 7 قواعد بيانات، مع
@@ -307,16 +337,23 @@ python sv1.py -u https://site.tld --crawl --db sv1.db --diff
 
 - سكربت التهيئة يستبدل `alert/confirm/prompt` قبل أي سكربت في الصفحة ويسجل
   كل نداء بماركر خاص بالفحص (`sv1...`).
-- النتيجة ما تصير `CONFIRMED` إلا إذا انطلق الماركر داخل الصفحة.
-- ما انطلق → تنزل لـ `MEDIUM` مع ملاحظة صريحة.
+- يجرّب الأساسي أولاً؛ إذا انعكس وما نفّذ، يجرّب حتى 5 بدائل قبل التخفيض.
+- يقرأ الصفحة وكل إطار فرعي، فـ `iframe srcdoc` و`srcdoc` المحقون يُثبتان
+  داخل المستند الفرعي، مو الصفحة العليا فقط.
+- بايلودات معالج الحدث تُفعّل بـ `mouseover` و`focus` و`click`، وروابط
+  `javascript:` تُتبع.
+- النتيجة ما تصير `CONFIRMED` إلا إذا انطلق الماركر في أي إطار.
+- ما انطلق → تنزل لـ `MEDIUM` مع ملاحظة صريحة وعدد البايلودات.
 - كل نتيجة مؤكدة تاخذ screenshot في `sv1-artifacts/`.
 
 **DOM XSS**
 تحليل ثابت لكل `<script>`: يبحث عن مصادر
-(`location.hash/search/href`, `document.referrer`, `window.name`, `document.cookie`)
-وأحواض (`innerHTML`, `document.write`, `eval`, `insertAdjacentHTML`, `setTimeout` …).
-كل زوج مصدر→حوض يُختبر في المتصفح: `#payload` أو باراميترات شائعة. الثغرة
-تسجل فقط إذا نفّذ المتصفح الماركر.
+(`location.hash/search/href`, `document.referrer`, `window.name`,
+`document.cookie`, `localStorage`, `sessionStorage`, `postMessage`) وأحواض
+(`innerHTML`, `document.write`, `eval`, `insertAdjacentHTML`, `setTimeout` …).
+كل زوج مصدر→حوض يُختبر في المتصفح: `#payload`، باراميترات شائعة، referrer،
+`window.name`، مفاتيح web storage أو حدث `postMessage`. الثغرة تسجل فقط إذا
+نفّذ المتصفح الماركر.
 
 **Stored XSS** (`--stored`)
 يرسل البايلود في نماذج POST، ثم يزور الصفحات مرة ثانية وينتظر الماركر.
@@ -464,6 +501,9 @@ sv1/
 │   └── report.py       العرض والتصدير (نص/JSON/CSV/HTML)
 ├── lab/server.py       هدف محلي مصاب للتدريب
 ├── tests/test_p5.py    اختبارات الوحدة (scope/history/SARIF/rate/fail-on)
+├── tests/test_1_2.py   أمانة الطلب، قواعد السياق، سياسة الإثبات
+├── docs/REALWORLD.md   التحقق الميداني 1.2.0
+├── docs/evidence/      أدلة JSON وصورة من الفحص العام
 ├── .github/workflows/ci.yml
 ├── LICENSE             MIT
 ├── CHANGELOG.md        سجل الإصدارات
@@ -471,6 +511,28 @@ sv1/
 ├── requirements.txt
 └── run.bat
 ```
+
+---
+
+## تحقق ميداني (1.2.0)
+
+أهداف عامة مصابة عمدًا فقط. الأوامر والأدلة الخام: [`docs/REALWORLD.md`](docs/REALWORLD.md).
+
+| الهدف | النطاق | النتيجة |
+|---|---|---|
+| Google Firing Range — منعكس | 49 صفحة، 47 نقطة | 42 نتيجة — **40 HIGH** مثبتة في Chromium، 2 MEDIUM |
+| Google Firing Range — DOM | 25 صفحة زحف، 20 معروضة | **15 HIGH** DOM، 0 أخطاء |
+| Altoro Mutual — بحث | معامل GET واحد | **1 HIGH** XSS منعكس، مؤكد |
+| المختبر المحلي | تغطية كاملة | **27/27** نتيجة أعادت التشغيل، 0 unstable |
+
+Firing Range: 508 طلبات، 0 أخطاء، حوالي 220 ثانية. الحالتان `MEDIUM` هما
+`/url/css_import` (رابط stylesheet لا ينفّذ `javascript:` في Chromium الحالي)
+و`/url/object_data` (مثبّت على نوع Flash plugin المحذوف)؛ الصفحتان ترفضان
+`<`/`>` في المعامل. سُجّلتا كانعكاس فقط، بدون رفعها إلى `HIGH`.
+
+قبول المختبر: CRITICAL 9 / HIGH 16 / MEDIUM 2، 19 صفحة، 25 نقطة، 853 طلبًا،
+حوالي 165 ثانية. إصلاح المعاملات المتعددة يظهر في `/api/fetch` و`/api/spa`
+و`/dynamic`: المعامل الثاني (`name`) صار يُحقن فعلًا، ورجعت نتائج XSS الثلاث.
 
 ---
 
@@ -500,7 +562,7 @@ python sv1.py -u http://127.0.0.1:8099/ --crawl --stored --js --second-order --d
 ```
 
 النتيجة: **27 نتيجة، 27 أعادت التشغيل، 0 unstable** — CRITICAL 9، HIGH 16،
-MEDIUM 2، 19 صفحة، 25 نقطة حقن، 780 طلباً، 149.2 ثانية (مع Chromium).
+MEDIUM 2، 19 صفحة، 25 نقطة حقن، 853 طلبًا، 164.4 ثانية (مع Chromium).
 
 - **XSS (14):** 13 مؤكدة بالتنفيذ داخل Chromium (`/search`, `/feedback` حقلان،
   `/js`, `/attr`, `/waf`, `/api/fetch`, `/api/spa`, `/dynamic`)، DOM في `/dom`
@@ -573,8 +635,12 @@ note    database error surfaced (MySQL) - error based injection
 ## حدود الأداة
 
 - XSS يغطي المنعكس و DOM والمخزّن عند تشغيل Chromium. بدونه: انعكاس فقط.
+- ردود غير HTML (`text/plain`، JSON، ثنائي) ليست مرشحة XSS. رابط stylesheet أو
+  `object` فلاش محذوف ممكن يعكس `javascript:` بدون تنفيذ؛ هذه النتائج تبقى
+  `MEDIUM`.
 - كشف DOM يعتمد على أزواج مصدر→حوض داخل `<script>` المضمّن. `--spa` ينفّذ
-  الصفحات لكنه ما يحلل نصوص الـ bundles الخارجية.
+  الصفحات لكنه ما يحلل نصوص الـ bundles الخارجية. ميزانية المتصفح تعرض 20
+  صفحة في تمريرة DOM.
 - `--js` يقرأ الروابط المكتوبة كنص داخل السكربت (سكربت مضمّن + ملفات خارجية
   بنفس الأصل). إذا الرابط يُبنى بالمتغيرات (`'/api/' + id`) ما ينكشف — هنا
   يجي `--spa` ويلتقطه من الطلب الفعلي.
@@ -609,7 +675,7 @@ note    database error surfaced (MySQL) - error based injection
   SSRF، Stored، DOM، وUNION تحتاج متصفحاً أو استخراجاً كاملاً فتُتخطى.
   الجلسة الأحدث لنفس `-u` هي المرجع.
 - `--db` ما فيه تقليم تلقائي؛ احذف الملف أو أرشف الجلسات القديمة يدوياً.
-- `--resume` ومحرك async (`httpx`) وcurl repro في HTML لسه P5.1.
+- `--resume` ومحرك async (`httpx`) مؤجلان إلى 1.3.0. curl repro داخل 1.2.0.
 
 ---
 
@@ -619,4 +685,5 @@ MIT — راجع ملف `LICENSE`.
 
 ## الإصدار
 
-`1.1.0` — الإصدار العام الحالي (P5.0). تفاصيل التغييرات في `CHANGELOG.md`.
+`1.2.0` — الإصدار العام الحالي. دقة السياق وأمانة الطلب والتحقق الميداني؛
+async/resume إلى 1.3.0. تفاصيل التغييرات في `CHANGELOG.md`.

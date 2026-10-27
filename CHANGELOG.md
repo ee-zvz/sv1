@@ -2,6 +2,74 @@
 
 All notable changes to SV1. Format follows Keep a Changelog.
 
+## 1.2.0 - 2026-10-26
+
+Accuracy and reproducibility. No new vulnerability categories: XSS (reflected,
+DOM, stored, blind), SQLi and SSRF remain the scope. Async, `--resume` and
+auth/session work stay deferred to 1.3.0.
+
+### XSS accuracy
+
+- Replaced the `rfind('<')` guess with an HTML state machine that tracks normal
+  tags, quoted attribute values, comments and raw-text elements. Markup inside a
+  quoted attribute (an iframe `data:` URL) no longer looks like a new tag.
+- Added grammar-specific payloads:
+  - element tag-name injection (`TOKEN><svg/onload=...>`);
+  - attribute-name and unquoted-value injection via a new event attribute;
+  - quote-free `alert(/TOKEN/)` for event-handler reflections, so servers that
+    escape double or single quotes cannot silently break the proof;
+  - closing `</textarea>` / `</style>` before markup when the reflection is in
+    the opening tag of a raw-text element;
+  - `iframe srcdoc` markup and a new `srcdoc` attribute for iframe parameters;
+  - JavaScript string (assignment and call), code, regex-literal and line/block
+    comment payloads;
+  - quote-aware `alert` strings so the JS string quote never collides with the
+    HTML attribute quote.
+- Content-type gate: `text/plain`, JSON and other non-HTML/XML responses are no
+  longer XSS candidates. This removed the Firing Range `text/plain` false
+  positives.
+- Browser proof now tries the primary payload plus up to five exact alternatives
+  (`XSS_MAX_PROOFS = 6`), reads every frame, and dispatches `mouseover`, `focus`
+  and `click` for handler payloads. `HIGH` still requires the marker to execute;
+  exact reflection without execution is `MEDIUM`.
+- DOM vectors extended to `document.referrer`, `window.name`, localStorage,
+  sessionStorage, `postMessage` and cookies.
+
+### Request and evidence fidelity
+
+- Duplicate query/form names are preserved in `InjectionPoint.params`.
+- `param_index` is the occurrence of that name, resolved through
+  `InjectionPoint.position()`. Fixed a 1.2.0 development bug where a second,
+  differently named parameter (`?id=1&name=test`) was not replaced at all. This
+  restored three multi-parameter lab XSS findings.
+- Reflected XSS, SQLi and SSRF findings carry a `curl` reproduction string,
+  shown in the console and exported to HTML, JSON and CSV. DOM, stored and blind
+  findings are browser proofs and carry the executed marker plus a screenshot.
+- OpenAPI operations keep their declared method and import query parameters for
+  non-GET methods.
+- Report output sanitises ANSI escapes, control bytes, CSV formula prefixes and
+  HTML text; console glyphs fall back to ASCII on non-UTF-8 streams.
+
+### Validation
+
+- `tests/test_1_2.py`: request fidelity (duplicate query/form names, second named
+  parameter, second occurrence), context grammar (tag name, raw text, iframe,
+  event handlers, JS comment/regex/eval), content-type gating, DOM vectors,
+  OpenAPI methods, report sanitisation. Total unit tests: 42.
+- **Google Firing Range reflected:** 49 pages, 47 points, 508 requests, 0 errors,
+  42 findings — 40 `HIGH` confirmed in Chromium, 2 `MEDIUM`. The two are
+  `/url/css_import` (stylesheet link) and `/url/object_data` (removed Flash
+  plugin type); markup is rejected by the target and current Chromium does not
+  execute those URL schemes.
+- **Google Firing Range DOM:** 25 pages crawled, 20 rendered, 15 confirmed DOM
+  findings across referrer, `location.href`, localStorage and `window.name`;
+  0 errors.
+- **Altoro Mutual:** one reflected query parameter confirmed `HIGH` by Chromium.
+- **Local lab:** 27 findings, 27 replayed, 0 unstable — CRITICAL 9 / HIGH 16 /
+  MEDIUM 2, 19 pages, 25 points, 853 requests, 164.4 s.
+- Evidence and commands: `docs/REALWORLD.md`, raw JSON under `docs/evidence/`.
+- Version `1.2.0`.
+
 ## 1.1.0 - 2026-10-26
 
 CI contract and session history. The scanner core, execution proof, coverage and

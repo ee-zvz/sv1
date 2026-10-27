@@ -5,7 +5,7 @@ from __future__ import annotations
 # --- version ---------------------------------------------------------------
 TOOL_NAME = "SV1"
 TOOL_AUTHOR = "ee.zvz"
-TOOL_VERSION = "1.1.0"
+TOOL_VERSION = "1.2.0"
 
 # --- network ---------------------------------------------------------------
 DEFAULT_TIMEOUT = 12.0          # seconds, per request
@@ -23,7 +23,7 @@ RATE_MAX_DEFER = 30.0           # cap on Retry-After, seconds
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 SV1/1.1"
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 SV1/1.2.0"
 )
 
 DEFAULT_HEADERS = {
@@ -50,7 +50,15 @@ SKIP_EXTENSIONS = (
 
 # --- xss -------------------------------------------------------------------
 XSS_MAX_PAYLOADS = 10           # payloads tried per injection point
+XSS_MAX_PROOFS = 6              # payloads tried in the browser per point
 XSS_SAMPLE_CHARS = 160          # context window around a reflection
+XSS_HTML_TYPES = (              # only these can execute markup
+    "text/html",
+    "application/xhtml+xml",
+    "application/xml",
+    "text/xml",
+    "image/svg+xml",
+)
 
 # --- sqli ------------------------------------------------------------------
 SQLI_TIME_DELAY = 4             # seconds the DB is asked to sleep
@@ -75,6 +83,7 @@ VERIFY_ROUNDS = 2               # every finding is replayed this many times
 # --- browser / execution proof --------------------------------------------
 BROWSER_TIMEOUT_MS = 20000      # navigation timeout
 BROWSER_SETTLE_MS = 900         # quiet time after load, lets onload handlers run
+BROWSER_INTERACT_MS = 500       # quiet time after dispatching mouse/focus events
 BROWSER_VIEWPORT = (1366, 800)
 BROWSER_MAX_PAGES = 20          # page budget for dom / stored passes
 DOM_MAX_CANDIDATES = 6          # static source-to-sink pairs tested per page
@@ -134,7 +143,7 @@ FAIL_ON_CHOICES = ("any", "none", "low", "medium", "high", "critical")
 # --- output ----------------------------------------------------------------
 CSV_FIELDS = (
     "severity", "kind", "url", "method", "param",
-    "payload", "confidence", "technique", "evidence",
+    "payload", "confidence", "technique", "evidence", "curl",
 )
 
 SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
@@ -143,4 +152,3 @@ SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
 BANNER_FRAME_DELAY = 0.035
 BANNER_TAIL_DELAY = 0.9
 SPINNER_INTERVAL = 0.09
-

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 import sys
 import threading
 import time
@@ -33,6 +34,30 @@ SEVERITY_COLOR = {
 
 FRAMES = "⣾⣽⣻⢿⡿⣟⣯⣷"
 FRAMES_ASCII = "|/-\\"
+
+ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def clean(value, limit: int = 0) -> str:
+    """Target-controlled text must not be able to drive the terminal or CSV."""
+    text = str(value or "")
+    text = ANSI_RE.sub("", text)
+    text = CONTROL_RE.sub("", text)
+    text = text.replace("\r", " ").replace("\n", " ")
+    text = text.strip()
+    if limit and len(text) > limit:
+        text = text[: max(0, limit - 3)] + "..."
+    return text
+
+
+def csv_cell(value) -> str:
+    text = clean(value)
+    if text.startswith(("=", "+", "-", "@")):
+        text = "'" + text
+    return text
+
+
 
 
 def supports_unicode() -> bool:
@@ -82,23 +107,27 @@ class Spinner:
             sys.stdout.flush()
 
 
+def glyph(unicode_char: str, ascii_char: str) -> str:
+    return unicode_char if supports_unicode() else ascii_char
+
+
 def info(message: str) -> None:
-    sys.stdout.write(f"  {GREY}·{RESET} {message}\n")
+    sys.stdout.write(f"  {GREY}{glyph('·', '-')}{RESET} {clean(message)}\n")
     sys.stdout.flush()
 
 
 def good(message: str) -> None:
-    sys.stdout.write(f"  {GREEN}✓{RESET} {message}\n")
+    sys.stdout.write(f"  {GREEN}{glyph('✓', '+')}{RESET} {clean(message)}\n")
     sys.stdout.flush()
 
 
 def warn(message: str) -> None:
-    sys.stdout.write(f"  {YELLOW}!{RESET} {message}\n")
+    sys.stdout.write(f"  {YELLOW}!{RESET} {clean(message)}\n")
     sys.stdout.flush()
 
 
 def bad(message: str) -> None:
-    sys.stdout.write(f"  {RED}✗{RESET} {message}\n")
+    sys.stdout.write(f"  {RED}{glyph('✗', 'x')}{RESET} {clean(message)}\n")
     sys.stdout.flush()
 
 
@@ -111,24 +140,30 @@ def section(title: str) -> None:
 def print_finding(finding, index: int) -> None:
     color = SEVERITY_COLOR.get(finding.severity, WHITE)
     sys.stdout.write(
-        f"\n  {color}{BOLD}[{finding.severity}]{RESET} "
-        f"{BOLD}{finding.kind}{RESET} "
-        f"{DIM}{finding.confidence} confidence{RESET}\n"
+        f"\n  {color}{BOLD}[{clean(finding.severity)}]{RESET} "
+        f"{BOLD}{clean(finding.kind)}{RESET} "
+        f"{DIM}{clean(finding.confidence)} confidence{RESET}\n"
     )
-    sys.stdout.write(f"  {GREY}target  {RESET}{WHITE}{finding.method} {finding.url}{RESET}\n")
-    sys.stdout.write(f"  {GREY}param   {RESET}{CYAN}{finding.param}{RESET}\n")
+    sys.stdout.write(
+        f"  {GREY}target  {RESET}{WHITE}{clean(finding.method)} "
+        f"{clean(finding.url)}{RESET}\n"
+    )
+    sys.stdout.write(f"  {GREY}param   {RESET}{CYAN}{clean(finding.param)}{RESET}\n")
     if finding.technique:
-        sys.stdout.write(f"  {GREY}vector  {RESET}{BLUE}{finding.technique}{RESET}\n")
-    payload = finding.payload if len(finding.payload) <= 96 else finding.payload[:93] + "..."
+        sys.stdout.write(f"  {GREY}vector  {RESET}{BLUE}{clean(finding.technique)}{RESET}\n")
+    payload = clean(finding.payload, 96)
     sys.stdout.write(f"  {GREY}payload {RESET}{MAGENTA}{payload}{RESET}\n")
     for label, value in getattr(finding, "data", {}).items():
-        shown = value if len(value) <= 110 else value[:107] + "..."
-        sys.stdout.write(f"  {GREY}data    {RESET}{DIM}{label:<8}{RESET}{shown}\n")
+        sys.stdout.write(
+            f"  {GREY}data    {RESET}{DIM}{clean(label, 8):<8}{RESET}"
+            f"{clean(value, 110)}\n"
+        )
     if finding.detail:
-        sys.stdout.write(f"  {GREY}note    {RESET}{finding.detail}\n")
+        sys.stdout.write(f"  {GREY}note    {RESET}{clean(finding.detail)}\n")
     if finding.evidence:
-        evidence = finding.evidence if len(finding.evidence) <= 150 else finding.evidence[:147] + "..."
-        sys.stdout.write(f"  {GREY}proof   {RESET}{DIM}{evidence}{RESET}\n")
+        sys.stdout.write(f"  {GREY}proof   {RESET}{DIM}{clean(finding.evidence, 150)}{RESET}\n")
+    if getattr(finding, "curl", ""):
+        sys.stdout.write(f"  {GREY}curl    {RESET}{DIM}{clean(finding.curl, 180)}{RESET}\n")
     sys.stdout.flush()
 
 
@@ -184,7 +219,7 @@ def export(path: str, findings: list, stats, meta: dict) -> str:
             writer = csv.DictWriter(handle, fieldnames=config.CSV_FIELDS, extrasaction="ignore")
             writer.writeheader()
             for finding in findings:
-                writer.writerow(finding.to_row())
+                writer.writerow({key: csv_cell(value) for key, value in finding.to_row().items()})
         return path
 
     payload = {
@@ -243,7 +278,7 @@ def export_html(path: str, findings: list, stats, meta: dict) -> str:
             source = escape(Path(finding.artifact).resolve().as_uri())
             shot = f'<img class="shot" src="{source}" alt="proof">'
         data_rows = "".join(
-            f'<div class="row"><b>{escape(label)}</b><span>{escape(value)}</span></div>'
+            f'<div class="row"><b>{escape(clean(label))}</b><span>{escape(clean(value))}</span></div>'
             for label, value in getattr(finding, "data", {}).items()
         )
         cards.append(
@@ -251,15 +286,16 @@ def export_html(path: str, findings: list, stats, meta: dict) -> str:
   <article class="card" style="border-left-color:{color}">
     <header>
       <span class="badge" style="background:{color}">{escape(finding.severity)}</span>
-      <span class="kind">{escape(finding.kind)}</span>
-      <span class="conf">{escape(finding.confidence)}</span>
-      <span class="tech">{escape(finding.technique)}</span>
+      <span class="kind">{escape(clean(finding.kind))}</span>
+      <span class="conf">{escape(clean(finding.confidence))}</span>
+      <span class="tech">{escape(clean(finding.technique))}</span>
     </header>
-    <div class="row"><b>target</b><code>{escape(finding.method)} {escape(finding.url)}</code></div>
-    <div class="row"><b>param</b><code>{escape(finding.param)}</code></div>
-    <div class="row"><b>payload</b><code class="payload">{escape(finding.payload)}</code></div>
-    {f'<div class="row"><b>note</b><span>{escape(finding.detail)}</span></div>' if finding.detail else ''}
-    {f'<div class="row"><b>proof</b><span class="proof">{escape(finding.evidence)}</span></div>' if finding.evidence else ''}
+    <div class="row"><b>target</b><code>{escape(clean(finding.method))} {escape(clean(finding.url))}</code></div>
+    <div class="row"><b>param</b><code>{escape(clean(finding.param))}</code></div>
+    <div class="row"><b>payload</b><code class="payload">{escape(clean(finding.payload))}</code></div>
+    {f'<div class="row"><b>note</b><span>{escape(clean(finding.detail))}</span></div>' if finding.detail else ''}
+    {f'<div class="row"><b>proof</b><span class="proof">{escape(clean(finding.evidence))}</span></div>' if finding.evidence else ''}
+    {f'<div class="row"><b>curl</b><code>{escape(clean(finding.curl))}</code></div>' if getattr(finding, "curl", "") else ''}
     {data_rows}
     {shot}
   </article>"""
@@ -270,7 +306,7 @@ def export_html(path: str, findings: list, stats, meta: dict) -> str:
             counts.items(), key=lambda item: config.SEVERITY_ORDER.get(item[0], 9)
         )
     ) or "no findings"
-    target = escape(str(meta.get("target", "")))
+    target = escape(clean(meta.get("target", "")))
     duration = f"{stats.duration:.1f}s"
     started = (
         time.strftime("%Y-%m-%d %H:%M", time.localtime(stats.started))

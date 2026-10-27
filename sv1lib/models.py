@@ -32,16 +32,33 @@ class Page:
 
 @dataclass(frozen=True)
 class InjectionPoint:
-    """A single mutable input on a single endpoint."""
+    """A single mutable input on a single endpoint.
+
+    param_index keeps duplicate names honest: ?id=1&id=2 is two points, and
+    the verifier must replace the same occurrence the scanner did.
+    """
 
     url: str
     method: str                 # "GET" | "POST"
     params: tuple               # tuple[(name, value), ...] - untouched inputs
     param: str                  # which key gets the payload
     source: str                 # "query" | "form" | "header" | "cookie" | "json"
+    param_index: int = 0        # which occurrence of param gets the payload
 
     def key(self) -> tuple:
-        return (self.method, self.url, self.param)
+        return (self.method, self.url, self.param, self.param_index)
+
+    def position(self) -> int:
+        """Absolute index in params for occurrence param_index of param."""
+        wanted = max(0, int(self.param_index))
+        seen = 0
+        for index, (name, _value) in enumerate(self.params):
+            if name != self.param:
+                continue
+            if seen == wanted:
+                return index
+            seen += 1
+        return -1
 
     def label(self) -> str:
         return f"{self.method} {self.url} [{self.param}]"
@@ -84,7 +101,9 @@ class Finding:
     technique: str = ""         # reflected/attr, error, boolean, time ...
     detail: str = ""
     artifact: str = ""          # screenshot proving execution
+    curl: str = ""              # exact reproduction command
     data: dict[str, str] = field(default_factory=dict)  # dumped values (user/db/tables)
+    alternatives: list[str] = field(default_factory=list)  # other confirmed payloads
 
     def to_row(self) -> dict[str, Any]:
         return {
@@ -97,10 +116,14 @@ class Finding:
             "confidence": self.confidence,
             "technique": self.technique,
             "evidence": self.evidence.replace("\n", " ")[:400],
+            "curl": self.curl,
         }
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        payload = asdict(self)
+        if not payload.get("alternatives"):
+            payload.pop("alternatives", None)
+        return payload
 
 
 @dataclass

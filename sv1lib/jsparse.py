@@ -68,8 +68,11 @@ def endpoints(client, pages: list[Page]) -> list[InjectionPoint]:
                 if not pairs:
                     continue
                 base = urllib.parse.urlunsplit(parts._replace(query="", fragment=""))
+                counts: dict[str, int] = {}
                 for name, _value in pairs:
-                    key = ("GET", base, name)
+                    occurrence = counts.get(name, 0)
+                    counts[name] = occurrence + 1
+                    key = ("GET", base, name, occurrence)
                     if key in seen:
                         continue
                     seen.add(key)
@@ -80,6 +83,7 @@ def endpoints(client, pages: list[Page]) -> list[InjectionPoint]:
                             params=tuple(pairs),
                             param=name,
                             source="js",
+                            param_index=occurrence,
                         )
                     )
                     if len(points) >= config.JS_MAX_POINTS:

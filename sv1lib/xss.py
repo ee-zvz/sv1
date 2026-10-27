@@ -13,6 +13,27 @@ from . import config, context, payloads
 from .models import Finding
 
 
+def _header(headers: dict, name: str) -> str:
+    target = name.lower()
+    for key, value in (headers or {}).items():
+        if str(key).lower() == target:
+            return str(value)
+    return ""
+
+
+def _renderable(response) -> bool:
+    """Only HTML documents can execute an HTML payload.
+
+    text/plain, application/json and friends are still useful for SQLi and
+    reflection evidence, but treating them as XSS candidates inflates the
+    report and makes a browser proof look optional.
+    """
+    ctype = _header(response.headers, "content-type").lower()
+    if not ctype:
+        return True
+    return any(kind in ctype for kind in config.XSS_HTML_TYPES)
+
+
 def _token() -> str:
     return "sv1" + secrets.token_hex(4)
 
@@ -45,9 +66,12 @@ def scan_point(client, point) -> list[Finding]:
     probe = client.send(point, token)
     if not probe.ok or token not in probe.text:
         return []
+    if not _renderable(probe):
+        return []
 
     site = context.analyze(probe.text, probe.text.find(token))
     reflected = 0
+    matches: list[tuple[str, str]] = []
 
     for payload_text in candidates(site, token):
         response = client.send(point, payload_text)
@@ -58,20 +82,26 @@ def scan_point(client, point) -> list[Finding]:
         reflected += 1
         if payload_text in response.text:
             index = response.text.find(payload_text)
-            return [
-                Finding(
-                    kind="XSS",
-                    severity="HIGH",
-                    url=point.url,
-                    method=point.method,
-                    param=point.param,
-                    payload=payload_text,
-                    confidence="HIGH",
-                    evidence=_snippet(response.text, index, len(payload_text)),
-                    technique=f"reflected/{site.kind}",
-                    detail=site.summary(),
-                )
-            ]
+            matches.append((payload_text, _snippet(response.text, index, len(payload_text))))
+
+    if matches:
+        payload_text, evidence = matches[0]
+        alternatives = [item[0] for item in matches[1:config.XSS_MAX_PROOFS]]
+        return [
+            Finding(
+                kind="XSS",
+                severity="HIGH",
+                url=point.url,
+                method=point.method,
+                param=point.param,
+                payload=payload_text,
+                confidence="HIGH",
+                evidence=evidence,
+                technique=f"reflected/{site.kind}",
+                detail=site.summary(),
+                alternatives=alternatives,
+            )
+        ]
 
     if reflected:
         index = probe.text.find(token)

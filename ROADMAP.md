@@ -157,7 +157,7 @@ version() -> 8.0.36-lab`، وعلى `/waf` تجاوز فلتر المسافات 
 | اختبارات وحدة + CI على Windows/Linux | ✅ |
 | محرك async (`httpx`) → سرعة أعلى | ⏳ P5.1 |
 | `--resume` لاستكمال جلسة متوقفة | ⏳ P5.1 |
-| curl repro وخط زمني أعمق في HTML | ⏳ P5.1 |
+| curl repro وخط زمني أعمق في HTML | ✅ curl في 1.2.0 |
 
 **قبول P5.0:** الفحص الكامل مع `--scope --db --diff --sarif --fail-on high`:
 27 نتيجة، 27 أعادت التشغيل، 0 unstable — CRITICAL 9، HIGH 16، MEDIUM 2،
@@ -167,7 +167,41 @@ version() -> 8.0.36-lab`، وعلى `/waf` تجاوز فلتر المسافات 
 
 P5.0 يضيف طبقة تشغيل حقيقية: تقرير SARIF للـ CI، بوابات خطورة، نطاق فحص
 مغلق، وذاكرة SQLite تقارن الجلسات وتعيد فحص ما يمكن إعادة فحصه. المحرك
-باقي متزامناً (threads)؛ الـ async مؤجل لـ P5.1 مع `--resume` وcurl repro.
+باقي متزامناً (threads)؛ الـ async مؤجل لـ P5.1 مع `--resume`.
+
+---
+
+## P5.0.1 — دقة 1.2.0 ✅
+
+إصدار دقة وأمانة طلب قبل نقل المحرك إلى async. لا فئات ثغرات جديدة.
+
+| البند | الحالة |
+|---|---|
+| ماسح HTML كامل: وسم/خاصية/اقتباس/تعليق/نص خام، بدون خدعة `<` داخل خاصية | ✅ |
+| بايلودات: اسم الوسم، اسم الخاصية، قيمة بلا اقتباس، إغلاق `textarea/style` | ✅ |
+| `iframe srcdoc` + حقن `srcdoc` + قراءة كل الإطارات في Chromium | ✅ |
+| JavaScript: تعيين/استدعاء/تعبير نمطي/تعليق سطر أو بلوك | ✅ |
+| معالج حدث بلا اقتباسات `alert(/TOKEN/)` ينجو من تهريب الاقتباسات | ✅ |
+| بوّابة Content-Type: غير HTML/XML ليس مرشح XSS | ✅ |
+| حتى 6 بايلودات في المتصفح + تفعيل `mouseover/focus/click` | ✅ |
+| حفظ المعاملات المكررة + `param_index` كتكرار للاسم | ✅ |
+| إصلاح المعامل الثاني (`?id=1&name=test`) + استعادة 3 نتائج XSS | ✅ |
+| `curl` لكل نتيجة في الطرفية/HTML/JSON/CSV | ✅ |
+| تعقيم ANSI/control/CSV/HTML + بديل ASCII للطرفية | ✅ |
+| الحفاظ على method في OpenAPI واستيراد query لغير GET | ✅ |
+| متجهات DOM: referrer، window.name، storage، postMessage، cookie | ✅ |
+
+**قبول 1.2.0:**
+
+- Firing Range منعكس: 49 صفحة، 47 نقطة، 508 طلبات، 0 أخطاء — 40 `HIGH`
+  مثبتة في Chromium و2 `MEDIUM` (stylesheet link وFlash object).
+- Firing Range DOM: 25 صفحة زحف، 20 معروضة، 15 `HIGH` مؤكدة.
+- Altoro Mutual: معامل بحث واحد، `HIGH` مؤكد.
+- المختبر: 27/27 أعادت التشغيل، 0 unstable — CRITICAL 9 / HIGH 16 / MEDIUM 2،
+  19 صفحة، 25 نقطة، 853 طلباً، 164.4 ثانية.
+- الاختبارات: 42 اختبار وحدة.
+
+الأدلة: `docs/REALWORLD.md` و`docs/evidence/`.
 
 ---
 
@@ -181,10 +215,11 @@ P3   ✅  (تغطية: second-order + باراميترات مخفية + JS + mul
 P3.1 ✅  (dump + SPA crawl + OpenAPI)
 P4   ✅  (الأعمى و OOB: blind xss + ssrf + callback)
 P5.0 ✅  (CI: SARIF + fail-on + scope + SQLite diff/retest + 429)
-P5.1 ←   (async + resume + curl repro)
+P5.0.1 ✅ (1.2.0: دقة السياق + أمانة الطلب + تحقق ميداني)
+P5.1 ←   (async + resume)
 ```
 
 P5.0 اكتمل: SV1 يصدّر SARIF صالحاً، يفرض نطاقاً، يحفظ الجلسات ويقارنها،
-ويعيد فحص ما يمكن إعادة فحصه. الخطوة القادمة P5.1 (محرك async وresume)
-أو P4.1 لـ DNS/OOB SQLi حسب الحاجة.
+ويعيد فحص ما يمكن إعادة فحصه. 1.2.0 أضاف دقة السياق وأمانة الطلب وcurl.
+الخطوة القادمة P5.1 (محرك async وresume) أو P4.1 لـ DNS/OOB SQLi حسب الحاجة.
 
