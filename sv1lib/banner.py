@@ -41,7 +41,10 @@ def enable_vt() -> None:
     try:
         import ctypes
 
-        kernel32 = ctypes.windll.kernel32
+        windll = getattr(ctypes, "windll", None)
+        if windll is None:
+            return
+        kernel32 = windll.kernel32
         handle = kernel32.GetStdHandle(-11)
         mode = ctypes.c_uint32()
         if kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
