@@ -5,16 +5,18 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.3.0` adds real-application inputs: HAR and
-raw HTTP request import, nested JSON and raw bodies, XHR/fetch POST capture,
-same-origin external JavaScript analysis, and nested OpenAPI bodies. Reflection
-alone stays `MEDIUM`; `HIGH` needs execution.
+SQLite session history. Release `1.3.1` keeps the real-application inputs
+introduced in `1.3.0`: HAR and raw HTTP request import, nested JSON and raw
+bodies, XHR/fetch POST capture, same-origin external JavaScript analysis, and
+nested OpenAPI bodies. Reflection alone stays `MEDIUM`; `HIGH` needs execution.
+`1.3.1` adds exact dependency pins, a `pyproject.toml`, a full-lab CI gate, and
+replay-enabled Altoro evidence.
 
 أداة فحص ثغرات **XSS** و **SQL Injection** و **Blind XSS** و **SSRF** مكتوبة
 ببايثون، تشتغل على ويندوز 11. عند التشغيل تطلع مقدمة متحركة (لوقو SV1 بتدرّج
 لوني + اسم المؤلف) ثم يبدأ الفحص.
 
-### مدخلات تطبيقات حقيقية (1.3.0)
+### مدخلات تطبيقات حقيقية (1.3.1)
 
 - **استيراد HAR** (`--har`): كوكيز وهيدرات وأجسام طلبات same-origin تتحول
   لجلسة ونقاط حقن. قيم CLI تتغلب على قيم الملف، والملف لقطة ثابتة.
@@ -83,6 +85,9 @@ cd sv1
 python -m pip install -r requirements.txt
 python -m playwright install chromium
 ```
+
+`requirements.txt` و`pyproject.toml` يثبتان إصدارات دقيقة؛
+`python -m pip install .` يستخدم نفس مجموعة الاعتماديات.
 
 خطوة المتصفح اختيارية لكن مطلوبة لإثبات التنفيذ (XSS حقيقي، DOM، Stored)،
 ولزيارة صفحة المشرف في Blind XSS، ولزحف SPA. بدونها الأداة تشتغل وتفحص
@@ -316,9 +321,9 @@ python sv1.py -u https://site.tld --crawl --db sv1.db --diff
 سليماً. `--rps 0` يبقى بلا حد.
 
 > 1.4.0 لاحقاً: محرك async بـ `httpx` و`--resume`.
-> الإصدار 1.3.0 يضيف HAR والطلبات الخام وJSON المتداخل وأجسام XHR POST
+> الإصدار 1.3.1 يضيف HAR والطلبات الخام وJSON المتداخل وأجسام XHR POST
 > وسكربتات خارجية وOpenAPI متداخل، فوق دقة 1.2.0 وSARIF وfail-on وscope
-> وSQLite diff/retest وتكيّف 429.
+> وSQLite diff/retest وتكيّف 429. CI يشغّل اختبار Chromium والمختبر الكامل.
 
 ---
 
@@ -566,41 +571,46 @@ sv1/
 ├── tests/test_1_2.py   أمانة الطلب، قواعد السياق، سياسة الإثبات
 ├── tests/test_1_3.py   HAR، JSON متداخل، أجسام SPA، سكربتات خارجية
 ├── tests/test_browser_1_3.py  تكامل Chromium XHR POST (CI)
+├── tests/test_lab_1_3.py      بوابة المختبر الكامل (CI)
 ├── docs/REALWORLD.md   التحقق الميداني
 ├── docs/evidence/      أدلة JSON من الفحص العام والمختبر
 ├── .github/workflows/ci.yml
 ├── LICENSE             MIT
 ├── CHANGELOG.md        سجل الإصدارات
 ├── ROADMAP.md          خارطة التطوير
-├── requirements.txt
+├── requirements.txt    إصدارات مثبتة بدقة
+├── pyproject.toml      بيانات الحزمة وإعداد البناء
 └── run.bat
 ```
 
 ---
 
-## تحقق ميداني (1.3.0)
+## تحقق ميداني (1.3.1)
 
 أهداف عامة مصابة عمدًا فقط. الأوامر والأدلة الخام: [`docs/REALWORLD.md`](docs/REALWORLD.md).
+
+تحقق المواقع الحية: **4 تشغيلات، 76 صفحة، 49 نقطة حقن، 560 طلباً، 59 نتيجة، 59/59 موثقة، 0 أخطاء**. الاختبارات: **75 مكتشفاً، 73 ينجح افتراضياً؛ اختبار Chromium واختبار المختبر الكامل يعملان في CI**.
 
 | الهدف | النطاق | النتيجة |
 |---|---|---|
 | Google Firing Range — منعكس | 49 صفحة، 47 نقطة | 42 نتيجة — **40 HIGH** مثبتة في Chromium، 2 MEDIUM؛ إعادة تشغيل 42/42، 0 unstable |
 | Google Firing Range — DOM | 25 صفحة زحف، 20 معروضة | **15 HIGH** DOM، 0 أخطاء |
-| Altoro Mutual — بحث | معامل GET واحد | **1 HIGH** XSS منعكس، مؤكد |
+| Altoro Mutual — بحث | معامل GET واحد | **1 HIGH** XSS منعكس، مؤكد؛ إعادة تشغيل 1/1 |
 | Firing Range — استيراد HAR | نقطة GET مستوردة | **1 HIGH** مؤكدة؛ إعادة تشغيل 1/1 |
-| المختبر المحلي 1.3.0 | تغطية كاملة + HAR/JSON/XHR/سكربت خارجي | **31/31** نتيجة أعادت التشغيل، 0 unstable |
+| المختبر المحلي 1.3.1 | تغطية كاملة + HAR/JSON/XHR/سكربت خارجي | **31/31** نتيجة أعادت التشغيل، 0 unstable |
 
-Firing Range وAltoro يبقيان دليل 1.2.1/1.2.0، ومحرك الكشف نفسه. فحص HAR
-العام في 1.3.0 استورد طلب GET واحداً، ولقى XSS منعكس `HIGH` + `CONFIRMED`،
-وأعاد تشغيله (12 طلباً، 17.9 ثانية). Firing Range: 512 طلباً، 0 أخطاء،
+Firing Range المنعكس وDOM يبقيان دليل 1.2.1/1.2.0، ومحرك الكشف نفسه.
+Altoro أُعيد فحصه مع إعادة التشغيل في 1.3.1. فحص HAR العام في 1.3.1 استورد
+طلب GET واحداً، ولقى XSS منعكس `HIGH` + `CONFIRMED`،
+وأعاد تشغيله (12 طلباً، 12.1 ثانية). Firing Range: 512 طلباً، 0 أخطاء،
 حوالي 247 ثانية. الحالتان `MEDIUM` هما
 `/url/css_import` (رابط stylesheet لا ينفّذ `javascript:` في Chromium الحالي)
 و`/url/object_data` (مثبّت على نوع Flash plugin المحذوف)؛ الصفحتان ترفضان
 `<`/`>` في المعامل. سُجّلتا كانعكاس فقط، بدون رفعها إلى `HIGH`. إعادة
 التشغيل أعادت إرسال 42 نتيجة وأثبتت 42.
 
-قبول المختبر في 1.3.0: 31/31 أعادت التشغيل، 0 unstable — CRITICAL 10 /
-HIGH 18 / MEDIUM 3، 21 صفحة، 29 نقطة، 966 طلباً، 183.8 ثانية. المسارات
+قبول المختبر في 1.3.1: 31/31 أعادت التشغيل، 0 unstable — CRITICAL 10 /
+HIGH 18 / MEDIUM 3، 21 صفحة، 29 نقطة، 966 طلباً، 185.4 ثانية. المسارات
 الجديدة ظاهرة في نفس التشغيل: `/external` نتيجة DOM خارجية `HIGH`،
 و`/api/xhr` انعكاس JSON POST `MEDIUM` من التقاط SPA. إصلاح المعاملات المتعددة
 يبقى في `/api/fetch` و`/api/spa` و`/dynamic`: المعامل الثاني (`name`) يُحقن.
@@ -633,7 +643,7 @@ python sv1.py -u http://127.0.0.1:8099/ --crawl --stored --js --second-order --d
 ```
 
 النتيجة: **31 نتيجة، 31 أعادت التشغيل، 0 unstable** — CRITICAL 10، HIGH 18،
-MEDIUM 3، 21 صفحة، 29 نقطة حقن، 966 طلبًا، 183.8 ثانية (مع Chromium).
+MEDIUM 3، 21 صفحة، 29 نقطة حقن، 966 طلبًا، 185.4 ثانية (مع Chromium).
 
 المختبر يحتفظ بحالة guestbook وblind وprofile في الذاكرة. أعد تشغيل
 `lab\server.py` قبل تكرار الفحص الكامل؛ وإلا فإن `/profile` يحتوي بايلود
@@ -775,7 +785,8 @@ MIT — راجع ملف `LICENSE`.
 
 ## الإصدار
 
-`1.3.0` — الإصدار العام الحالي. مدخلات تطبيقات حقيقية: HAR وطلبات HTTP خام،
+`1.3.1` — الإصدار العام الحالي. مدخلات تطبيقات حقيقية: HAR وطلبات HTTP خام،
 JSON وأجسام خام متداخلة، التقاط XHR/fetch POST، تحليل سكربتات same-origin
-خارجية، وOpenAPI متداخل، مع مهمة CI لمتصفح Playwright. الانعكاس وحده يبقى
-`MEDIUM`. تفاصيل التغييرات في `CHANGELOG.md`.
+خارجية، وOpenAPI متداخل، مع إصدارات مثبتة بدقة، `pyproject.toml`، وبوابة CI
+تشغّل المختبر الكامل. الانعكاس وحده يبقى `MEDIUM`. تفاصيل التغييرات في
+`CHANGELOG.md`.

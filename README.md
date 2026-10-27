@@ -7,10 +7,12 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.3.0` adds real-application inputs: HAR and
-raw HTTP request import, nested JSON and raw bodies, XHR/fetch POST capture,
-same-origin external JavaScript analysis, and nested OpenAPI bodies. Reflection
-alone stays `MEDIUM`; `HIGH` needs execution.
+SQLite session history. Release `1.3.1` keeps the real-application inputs
+introduced in `1.3.0`: HAR and raw HTTP request import, nested JSON and raw
+bodies, XHR/fetch POST capture, same-origin external JavaScript analysis, and
+nested OpenAPI bodies. Reflection alone stays `MEDIUM`; `HIGH` needs execution.
+`1.3.1` adds exact dependency pins, a `pyproject.toml`, a full-lab CI gate, and
+replay-enabled Altoro evidence.
 
 A vulnerability scanner for **XSS**, **SQL Injection**, **Blind XSS** and **SSRF**
 written in Python, running on Windows 11. On start it prints an animated banner
@@ -27,6 +29,9 @@ cd sv1
 python -m pip install -r requirements.txt
 python -m playwright install chromium
 ```
+
+`requirements.txt` and `pyproject.toml` pin exact versions; `python -m pip install .`
+uses the same dependency set.
 
 The browser step is optional, but required for execution proof (real XSS, DOM,
 Stored), for visiting the admin page in Blind XSS, and for SPA crawling. Without
@@ -186,7 +191,7 @@ python sv1.py -u https://site.tld --blind --oob https://cb.example.tld `
 Exit codes: `0` = no findings (or `--fail-on none`), `1` = a finding at or above
 the `--fail-on` threshold, `2` = the target did not respond or a file could not be opened.
 
-### Real application inputs (1.3.0)
+### Real application inputs (1.3.1)
 
 - **HAR session import.** `--har session.har` reads same-origin cookies, headers
   (including `Authorization` and CSRF headers) and request bodies. Query, JSON,
@@ -339,9 +344,9 @@ python sv1.py -u https://site.tld --crawl --db sv1.db --diff
 after 20 healthy responses. `--rps 0` stays unlimited.
 
 > 1.4.0 later: async engine on `httpx` and `--resume`.
-> Release 1.3.0 adds HAR/raw request import, nested JSON/raw bodies, XHR POST
-> capture, external JavaScript analysis, nested OpenAPI bodies and a Chromium
-> integration CI job.
+> Release 1.3.1 keeps HAR/raw request import, nested JSON/raw bodies, XHR POST
+> capture, external JavaScript analysis and nested OpenAPI bodies. CI runs the
+> Chromium XHR test and the full-lab acceptance test.
 
 ---
 
@@ -587,22 +592,28 @@ compares structure.
 
 ---
 
-## Real-world validation (1.3.0)
+## Real-world validation (1.3.1)
 
 Public, intentionally vulnerable demo targets only. Raw evidence and the exact
 commands: [`docs/REALWORLD.md`](docs/REALWORLD.md).
+
+Live-site validation: **4 runs, 76 pages, 49 injection points, 560 requests,
+59 findings, 59/59 verified, 0 errors**. Automated tests: **75 discovered,
+73 pass by default; the Chromium XHR test and the full-lab acceptance test run
+in CI**.
 
 | Target | Scope | Result |
 |---|---|---|
 | Google Firing Range, reflected | 49 pages, 47 points | 42 findings — **40 HIGH** confirmed in Chromium, 2 MEDIUM; replay 42/42, 0 unstable |
 | Google Firing Range, DOM | 25 pages crawled, 20 rendered | **15 HIGH** DOM findings, 0 errors |
-| Altoro Mutual search | one GET parameter | **1 HIGH** reflected XSS, confirmed |
+| Altoro Mutual search | one GET parameter | **1 HIGH** reflected XSS, confirmed; replay 1/1 |
 | Firing Range, HAR import | one imported GET point | **1 HIGH** confirmed; replay 1/1 |
-| Local lab, 1.3.0 | full coverage incl. HAR/JSON/XHR/external JS | **31/31** findings replayed, 0 unstable |
+| Local lab, 1.3.1 | full coverage incl. HAR/JSON/XHR/external JS | **31/31** findings replayed, 0 unstable |
 
-The Firing Range and Altoro runs remain the 1.2.1/1.2.0 evidence; the detection
-engine is unchanged. The 1.3.0 public HAR run imported one GET request, found the
-reflected XSS at `HIGH` + `CONFIRMED`, and replayed it (12 requests, 17.9 s).
+The reflected Firing Range and DOM runs remain the 1.2.1/1.2.0 evidence; the
+detection engine is unchanged. Altoro was re-run with replay enabled for 1.3.1.
+The 1.3.1 public HAR run imported one GET request, found the reflected XSS at
+`HIGH` + `CONFIRMED`, and replayed it (12 requests, 12.1 s).
 Firing Range ended with 512 requests, 0 errors and 247 s.
 The two `MEDIUM` cases are `/url/css_import` (a stylesheet `<link>` cannot execute
 `javascript:` in current Chromium) and `/url/object_data` (pinned to the removed
@@ -610,8 +621,8 @@ Flash plugin type); neither page accepts `<`/`>` in the parameter. They are
 reported as reflection-only, not inflated to `HIGH`. Replay re-sent all 42
 findings and reproduced all 42.
 
-The 1.3.0 lab acceptance run: 31/31 replayed, 0 unstable — CRITICAL 10 / HIGH 18 /
-MEDIUM 3, 21 pages, 29 points, 966 requests, 183.8 s. The new input paths are in
+The 1.3.1 lab acceptance run: 31/31 replayed, 0 unstable — CRITICAL 10 / HIGH 18 /
+MEDIUM 3, 21 pages, 29 points, 966 requests, 185.4 s. The new input paths are in
 that same run: `--external-js` confirms `/external` (`location.hash → innerHTML`
 inside `/external.js`) at `HIGH`; `--spa` captures the `/api/xhr` POST JSON body
 and reports `user.name` at `MEDIUM` (reflection only, no JSON browser execution);
@@ -663,13 +674,15 @@ sv1/
 ├── tests/test_1_2.py   request fidelity, context grammar, proof policy
 ├── tests/test_1_3.py   HAR, nested JSON, SPA bodies, external JS
 ├── tests/test_browser_1_3.py  Chromium XHR POST integration (CI)
+├── tests/test_lab_1_3.py      full-lab release gate (CI)
 ├── docs/REALWORLD.md   real-world validation
 ├── docs/evidence/      JSON evidence from public and local runs
 ├── .github/workflows/ci.yml
 ├── LICENSE             MIT
 ├── CHANGELOG.md        release log
 ├── ROADMAP.md          development roadmap
-├── requirements.txt
+├── requirements.txt    exact dependency pins
+├── pyproject.toml      package metadata and build configuration
 └── run.bat
 ```
 
@@ -701,7 +714,7 @@ python sv1.py -u http://127.0.0.1:8099/ --crawl --stored --js --second-order --d
 ```
 
 Result: **31 findings, 31 replayed, 0 unstable** — CRITICAL 10, HIGH 18, MEDIUM 3,
-21 pages, 29 injection points, 966 requests, 183.8 s (with Chromium).
+21 pages, 29 injection points, 966 requests, 185.4 s (with Chromium).
 
 The lab stores guestbook, blind and profile state in memory. Restart
 `lab\server.py` before repeating the full run; otherwise `/profile` already
@@ -850,7 +863,8 @@ MIT — see `LICENSE`.
 
 ## Version
 
-`1.3.0` — current public release. Real-application inputs: HAR/raw HTTP request
+`1.3.1` — current public release. Real-application inputs: HAR/raw HTTP request
 import, nested JSON and raw bodies, XHR/fetch POST capture, external same-origin
-JavaScript analysis, nested OpenAPI bodies, and a Playwright CI job. Reflection
-alone remains `MEDIUM`. Change details in `CHANGELOG.md`.
+JavaScript analysis, nested OpenAPI bodies, exact dependency pins, a
+`pyproject.toml`, and a full-lab Playwright CI gate. Reflection alone remains
+`MEDIUM`. Change details in `CHANGELOG.md`.

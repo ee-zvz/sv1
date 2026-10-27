@@ -1,14 +1,15 @@
-# SV1 1.3.0 — real-world validation
+# SV1 1.3.1 — real-world validation
 
 Date: 2026-10-27
-Build: `1.3.0`
+Build: `1.3.1`
 Platform: Windows 11, Python 3.14.6, Playwright Chromium (headless)
 
 This document records what SV1 actually found and proved outside the local lab.
-The reflected Firing Range run and the Altoro run remain from 1.2.1/1.2.0; the
-detection engine is shared. Release 1.3.0 adds focused local input-path evidence
-(HAR, nested JSON, XHR POST, external JavaScript) and a fresh full lab run. The
-public targets are intentionally vulnerable demo applications:
+The reflected Firing Range and DOM runs remain from 1.2.1/1.2.0; Altoro was
+re-run for 1.3.1 with replay enabled. Release 1.3.1 packages the 1.3.0
+input-path work and adds exact dependency pins, a `pyproject.toml`, a full-lab
+CI acceptance test, and fresh evidence. The public targets are intentionally
+vulnerable demo applications:
 
 - **Google Firing Range** (`public-firing-range.appspot.com`) — reflected and DOM
   XSS test corpus.
@@ -28,9 +29,19 @@ Raw evidence:
 - [Local HAR import evidence](evidence/local-har.json) and [HAR fixture](evidence/local-nested.har)
 - [Public HAR import evidence](evidence/firing-range-har.json) and [HAR fixture](evidence/firing-range-har.har)
 
+Live-site validation totals: **4 runs, 76 pages, 49 injection points, 560 HTTP
+requests, 59 findings, 59/59 verified, 0 errors**. The replay counts are 42/42
+for reflected Firing Range, 1/1 for Altoro, 1/1 for the public HAR import, and
+15/15 execution-confirmed for DOM (the DOM run was generated with
+`--no-verify`).
+
+Automated tests: **75 discovered, 73 pass by default**. The Chromium XHR test
+and the full-lab acceptance test are opt-in locally and run in CI; both pass on
+a fresh lab process.
+
 ---
 
-## 0. 1.3.0 input-path regression (local lab)
+## 0. 1.3.1 input-path regression (local lab)
 
 The local lab is the controlled target. Each focused run kept replay enabled
 unless noted, so a reflection is re-sent and the finding is removed if it does
@@ -47,7 +58,7 @@ python sv1.py -u http://127.0.0.1:8099/external `
 `/external.js` contains `location.hash → innerHTML`. Chromium executed the
 marker; the result is one `HIGH` + `CONFIRMED` DOM finding. No query/form points
 exist on this page, so it is the external source/sink path that supplies the
-finding. Stats: 1 page, 0 points, 2 requests, 0 errors, 1.58 s.
+finding. Stats: 1 page, 0 points, 2 requests, 0 errors, 1.57 s.
 
 ### XHR/fetch POST capture
 
@@ -78,7 +89,7 @@ python sv1.py -u http://127.0.0.1:8099/api/nested `
 The imported body is flattened to `user.name` and `q`; the nested leaf is sent
 by rebuilding the original object, not by flattening the wire body. The
 reflection is `MEDIUM` because the run has no browser. Stats: 1 page, 2 points,
-14 requests, 0 errors, 1.64 s. The `--json` variant produced the same point and
+14 requests, 0 errors, 1.65 s. The `--json` variant produced the same point and
 the same `MEDIUM` result ([evidence](evidence/local-nested-json.json)).
 
 ### Public HAR import (Firing Range)
@@ -91,7 +102,7 @@ python sv1.py -u "https://public-firing-range.appspot.com/reflected/parameter/at
 
 The HAR supplies the request, query point, `Accept` header and browser session.
 The run produced one `HIGH` + `CONFIRMED` reflected XSS finding and replayed it
-(`stats.verified: 1`). Stats: 1 page, 1 point, 12 requests, 0 errors, 17.9 s.
+(`stats.verified: 1`). Stats: 1 page, 1 point, 12 requests, 0 errors, 12.1 s.
 This is the public-target check for the import path; the nested-body features
 were checked on the controlled local lab because no public demo exposes a
 matching authenticated JSON request.
@@ -218,38 +229,55 @@ claim that every page in the corpus is vulnerable.
 
 ---
 
-## 3. Altoro Mutual — reflected XSS (1.2.0 evidence)
+## 3. Altoro Mutual — reflected XSS (1.3.1 evidence)
 
 ### Command
 
 ```powershell
 python sv1.py -u "http://demo.testfire.net/search.jsp?query=test" `
-  --xss --threads 2 --rps 2 --no-banner --no-verify `
-  -o altoro-search-1.2.0.json `
-  --html altoro-search-1.2.0.html `
-  --artifacts altoro-artifacts
+  --xss --threads 2 --rps 2 --no-banner --fail-on none `
+  -o docs/evidence/altoro-search.json `
+  --html altoro-search-1.3.1.html `
+  --artifacts altoro-artifacts-1.3.1
 ```
 
+Replay is enabled (there is no `--no-verify`). The 1.3.1 run also collapses the
+GET form point into the query point when both address the same URL and
+parameter, so the same reflection is not reported twice.
+
 ### Result
+
+| Metric | Value |
+|---|---:|
+| Pages | 1 |
+| Injection points | 1 |
+| Requests | 11 |
+| Errors | 0 |
+| Findings | 1 |
+| Verified / replayed | 1/1 |
+| Unstable | 0 |
+| Duration | 8.0 s |
 
 One finding, `HIGH` + `CONFIRMED`:
 
 ```text
 target   http://demo.testfire.net/search.jsp?query=test
 param    query
-payload  <svg/onload=alert('sv1a041d253')>sv1a041d253
-proof    executed in chromium: alert:sv1a041d253
+payload  <svg/onload=alert('sv11af4bbc1')>sv11af4bbc1
+proof    executed in chromium: alert:sv11af4bbc1
 ```
 
-The JSON evidence is [`evidence/altoro-search.json`](evidence/altoro-search.json); the finding records `confidence: CONFIRMED`.
+The JSON evidence is [`evidence/altoro-search.json`](evidence/altoro-search.json).
+It records `meta.replay: true`, `stats.verified: 1`, `stats.unverified: 0`, and
+`confidence: CONFIRMED`.
 
 ---
 
-## 4. Local lab regression (1.3.0)
+## 4. Local lab regression (1.3.1)
 
 The lab is the controlled acceptance target. It contains reflected, stored, DOM,
 external-script DOM, blind, second-order, SQLi and SSRF paths, plus a JSON POST
-XHR path.
+XHR path. The same command is enforced by `tests/test_lab_1_3.py` in CI.
 
 ### Command
 
@@ -262,10 +290,10 @@ python sv1.py -u http://127.0.0.1:8099/ `
   --crawl --stored --js --second-order --dump `
   --spa --external-js --openapi http://127.0.0.1:8099/openapi.json `
   --blind --blind-visit http://127.0.0.1:8099/blind-admin --ssrf `
-  --scope scope-lab.txt --db lab-1.3.0.db --diff `
+  --scope scope-lab.txt --db lab-1.3.1.db --diff `
   --sarif docs/evidence/local-lab.sarif --fail-on high `
-  --html lab-1.3.0.html --no-banner `
-  -o docs/evidence/local-lab.json --artifacts lab-artifacts-1.3.0
+  --html lab-1.3.1.html --no-banner `
+  -o docs/evidence/local-lab.json --artifacts lab-artifacts-1.3.1
 ```
 
 ### Result
@@ -282,7 +310,7 @@ python sv1.py -u http://127.0.0.1:8099/ `
 | Injection points | 29 |
 | Requests | 966 |
 | Errors | 0 |
-| Duration | 183.8 s |
+| Duration | 185.4 s |
 
 Breakdown: 17 XSS, 13 SQLi, 1 SSRF. The run is `stats.verified: 31`,
 `stats.unverified: 0`, so the release gate (`verified == findings`) passes. The
@@ -291,6 +319,12 @@ DOM finding, and `/api/xhr` is a `MEDIUM` reflected JSON POST finding captured
 from the SPA pass. The multi-parameter behavior is unchanged: `/api/fetch`,
 `/api/spa` and `/dynamic` inject the second parameter (`name`), not only the
 first.
+
+The CI acceptance test starts a fresh server, runs the same full command with
+`--fail-on none`, and asserts 31 findings, 31 verified, 0 unverified, 0 errors,
+the severity/type split, `/external` at `HIGH`/`CONFIRMED`, `/api/xhr` at
+`MEDIUM`, 31 SARIF results, and an HTML report. It passed locally in 185.0 s and
+runs in the `browser-and-lab` CI job after the Chromium XHR test.
 
 The lab keeps its stored state in memory. Restart `lab\server.py` before a full
 acceptance run. A second full run without a restart starts with the second-order
@@ -312,9 +346,13 @@ Proved:
 - Child frames are read, so `iframe srcdoc` and injected `srcdoc` are proved,
   not guessed.
 - Duplicate and multi-parameter requests keep every value in order.
+- A GET form and a page query that address the same URL and parameter are
+  collapsed into one point, so Altoro is 1 point / 1 finding instead of a
+  duplicate pair.
 - The local lab result is reproducible after a fresh server start: 31/31.
 - HAR/raw request import, nested JSON rebuilding and XHR POST capture retain the
-  actual body and method; the focused evidence files record 2 points each.
+  actual body and method; the JSON, XHR and HAR focused files record 2 points
+  each.
 - External same-origin JavaScript is read and its source/sink path is proved by
   Chromium execution, not by string matching alone.
 

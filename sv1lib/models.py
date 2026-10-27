@@ -53,10 +53,16 @@ class InjectionPoint:
     path: tuple = ()            # nested JSON path, e.g. ("user", "name")
 
     def key(self) -> tuple:
+        # A GET form is sent on the query string. When the page URL already
+        # exposes the same parameter, scanning both would send the same
+        # request twice and produce duplicate findings.
+        source = self.source
+        if self.method.upper() == "GET" and source in ("query", "form"):
+            source = "query"
         return (
             self.method,
             self.url,
-            self.source,
+            source,
             self.param,
             self.param_index,
             self.path,

@@ -5,7 +5,7 @@ from __future__ import annotations
 # --- version ---------------------------------------------------------------
 TOOL_NAME = "SV1"
 TOOL_AUTHOR = "ee.zvz"
-TOOL_VERSION = "1.3.0"
+TOOL_VERSION = "1.3.1"
 
 # --- network ---------------------------------------------------------------
 DEFAULT_TIMEOUT = 12.0          # seconds, per request
@@ -23,7 +23,7 @@ RATE_MAX_DEFER = 30.0           # cap on Retry-After, seconds
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 SV1/1.3.0"
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 SV1/1.3.1"
 )
 
 DEFAULT_HEADERS = {

