@@ -10,8 +10,10 @@ import string
 import sys
 import time
 import urllib.request
+from email.parser import BytesParser
+from email.policy import default as email_default
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, unquote_plus, urlsplit
+from urllib.parse import parse_qs, unquote, unquote_plus, urlsplit
 
 PORT = 8099
 
@@ -34,6 +36,8 @@ INDEX = """<!doctype html>
   <p><a href="/js-endpoints">js api</a></p>
   <p><a href="/spa">spa</a></p>
   <p><a href="/xhr-post">xhr post</a></p>
+  <p><a href="/xhr-form">xhr form</a></p>
+  <p><a href="/csrf">csrf form</a></p>
   <p><a href="/external">external js</a></p>
   <p><a href="/upload">upload</a></p>
   <p><a href="/profile">profile</a></p>
@@ -49,6 +53,38 @@ INDEX = """<!doctype html>
 GUESTBOOK: list[tuple[str, str]] = []
 BLIND: list[str] = []
 PROFILE: dict[str, str] = {"name": "guest"}
+CSRF_TOKEN = "sv1-csrf-token"
+
+
+def _looks_sql(value: str) -> bool:
+    """A single quote is the error probe; XSS payloads also contain quotes."""
+    text = (value or "").strip()
+    if text in ("'", '"'):
+        return True
+    return bool(re.search(r"(?i)\b(union\s+select|sleep\s*\(|extractvalue\s*\()", text))
+
+
+def _multipart_fields(content_type: str, raw: bytes) -> dict[str, list[str]]:
+    """Small test-only multipart reader; file parts are deliberately ignored."""
+    message = BytesParser(policy=email_default).parsebytes(
+        b"Content-Type: " + content_type.encode("latin-1", "replace")
+        + b"\r\nMIME-Version: 1.0\r\n\r\n" + raw
+    )
+    fields: dict[str, list[str]] = {}
+    for part in message.iter_parts():
+        if part.get_content_disposition() != "form-data":
+            continue
+        name = part.get_param("name", header="content-disposition")
+        filename = part.get_filename()
+        if isinstance(name, tuple):
+            name = name[2]
+        if not name or filename:
+            continue
+        value = part.get_content()
+        fields.setdefault(str(name), []).append(str(value))
+        if len(fields) >= 40:
+            break
+    return fields
 
 MYSQL_ERROR = (
     "<br />You have an error in your SQL syntax; check the manual that "
@@ -124,6 +160,15 @@ OPENAPI_SPEC = {
                         }
                     }
                 },
+            }
+        },
+        "/api/path/{id}": {
+            "get": {
+                "summary": "path parameter injection",
+                "parameters": [
+                    {"name": "id", "in": "path", "required": True,
+                     "schema": {"type": "string", "default": "1"}},
+                ],
             }
         },
     },
@@ -452,6 +497,40 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
 
+        if parts.path == "/xhr-form":                      # multipart created by fetch
+            self._send(
+                "<html><body><h1>xhr form</h1><div id='out'></div>"
+                "<script>"
+                "const fd = new FormData(); fd.append('comment', 'hello');"
+                "fetch('/api/form', {method: 'POST', body: fd})"
+                ".then(r => r.text())"
+                ".then(t => { document.getElementById('out').innerHTML = t; });"
+                "</script></body></html>"
+            )
+            return
+
+        if parts.path == "/csrf":                          # origin + hidden token form
+            self._send(
+                "<html><body><h1>csrf</h1>"
+                "<form method='post' action='/csrf'>"
+                f"<input type='hidden' name='csrf' value='{CSRF_TOKEN}'>"
+                "<input type='text' name='message' value=''>"
+                "<input type='submit' value='send'>"
+                "</form></body></html>"
+            )
+            return
+
+        if parts.path.startswith("/api/path/"):            # openapi path parameter
+            ident = unquote(parts.path[len("/api/path/"):])
+            if _looks_sql(ident):
+                self._send(f"<html><body><h1>error</h1>{MYSQL_ERROR}</body></html>")
+                return
+            self._send(
+                "<html><body><h1>path api</h1>"
+                f"<div>{ident}</div></body></html>"
+            )
+            return
+
         if parts.path == "/profile":                      # second-order sqli
             name = PROFILE["name"]
             if "'" in name:
@@ -550,7 +629,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         length = int(self.headers.get("Content-Length", "0"))
-        body = self.rfile.read(length).decode("utf-8", errors="replace")
+        raw_body = self.rfile.read(length)
+        body = raw_body.decode("utf-8", errors="replace")
         path = urlsplit(self.path).path
         content_type = (self.headers.get("Content-Type") or "").lower()
 
@@ -579,20 +659,46 @@ class Handler(BaseHTTPRequestHandler):
             self._send(f"<html><body><pre>{json.dumps(payload)}</pre></body></html>")
             return
 
-        data = parse_qs(body, keep_blank_values=True)
+        if "multipart/form-data" in content_type:
+            data = _multipart_fields(self.headers.get("Content-Type", ""), raw_body)
+        else:
+            data = parse_qs(body, keep_blank_values=True)
         name = data.get("name", [""])[0]
         message = data.get("message", [""])[0]
+
+        if path == "/csrf":
+            token = data.get("csrf", [""])[0]
+            origin = self.headers.get("Origin", "")
+            expected = f"http://{self.headers.get('Host', '')}"
+            if token != CSRF_TOKEN or origin.rstrip("/") != expected:
+                self._send(
+                    "<html><body><h1>blocked</h1><p>csrf check failed</p></body></html>",
+                    403,
+                )
+                return
+            if _looks_sql(message):
+                self._send(f"<html><body><h1>error</h1>{MYSQL_ERROR}</body></html>")
+                return
+            self._send(
+                "<html><body><h1>csrf</h1>"
+                f"<div>{message}</div></body></html>"
+            )
+            return
+
+        if path in ("/upload", "/api/form"):
+            comment = data.get("comment", [""])[0]
+            if _looks_sql(comment):
+                self._send(f"<html><body><h1>error</h1>{MYSQL_ERROR}</body></html>")
+                return
+            self._send(
+                "<html><body><h1>uploaded</h1>"
+                f"<p>saved: {comment}</p></body></html>"
+            )
+            return
 
         if path == "/guestbook":
             GUESTBOOK.append((name, message))
             self._send("<html><body><h1>signed</h1><p>saved</p></body></html>")
-            return
-
-        if path == "/upload":
-            if "'" in body:
-                self._send(f"<html><body><h1>error</h1>{MYSQL_ERROR}</body></html>")
-                return
-            self._send("<html><body><h1>uploaded</h1><p>saved</p></body></html>")
             return
 
         if path == "/profile":

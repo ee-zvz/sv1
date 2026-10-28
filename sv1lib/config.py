@@ -129,6 +129,15 @@ HAR_MAX_ENTRIES = 2000          # requests read from one HAR file
 HAR_MAX_POINTS = 160            # points imported from one HAR/raw request
 REQUEST_MAX_BYTES = 2_000_000   # raw HTTP request file cap
 
+# --- captured multipart ----------------------------------------------------
+MULTIPART_MAX_FIELDS = 40       # text fields kept from one captured body
+MULTIPART_MAX_VALUE = 100_000   # largest text part kept as a field value
+
+# --- browser storage state -------------------------------------------------
+STORAGE_STATE_MAX_BYTES = 10_000_000  # refuse an oversized storage-state file
+STORAGE_STATE_MAX_COOKIES = 200       # target cookies imported from a state
+STORAGE_STATE_MAX_ORIGINS = 20        # same-origin localStorage records
+
 # --- external javascript ---------------------------------------------------
 DOM_EXTERNAL_SCRIPTS = 4        # same-origin bundles read per page
 DOM_EXTERNAL_BYTES = 1_500_000  # largest bundle kept for source/sink analysis

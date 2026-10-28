@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import urllib.parse
 
-from . import config, crawl, net
+from . import config, crawl, formdata, net
 from .models import CapturedRequest, InjectionPoint, Page
 
 
@@ -89,6 +89,13 @@ def _points_from_capture(captured: CapturedRequest, page_url: str) -> list[Injec
             data,
             method=method,
             content_type=captured.content_type or "application/json",
+        )
+    if "multipart/form-data" in content_type:
+        return query_points + formdata.points(
+            full,
+            captured.content_type,
+            body,
+            method=method,
         )
     if "x-www-form-urlencoded" in content_type:
         return query_points + _points_from_form(full, body, method, captured.content_type)

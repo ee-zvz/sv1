@@ -17,13 +17,18 @@ TEXT_TYPES = ("text", "search", "url", "email", "tel", "textarea", "select", "")
 PAYLOAD_VARIANTS = 3
 
 
-def _fields(form) -> list:
+def _fields(form, include_hidden: bool = False,
+            include_password: bool = False) -> list:
     usable = []
     for item in form.fields:
         kind = (item.type or "").lower()
-        if kind in ("submit", "button", "image", "reset", "file", "hidden", "checkbox", "radio"):
+        if kind in ("submit", "button", "image", "reset", "file", "checkbox", "radio"):
             continue
-        if kind not in TEXT_TYPES:
+        if kind == "hidden" and not include_hidden:
+            continue
+        if kind == "password" and not include_password:
+            continue
+        if kind not in TEXT_TYPES and kind not in ("hidden", "password"):
             continue
         usable.append(item)
     return usable[: config.STORED_TEST_FIELDS]
@@ -46,14 +51,17 @@ def _shot_path(root: str, index: int) -> str:
     return f"{root}/stored-{index:02d}.png"
 
 
-def run(engine: browser_mod.Browser, pages: list[Page], artifacts: str) -> list[Finding]:
+def run(engine: browser_mod.Browser, pages: list[Page], artifacts: str,
+        include_hidden: bool = False, include_password: bool = False) -> list[Finding]:
     if not engine.enabled:
         return []
 
     forms = []
     for page in pages:
         for form in page.forms:
-            if form.method == "post" and _fields(form) and crawl.form_endpoint(page.url, form):
+            if (form.method == "post"
+                    and _fields(form, include_hidden, include_password)
+                    and crawl.form_endpoint(page.url, form)):
                 forms.append((page.url, form))
     forms = forms[: config.STORED_MAX_FORMS]
     if not forms:
@@ -65,7 +73,9 @@ def run(engine: browser_mod.Browser, pages: list[Page], artifacts: str) -> list[
     for form_index, (page_url, form) in enumerate(forms):
         revisit = [page_url] + [url for url in visited_pages if url != page_url]
         revisit = revisit[: config.STORED_MAX_PAGES]
-        for field_index, item in enumerate(_fields(form)):
+        for field_index, item in enumerate(
+            _fields(form, include_hidden, include_password)
+        ):
             fired = False
             for payload_index in range(PAYLOAD_VARIANTS):
                 index = (form_index * 10 + field_index) * 10 + payload_index

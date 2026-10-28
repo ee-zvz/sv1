@@ -47,7 +47,7 @@ class InjectionPoint:
     method: str                 # "GET" | "POST" | "PUT" | ...
     params: tuple               # tuple[(name, value), ...] - untouched inputs
     param: str                  # which key gets the payload
-    source: str                 # "query" | "form" | "header" | "cookie" | "json" | "raw"
+    source: str                 # "query" | "form" | "multipart" | "path" | "header" | "cookie" | "json" | "raw"
     param_index: int = 0        # which occurrence of param gets the payload
     body: str = ""              # JSON/raw body template, when source needs it
     content_type: str = ""      # request content type for body-based points

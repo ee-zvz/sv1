@@ -1,18 +1,25 @@
-# SV1 1.3.4 - before/after and external comparison
+# SV1 1.4.0 - before/after and external comparison
 
-Date: 2026-10-27
+This comparison was measured on `1.4.0`. The `1.3.3` / `1.3.4` rows are kept as
+history; `1.3.5` is included in `1.4.0` and adds request-boundary hardening. The
+new release grows the full lab from 31 to 38 cases because multipart, CSRF,
+OpenAPI path injection and browser XHR proof are now exercised. The separate
+SQLite benchmark stays at seven findings, so the comparison can still detect a
+regression in the original classes.
+
+Date: 2026-10-28
 
 This page fixes the comparison to one day and one target process. It is not a
 scoreboard. Dalfox is an XSS scanner; sqlmap is a SQL injection engine; SV1
 crawls, scans both classes, proves browser execution and also records
 reflection-only notes. The table keeps those scope differences visible.
 
-The release gate is the 31-case local lab. The external comparison uses a
+The release gate is the 38-case local lab. The external comparison uses a
 separate SQLite target because the lab emulates SQL errors and is not a valid
 sqlmap benchmark. Public runs use Google Firing Range and Altoro Mutual, both
 intentionally vulnerable demos.
 
-## 1. Same target, 1.3.3 vs 1.3.4
+## 1. Same target, 1.3.3 vs 1.3.4 vs 1.4.0
 
 Target: [`lab/real_sql.py`](../lab/real_sql.py), `http://127.0.0.1:8100/`,
 7 pages, 6 injection points, SQLite in memory. Same command, fresh process for
@@ -22,13 +29,15 @@ each version.
 |---|---:|---:|---:|---:|---:|---:|---:|
 | SV1 1.3.3 | 7 | **3** | **2** | 2 | 0 | 213 | 47.4 s |
 | SV1 1.3.4 | 7 | **3** | **2** | 2 | 0 | 221 | 49.0 s |
+| SV1 1.4.0 | 7 | **3** | **2** | 2 | 0 | 221 | 49.2 s |
 
 Result: same seven findings, no lost detection and no new false positive. The
 1.3.4 pass sent 8 more requests and took 1.6 s longer because it measured a fresh
-clean baseline before replaying the SQLi evidence. That is the intended price of
-a stronger proof. Raw JSON:
-[`sv1-real-1.3.3.json`](evidence/sv1-real-1.3.3.json) and
-[`sv1-real-1.3.4.json`](evidence/sv1-real-1.3.4.json).
+clean baseline before replaying the SQLi evidence. `1.4.0` keeps the stronger
+proof at the same request count. Raw JSON:
+[`sv1-real-1.3.3.json`](evidence/sv1-real-1.3.3.json),
+[`sv1-real-1.3.4.json`](evidence/sv1-real-1.3.4.json) and
+[`sv1-real-1.4.0.json`](evidence/sv1-real-1.4.0.json).
 
 Full-lab comparison on the same day:
 
@@ -36,11 +45,16 @@ Full-lab comparison on the same day:
 |---|---:|---:|---:|---:|---:|---:|
 | SV1 1.3.3 | 31/31 | 17 | 14 | 966 | 184.8 s | 0 |
 | SV1 1.3.4 | 31/31 | 17 | 14 | 1012 | 240.2 s | 0 |
+| SV1 1.4.0 | 38/38 | 22 | 16 | 1099 | 262.8 s | 0 |
 
-The 1.3.4 lab run adds baseline checks across 31 findings; it does not change
-the severity mix (10 `CRITICAL`, 18 `HIGH`, 3 `MEDIUM`). Evidence:
-[`local-lab-1.3.3.json`](evidence/local-lab-1.3.3.json) and
-[`local-lab-1.3.4.json`](evidence/local-lab-1.3.4.json).
+The 1.4.0 lab run adds seven findings across four new paths: `/csrf`
+(hidden-token + Origin; XSS + SQLi), `/upload` (multipart; XSS), `/api/form`
+(multipart; XSS + SQLi), and `/api/path/{id}` (OpenAPI path; XSS + SQLi). The
+previously reflected `/api/xhr` is promoted to `HIGH` but is not an additional
+finding. Severity is now 13 `CRITICAL`, 23 `HIGH`, 2 `MEDIUM`. Evidence:
+[`local-lab-1.3.3.json`](evidence/local-lab-1.3.3.json),
+[`local-lab-1.3.4.json`](evidence/local-lab-1.3.4.json) and
+[`local-lab-1.4.0.json`](evidence/local-lab-1.4.0.json).
 
 ## 2. External tools, same SQLite target
 
@@ -51,6 +65,7 @@ versions below.
 | Tool | Scope | Confirmed XSS | Confirmed SQLi | Reflection-only | False positives | HTTP requests | Wall time |
 |---|---|---:|---:|---:|---:|---:|---:|
 | SV1 1.3.4 | crawl 7 pages, 6 points, XSS + SQLi + dump | **3** | **2** | 2 `MEDIUM` | 0 | 221 | 49.0 s |
+| SV1 1.4.0 | crawl 7 pages, 6 points, XSS + SQLi + dump | **3** | **2** | 2 `MEDIUM` | 0 | 221 | 49.2 s |
 | dalfox 3.2.4 | 4 XSS URLs, no mining | **3** | n/a | 0 | 0 | 598 | 29.9 s |
 | sqlmap 1.10.10.27#dev | 2 SQLi URLs, level 3 / risk 2 / BEUST | n/a | **2** | 0 | 0 | 107 | 9.4 s |
 
@@ -74,21 +89,21 @@ third-party target was used.
 
 | Target | Tool | Finding | Requests | Wall time | Errors |
 |---|---|---|---:|---:|---:|
-| Firing Range reflected attribute | SV1 1.3.4 | 1 `HIGH` / `CONFIRMED` XSS | 12 | 18.8 s | 0 |
+| Firing Range reflected attribute | SV1 1.4.0 | 1 `HIGH` / `CONFIRMED` XSS | 12 | 18.4 s | 0 |
 | Firing Range reflected attribute | dalfox 3.2.4 | 1 high XSS | 26 | 6.2 s | 0 |
-| Altoro Mutual search | SV1 1.3.4 | 1 `HIGH` / `CONFIRMED` XSS | 35 | 46.5 s | 0 |
+| Altoro Mutual search | SV1 1.4.0 | 1 `HIGH` / `CONFIRMED` XSS | 35 | 35.0 s | 0 |
 | Altoro Mutual search | dalfox 3.2.4 | 1 high XSS | 23 | 12.0 s | 0 |
 
 SV1 evidence contains the executed marker:
-`executed in chromium: alert:sv10bf9a934` (Firing Range) and
-`executed in chromium: alert:sv1bcccfe46` (Altoro). Dalfox reports a parsed
+`executed in chromium: alert:sv1376d4837` (Firing Range) and
+`executed in chromium: alert:sv1b6a24f18` (Altoro). Dalfox reports a parsed
 reflection / DOM marker. Both tools agree the input is exploitable.
 
 Altoro's certificate is expired. The public Altoro run therefore uses the
 explicit `--insecure` option; this is a property of the demo, not a TLS finding.
 Raw evidence:
-[`firing-range-1.3.4.json`](evidence/firing-range-1.3.4.json),
-[`altoro-1.3.4.json`](evidence/altoro-1.3.4.json),
+[`firing-range-1.4.0.json`](evidence/firing-range-1.4.0.json),
+[`altoro-1.4.0.json`](evidence/altoro-1.4.0.json),
 [`dalfox-firing-1.3.4.json`](evidence/dalfox-firing-1.3.4.json) and
 [`dalfox-altoro-1.3.4.json`](evidence/dalfox-altoro-1.3.4.json).
 
@@ -98,7 +113,7 @@ Raw evidence:
 # local SQLite target
 python lab/real_sql.py 8100
 
-# SV1 1.3.3 and 1.3.4 (run from the matching source tree)
+# SV1 1.3.3, 1.3.4 and 1.4.0 (run from the matching source tree)
 python sv1.py -u http://127.0.0.1:8100/ --crawl --pages 10 `
   --xss --sqli --dump --threads 2 --rps 5 --fail-on none --no-banner `
   -o sv1-real.json
@@ -131,8 +146,8 @@ python sv1.py -u "https://demo.testfire.net/search.jsp?query=test" `
 
 ## الخلاصة
 
-على نفس الهدف ونفس اليوم: `1.3.3` و`1.3.4` أعطيا نفس السبع نتائج، لكن `1.3.4`
-أعاد قياس خط الأساس قبل تثبيت أدلة SQLi، فزاد 8 طلبات فقط. على المختبر الكامل
-بقي 31/31، والزيادة في الوقت ثمن التحقق الإضافي. dalfox وsqlmap أسرع داخل
-تخصصهما، لكن SV1 غطى الصنفين وأثبت تنفيذ XSS داخل Chromium. لا إيجابيات كاذبة
-في أي من الجولات.
+على نفس الهدف ونفس اليوم: `1.3.3` و`1.3.4` و`1.4.0` أعطوا نفس السبع نتائج،
+و`1.4.0` حافظ على 221 طلباً و49.2 ثانية. المختبر الكامل كبر إلى 38/38 مع سبع
+حالات جديدة، لكن هدف SQLite بقي سبع نتائج فلا تراجع في الفئات الأصلية. dalfox
+وsqlmap أسرع داخل تخصصهما، لكن SV1 غطى الصنفين وأثبت تنفيذ XSS داخل Chromium.
+لا إيجابيات كاذبة في أي من الجولات.

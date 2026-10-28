@@ -110,8 +110,8 @@ def build(findings: list, stats, meta: dict) -> dict:
             }
         )
 
-    started = _utc(getattr(stats, "started", 0.0))
-    finished = _utc(getattr(stats, "finished", 0.0))
+    started, finished = _timestamps(stats)
+    errors = int(getattr(stats, "errors", 0))
     return {
         "$schema": SCHEMA,
         "version": "2.1.0",
@@ -127,7 +127,7 @@ def build(findings: list, stats, meta: dict) -> dict:
                 },
                 "invocations": [
                     {
-                        "executionSuccessful": True,
+                        "executionSuccessful": errors == 0,
                         "startTimeUtc": started,
                         "endTimeUtc": finished,
                     }
@@ -139,6 +139,7 @@ def build(findings: list, stats, meta: dict) -> dict:
                     "tool_author": config.TOOL_AUTHOR,
                     "duration_seconds": round(float(getattr(stats, "duration", 0.0)), 2),
                     "requests": int(getattr(stats, "requests", 0)),
+                    "errorCount": errors,
                     "scanners": meta.get("scanners", []),
                     "retest": bool(meta.get("retest", False)),
                 },
@@ -154,7 +155,21 @@ def write(path: str, findings: list, stats, meta: dict) -> str:
     return path
 
 
+def _timestamps(stats) -> tuple[str, str]:
+    """Return wall-clock SARIF times from monotonic or epoch scan stats.
+
+    ScanStats uses ``time.monotonic`` for a stable duration. Feeding that value
+    to ``gmtime`` produced 1970 timestamps, which look like corrupt evidence.
+    Epoch values are still accepted for callers that already provide them.
+    """
+    started = float(getattr(stats, "started", 0.0))
+    finished = float(getattr(stats, "finished", 0.0))
+    if started > 1_000_000_000 and finished > 1_000_000_000:
+        return _utc(started), _utc(finished)
+    duration = max(0.0, float(getattr(stats, "duration", 0.0)))
+    end = time.time()
+    return _utc(end - duration), _utc(end)
+
+
 def _utc(epoch: float) -> str:
-    if not epoch:
-        epoch = time.time()
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(epoch))

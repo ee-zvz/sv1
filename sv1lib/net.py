@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shlex
 import threading
 import time
@@ -194,6 +195,56 @@ class Client:
         merged.update(extra)
         return merged
 
+    def _context_headers(self, method: str, url: str, headers: dict) -> dict:
+        """Add the headers a browser sends with an unsafe same-origin request.
+
+        CSRF middleware often checks ``Origin`` (and sometimes ``Referer``)
+        before it looks at the token.  ``requests`` does not add either header,
+        so a scan that preserved the hidden token still looked like a
+        cross-site request.  Only the target origin is decorated, and an
+        explicit header point keeps the value the operator asked us to test.
+        """
+        if method.upper() not in ("POST", "PUT", "PATCH", "DELETE"):
+            return headers
+        if not self.base_url or not self.same_target_origin(url):
+            return headers
+        merged = dict(headers)
+        merged.setdefault("Origin", origin(url))
+        merged.setdefault("Referer", self.base_url)
+        return merged
+
+    def same_target_origin(self, url: str) -> bool:
+        """Public spelling of the send boundary, used by callers and tests."""
+        return self._may_send_session(url)
+
+    def repro_headers(self) -> dict:
+        """Headers that belong in a reproduction command, not scanner noise."""
+        skip = {
+            "cookie", "host", "content-length", "connection",
+            "proxy-connection", "transfer-encoding", "accept-encoding",
+        }
+        return {
+            str(name): str(value)
+            for name, value in self.session_headers.items()
+            if str(name).lower() not in skip
+        }
+
+    def repro_cookies(self) -> dict:
+        """Target-scoped cookies for ``curl -b``; never another host's jar."""
+        if not self.base_url:
+            return {}
+        try:
+            host = (urllib.parse.urlsplit(self.base_url).hostname or "").lower()
+        except ValueError:
+            return {}
+        found: dict[str, str] = {}
+        for cookie in self.cookies:
+            domain = (cookie.domain or "").lstrip(".").lower()
+            if host != domain and not host.endswith("." + domain):
+                continue
+            found[str(cookie.name)] = str(cookie.value)
+        return found
+
     # -- counters ----------------------------------------------------------
     def _tick(self) -> None:
         with self._stat_lock:
@@ -277,12 +328,17 @@ class Client:
 
         while True:
             session = self._session()
+            hop_headers = self._hop_headers(current_url, current_headers)
+            if self._may_send_session(current_url):
+                hop_headers = self._context_headers(
+                    current_method, current_url, hop_headers
+                )
             prepared = session.prepare_request(requests.Request(
                 method=current_method,
                 url=current_url,
                 params=current_params,
                 data=current_data,
-                headers=self._hop_headers(current_url, current_headers),
+                headers=hop_headers,
                 cookies=current_cookies,
                 files=current_files,
             ))
@@ -342,8 +398,16 @@ class Client:
                 )
 
             cross_origin = not self._may_send_session(next_url)
-            current_method, current_data, current_files = self._redirect_method(
+            next_method, next_data, next_files = self._redirect_method(
                 status, current_method, current_data, current_files,
+            )
+            if cross_origin and (next_data is not None or next_files is not None):
+                return self._blocked(
+                    next_url, response_headers, started,
+                    f"cross-origin redirect would forward request body: {next_url}",
+                )
+            current_method, current_data, current_files = (
+                next_method, next_data, next_files,
             )
             current_params = None
             current_cookies = None
@@ -448,6 +512,8 @@ class Client:
             for index, (name, original) in enumerate(point.params)
         ]
         source = getattr(point, "source", "query")
+        if source == "path":
+            return self.request(point.method, path_url(point.url, mapping))
         if source == "header":
             return self.request("GET", point.url, headers=dict(mapping))
         if source == "cookie":
@@ -560,6 +626,71 @@ def origin(url: str) -> str:
     return f"{parts.scheme}://{host}{f':{port}' if port is not None else ''}"
 
 
+def browser_cookies(
+    jar: requests.cookies.RequestsCookieJar,
+    base_url: str,
+) -> list[dict]:
+    """Translate target cookies from the HTTP jar into Playwright records.
+
+    ``requests`` and Chromium keep separate cookie jars. A login performed by
+    the HTTP client would otherwise disappear when the browser tries to prove
+    the finding. Only cookies that belong to the scan host are imported, and
+    every record is anchored to the target origin by URL, so a server-set
+    domain cookie cannot widen browser scope.
+    """
+    if not base_url:
+        return []
+    try:
+        parts = urllib.parse.urlsplit(base_url)
+        host = (parts.hostname or "").lower().rstrip(".")
+        scheme = parts.scheme.lower()
+    except ValueError:
+        return []
+    if scheme not in ("http", "https") or not host:
+        return []
+    origin_url = origin(base_url)
+    if not origin_url:
+        return []
+
+    records: list[dict] = []
+    now = time.time()
+    for cookie in jar:
+        domain = (cookie.domain or "").lstrip(".").lower().rstrip(".")
+        if not domain:
+            continue
+        if host != domain and not host.endswith("." + domain):
+            continue
+        name = str(cookie.name or "")
+        value = str(cookie.value or "")
+        if not name or any(ord(ch) < 0x20 or ord(ch) == 0x7f for ch in name + value):
+            continue
+        expired = False
+        if cookie.expires is not None:
+            try:
+                expired = float(cookie.expires) < now
+            except (TypeError, ValueError):
+                expired = False
+        if expired:
+            continue
+        if cookie.secure and scheme != "https":
+            continue
+        path = str(cookie.path or "/")
+        if not path.startswith("/"):
+            path = "/" + path
+        path = urllib.parse.quote(path, safe="/%!$&'()*+,;=:@-._~")
+        record: dict = {
+            "name": name,
+            "value": value,
+            "url": f"{origin_url}{path}",
+        }
+        if cookie.secure:
+            record["secure"] = True
+        if cookie.has_nonstandard_attr("HttpOnly"):
+            record["httpOnly"] = True
+        records.append(record)
+    return records
+
+
 def same_target(a: str, b: str) -> bool:
     """Same origin, plus the one canonical hop worth trusting by default.
 
@@ -587,11 +718,51 @@ def is_skippable(url: str) -> bool:
     return path.endswith(config.SKIP_EXTENSIONS)
 
 
-def curl(point, value: str) -> str:
+def path_url(template: str, mapping: list[tuple[str, str]]) -> str:
+    """Replace every OpenAPI-style path placeholder with an encoded value."""
+    url = template
+    for name, item in mapping:
+        url = url.replace("{" + str(name) + "}", urllib.parse.quote(str(item), safe=""))
+    # A placeholder the spec did not describe must not leak a literal brace
+    # into the request line. It is unknown, so leave it as a harmless value.
+    return re.sub(r"\{[^{}/]+\}", "1", url)
+
+
+def _curl_headers(parts: list[str], headers: dict | None,
+                  skip: tuple[str, ...] = ("cookie", "host", "content-length",
+                                           "connection", "proxy-connection",
+                                           "transfer-encoding", "accept-encoding")) -> None:
+    for name, value in (headers or {}).items():
+        if str(name).lower() in skip:
+            continue
+        parts.extend(["-H", shlex.quote(f"{name}: {value}")])
+
+
+def _curl_cookies(parts: list[str], cookies: dict | None) -> None:
+    if not cookies:
+        return
+    jar = "; ".join(f"{name}={value}" for name, value in cookies.items())
+    parts.extend(["-b", shlex.quote(jar)])
+
+
+def repro_headers(point, headers: dict | None, url: str = "") -> dict:
+    """Session headers plus the browser context an unsafe request needs."""
+    merged = {str(name): str(value) for name, value in (headers or {}).items()}
+    target = url or point.url
+    if point.method.upper() in ("POST", "PUT", "PATCH", "DELETE"):
+        merged.setdefault("Origin", origin(target))
+        merged.setdefault("Referer", target)
+    return merged
+
+
+def curl(point, value: str, headers: dict | None = None,
+         cookies: dict | None = None) -> str:
     """Build a replay command from the exact point and payload.
 
     Boolean findings carry two branches separated by `|`; the first branch is
-    the request that actually demonstrates the difference.
+    the request that actually demonstrates the difference.  Optional session
+    headers and target cookies are added so a replay of an authenticated form
+    is usable, while a cookie point still overrides the jar value.
     """
     if "|" in (value or ""):
         value = value.split("|", 1)[0].strip()
@@ -601,19 +772,34 @@ def curl(point, value: str) -> str:
         for index, (name, original) in enumerate(point.params)
     ]
     source = getattr(point, "source", "query")
+    concrete_url = path_url(point.url, mapping) if source == "path" else point.url
+    session_headers = repro_headers(point, headers, concrete_url)
+    session_cookies = dict(cookies or {})
     parts = ["curl", "-sS"]
+    if source == "path":
+        parts.extend(["-X", point.method])
+        _curl_headers(parts, session_headers)
+        _curl_cookies(parts, session_cookies)
+        parts.append(shlex.quote(concrete_url))
+        return " ".join(parts)
     if source == "header":
-        for name, item in mapping:
-            parts.extend(["-H", shlex.quote(f"{name}: {item}")])
+        headers_here = dict(session_headers)
+        headers_here.update({name: item for name, item in mapping})
+        _curl_headers(parts, headers_here)
+        _curl_cookies(parts, session_cookies)
         parts.append(shlex.quote(point.url))
         return " ".join(parts)
     if source == "cookie":
-        jar = "; ".join(f"{name}={item}" for name, item in mapping)
-        parts.extend(["-b", shlex.quote(jar)])
+        jar = dict(session_cookies)
+        jar.update({name: item for name, item in mapping})
+        _curl_cookies(parts, jar)
+        _curl_headers(parts, session_headers)
         parts.append(shlex.quote(point.url))
         return " ".join(parts)
     if source == "multipart":
         parts.extend(["-X", point.method])
+        _curl_headers(parts, session_headers)
+        _curl_cookies(parts, session_cookies)
         for name, item in mapping:
             parts.extend(["-F", shlex.quote(f"{name}={item}")])
         parts.append(shlex.quote(point.url))
@@ -634,9 +820,11 @@ def curl(point, value: str) -> str:
         else:
             payload = {name: item for name, item in mapping}
         parts.extend(["-X", point.method])
+        _curl_headers(parts, session_headers)
         parts.extend(["-H", shlex.quote(
             f"Content-Type: {getattr(point, 'content_type', '') or 'application/json'}"
         )])
+        _curl_cookies(parts, session_cookies)
         parts.extend(["--data-raw", shlex.quote(jsonbody.dumps(payload))])
         parts.append(shlex.quote(point.url))
         return " ".join(parts)
@@ -645,9 +833,11 @@ def curl(point, value: str) -> str:
         if "*" in body:
             body = body.replace("*", value, 1)
         parts.extend(["-X", point.method])
+        _curl_headers(parts, session_headers)
         parts.extend(["-H", shlex.quote(
             f"Content-Type: {getattr(point, 'content_type', '') or 'application/octet-stream'}"
         )])
+        _curl_cookies(parts, session_cookies)
         parts.extend(["--data-raw", shlex.quote(body)])
         parts.append(shlex.quote(point.url))
         return " ".join(parts)
@@ -656,10 +846,21 @@ def curl(point, value: str) -> str:
         separator = "&" if "?" in point.url else "?"
         if point.method != "GET":
             parts.extend(["-X", point.method])
+        _curl_headers(parts, session_headers)
+        _curl_cookies(parts, session_cookies)
         parts.append(shlex.quote(f"{point.url}{separator}{query}"))
         return " ".join(parts)
     parts.extend(["-X", point.method])
+    _curl_headers(parts, session_headers)
+    _curl_cookies(parts, session_cookies)
     for name, item in mapping:
         parts.extend(["--data-urlencode", shlex.quote(f"{name}={item}")])
     parts.append(shlex.quote(point.url))
     return " ".join(parts)
+
+
+def repro_curl(client, point, value: str) -> str:
+    """Use the live session for a command that an operator can actually run."""
+    headers = client.repro_headers() if hasattr(client, "repro_headers") else {}
+    cookies = client.repro_cookies() if hasattr(client, "repro_cookies") else {}
+    return curl(point, value, headers, cookies)

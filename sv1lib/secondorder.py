@@ -16,13 +16,18 @@ PAYLOAD = "sv1'"
 CLEAN = "sv1clean"
 
 
-def _fields(form) -> list:
+def _fields(form, include_hidden: bool = False,
+            include_password: bool = False) -> list:
     usable = []
     for item in form.fields:
         kind = (item.type or "").lower()
-        if kind in ("submit", "button", "image", "reset", "file", "hidden", "checkbox", "radio"):
+        if kind in ("submit", "button", "image", "reset", "file", "checkbox", "radio"):
             continue
-        if kind not in TEXT_TYPES:
+        if kind == "hidden" and not include_hidden:
+            continue
+        if kind == "password" and not include_password:
+            continue
+        if kind not in TEXT_TYPES and kind not in ("hidden", "password"):
             continue
         usable.append(item)
     return usable[: config.SECOND_ORDER_FIELDS]
@@ -47,11 +52,14 @@ def _revisit(pages, actions: list[str]) -> list[str]:
     return ordered[: config.SECOND_ORDER_PAGES]
 
 
-def run(client, pages) -> list[tuple[Finding, InjectionPoint]]:
+def run(client, pages, include_hidden: bool = False,
+        include_password: bool = False) -> list[tuple[Finding, InjectionPoint]]:
     forms = []
     for page in pages:
         for form in page.forms:
-            if form.method == "post" and _fields(form) and crawl.form_endpoint(page.url, form):
+            if (form.method == "post"
+                    and _fields(form, include_hidden, include_password)
+                    and crawl.form_endpoint(page.url, form)):
                 forms.append((page.url, form))
     forms = forms[: config.SECOND_ORDER_FORMS]
     if not forms:
@@ -68,7 +76,7 @@ def run(client, pages) -> list[tuple[Finding, InjectionPoint]]:
         action = crawl.form_endpoint(page_url, form)
         if not action:
             continue
-        for field in _fields(form):
+        for field in _fields(form, include_hidden, include_password):
             client.request("POST", action, data=_data(form, field.name, CLEAN))
             baseline: dict[str, str] = {}
             for url in revisit:

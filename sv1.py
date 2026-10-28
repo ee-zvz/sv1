@@ -26,7 +26,7 @@ from sv1lib import banner, blind, config, crawl, domxss, hidden, imports as impo
 from sv1lib import browser as browser_mod
 from sv1lib import history as history_mod
 from sv1lib import policy, sarif, scope as scope_mod
-from sv1lib import secondorder, stored, verify, xss
+from sv1lib import secondorder, storage, stored, verify, xss
 from sv1lib.models import ScanStats
 
 TOKEN_RE = re.compile(r"sv1[0-9a-zA-Z]+")
@@ -68,6 +68,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
   python sv1.py -u https://site.tld --crawl --db sv1-history.db --diff
   python sv1.py -u https://site.tld --crawl --sarif sv1.sarif --fail-on high
   python sv1.py -u https://site.tld --db sv1-history.db --retest
+  python sv1.py -u https://site.tld --crawl --storage-state state.json
+  python sv1.py -u https://site.tld --crawl --hidden-fields --password-fields
 """,
     )
     parser.add_argument("--version", action="version",
@@ -112,6 +114,14 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
                         help="import cookies, headers and points from a HAR file")
     parser.add_argument("--request", default="", metavar="FILE",
                         help="import one raw HTTP request file")
+    parser.add_argument("--storage-state", default="", metavar="FILE",
+                        help="playwright storage-state json (target cookies + localStorage)")
+    parser.add_argument("--save-storage-state", default="", metavar="FILE",
+                        help="write target-scoped browser state after the scan")
+    parser.add_argument("--hidden-fields", dest="hidden_fields", action="store_true",
+                        help="inject into hidden form inputs (off by default; may overwrite CSRF tokens)")
+    parser.add_argument("--password-fields", dest="password_fields", action="store_true",
+                        help="inject into password form inputs (off by default)")
     parser.add_argument("--params", action="store_true", help="discover hidden query parameters")
     parser.add_argument("--js", action="store_true", help="mine endpoints from javascript")
     parser.add_argument("--second-order", action="store_true",
@@ -192,7 +202,7 @@ def select_scanners(args: argparse.Namespace) -> list[str]:
 
 def make_browser(args: argparse.Namespace, target: str,
                  headers: dict | None = None, cookies: dict | None = None,
-                 allows=None):
+                 allows=None, storage_state: dict | None = None):
     return browser_mod.Browser(
         headers=headers if headers is not None else parse_headers(args.header),
         cookies=cookies if cookies is not None else parse_cookies(args.cookie),
@@ -202,6 +212,7 @@ def make_browser(args: argparse.Namespace, target: str,
         artifacts=args.artifacts,
         timeout_ms=config.BROWSER_TIMEOUT_MS,
         allows=allows,
+        storage_state=storage_state,
     )
 
 
@@ -285,7 +296,7 @@ def artifact_path(root: str, kind: str, index: int) -> str:
     return f"{root}/{kind}-{index:02d}.png" if root else ""
 
 
-def prove_xss(engine, pairs: list, args: argparse.Namespace) -> None:
+def prove_xss(engine, pairs: list, args: argparse.Namespace, client=None) -> None:
     """Turn 'the payload came back' into 'the payload ran'.
 
     When Chromium is available, HIGH is reserved for execution. An exact
@@ -299,7 +310,8 @@ def prove_xss(engine, pairs: list, args: argparse.Namespace) -> None:
     for index, (finding, point) in enumerate(xss_pairs, 1):
         if finding.technique == "reflection-encoded":
             continue
-        if point.source not in ("query", "form", "js") or point.method not in ("GET", "POST"):
+        if point.source not in ("query", "form", "multipart", "path",
+                                "json", "raw", "js"):
             finding.severity = "MEDIUM"
             note = f"browser proof unavailable for {point.source} inputs"
             finding.detail = f"{finding.detail} | {note}".strip(" |")
@@ -330,14 +342,21 @@ def prove_xss(engine, pairs: list, args: argparse.Namespace) -> None:
         if executed is not None:
             payload_text, token, visit = executed
             finding.payload = payload_text
-            finding.curl = net.curl(point, payload_text)
+            finding.curl = (
+                net.repro_curl(client, point, payload_text)
+                if client is not None else net.curl(point, payload_text)
+            )
             finding.alternatives = [
                 item for item in finding.alternatives if item != payload_text
             ]
             finding.severity = "HIGH"
             finding.confidence = "CONFIRMED"
             finding.evidence = f"executed in chromium: {visit.proof(token)}"
-            finding.detail = f"{finding.detail} | proof: alert fired".strip(" |")
+            detail = finding.detail
+            pending = "reflection confirmed; execution not yet proven"
+            if detail.startswith(pending):
+                detail = "execution confirmed in chromium" + detail[len(pending):]
+            finding.detail = f"{detail} | proof: alert fired".strip(" |")
             if attempt > 1:
                 finding.detail = f"{finding.detail} | payload {attempt}/{len(candidates)}"
             finding.artifact = visit.screenshot
@@ -449,7 +468,7 @@ def retest_run(args: argparse.Namespace, target: str, client: net.Client,
                 report.warn(f"{label} - retest error: {exc}")
             continue
         if reproduced:
-            finding.curl = net.curl(point, finding.payload)
+            finding.curl = net.repro_curl(client, point, finding.payload)
             finding.detail = f"{finding.detail} | retest: still open".strip(" |")
             findings.append(finding)
             report.good(f"{label}  still open")
@@ -540,6 +559,26 @@ def run(args: argparse.Namespace) -> int:
             report.bad(f"history - {exc}")
             return 2
 
+    storage_raw = None
+    browser_storage_state = None
+    if args.storage_state:
+        try:
+            storage_raw = storage.load(args.storage_state)
+        except storage.StorageError as exc:
+            report.bad(f"storage - {exc}")
+            if history is not None:
+                history.close()
+            return 2
+        browser_storage_state = storage.browser_state(storage_raw, target)
+        if not browser_storage_state["cookies"] and not browser_storage_state["origins"]:
+            browser_storage_state = None
+            report.warn("storage - no cookies or localStorage for this target")
+        else:
+            report.info(
+                f"storage {len(browser_storage_state['cookies'])} cookie(s)"
+                f" · {len(browser_storage_state['origins'])} origin(s)"
+            )
+
     imported: list = []
     import_notes: list[str] = []
     if args.har:
@@ -564,7 +603,10 @@ def run(args: argparse.Namespace) -> int:
     import_headers, import_cookies = imports_mod.session(imported, target)
     session_headers = dict(import_headers)
     session_headers.update(parse_headers(args.header))
-    session_cookies = dict(import_cookies)
+    session_cookies = {}
+    if storage_raw is not None:
+        session_cookies.update(storage.cookie_values(storage_raw, target))
+    session_cookies.update(import_cookies)
     session_cookies.update(parse_cookies(args.cookie))
     if imported:
         report.info(f"import  {len(imported)} request(s) - {', '.join(import_notes)}")
@@ -643,6 +685,7 @@ def run(args: argparse.Namespace) -> int:
             explorer = make_browser(
                 args, target, headers=session_headers, cookies=session_cookies,
                 allows=scope_rules.allows if scope_rules is not None else None,
+                storage_state=browser_storage_state,
             )
             spinner = report.Spinner("rendering pages").start()
             started = explorer.start()
@@ -650,6 +693,8 @@ def run(args: argparse.Namespace) -> int:
             if not started:
                 report.warn(f"spa skipped - {explorer.reason}")
             else:
+                if not explorer.import_cookies(client.cookies):
+                    report.warn("spa cookie import failed - session may be missing")
                 try:
                     new_pages, spa_points, spa_note = spa.capture(client, explorer, pages)
                 finally:
@@ -667,7 +712,11 @@ def run(args: argparse.Namespace) -> int:
                 report.info(f"spa     {spa_note}")
 
     stats.pages = len(pages)
-    points = crawl.collect_points(pages)
+    points = crawl.collect_points(
+        pages,
+        include_hidden=args.hidden_fields,
+        include_password=args.password_fields,
+    )
     merge_points(points, spa_points)
     extra = extra_points(args, target, session_cookies)
     merge_points(points, extra)
@@ -755,7 +804,7 @@ def run(args: argparse.Namespace) -> int:
                     continue
                 for finding in found:
                     sys.stdout.write("\r\x1b[2K")
-                    finding.curl = net.curl(point, finding.payload)
+                    finding.curl = net.repro_curl(client, point, finding.payload)
                     findings.append(finding)
                     pairs.append((finding, point))
                     report.print_finding(finding, len(findings))
@@ -811,6 +860,7 @@ def run(args: argparse.Namespace) -> int:
             engine = make_browser(
                 args, target, headers=session_headers, cookies=session_cookies,
                 allows=scope_rules.allows if scope_rules is not None else None,
+                storage_state=browser_storage_state,
             )
             spinner = report.Spinner("launching chromium").start()
             started = engine.start()
@@ -819,11 +869,13 @@ def run(args: argparse.Namespace) -> int:
                 report.warn(f"chromium unavailable: {engine.reason}")
                 engine = None
             else:
+                if not engine.import_cookies(client.cookies):
+                    report.warn("chromium cookie import failed - session may be missing")
                 report.good("chromium ready - xss must execute to stay high")
 
         if engine is not None:
             if "xss" in scanners:
-                prove_xss(engine, pairs, args)
+                prove_xss(engine, pairs, args, client)
 
                 report.section("dom")
                 dom_findings = domxss.run(
@@ -843,7 +895,11 @@ def run(args: argparse.Namespace) -> int:
 
             if args.stored:
                 report.section("stored")
-                stored_findings = stored.run(engine, pages, args.artifacts)
+                stored_findings = stored.run(
+                    engine, pages, args.artifacts,
+                    include_hidden=args.hidden_fields,
+                    include_password=args.password_fields,
+                )
                 for finding in stored_findings:
                     findings.append(finding)
                     stats.confirmed += 1
@@ -872,6 +928,8 @@ def run(args: argparse.Namespace) -> int:
                     blind_visits,
                     args.oob_wait,
                     args.artifacts,
+                    include_hidden=args.hidden_fields,
+                    include_password=args.password_fields,
                 )
                 report.info(f"blind   {note}")
                 for finding in blind_findings:
@@ -884,9 +942,13 @@ def run(args: argparse.Namespace) -> int:
 
         if args.second_order and "sqli" in scanners:
             report.section("second-order")
-            doubles = secondorder.run(client, pages)
+            doubles = secondorder.run(
+                client, pages,
+                include_hidden=args.hidden_fields,
+                include_password=args.password_fields,
+            )
             for finding, point in doubles:
-                finding.curl = net.curl(point, finding.payload)
+                finding.curl = net.repro_curl(client, point, finding.payload)
                 findings.append(finding)
                 pairs.append((finding, point))
                 report.print_finding(finding, len(findings))
@@ -910,9 +972,24 @@ def run(args: argparse.Namespace) -> int:
                     report.warn(f"{index}/{len(pending)}  {label}  -  not reproducible")
     finally:
         if engine is not None:
+            if args.save_storage_state:
+                state = engine.export_state()
+                if state:
+                    try:
+                        storage.save(args.save_storage_state, state, target)
+                        report.good(
+                            f"storage {os.path.abspath(args.save_storage_state)}"
+                        )
+                    except OSError as exc:
+                        report.warn(f"storage write failed - {exc}")
+                else:
+                    report.warn("storage - browser returned no state to save")
             engine.close()
         if callback is not None:
             callback.close()
+
+    if args.save_storage_state and engine is None:
+        report.warn("storage - no browser ran, state not saved")
 
     if "xss" in scanners and engine is None:
         demote_unproven_xss(pairs, "chromium unavailable")
@@ -941,6 +1018,11 @@ def run(args: argparse.Namespace) -> int:
         "data": bool(args.data),
         "json": bool(args.json),
         "second_order": bool(args.second_order),
+        "hidden_fields": bool(args.hidden_fields),
+        "password_fields": bool(args.password_fields),
+        "storage_state": bool(args.storage_state),
+        "saved_storage_state": os.path.abspath(args.save_storage_state)
+        if args.save_storage_state else "",
         "dump": bool(args.dump),
         "spa": bool(args.spa),
         "openapi": bool(args.openapi),

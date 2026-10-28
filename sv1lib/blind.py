@@ -28,17 +28,26 @@ class Probe:
     payload: str
 
 
-def _usable(field) -> bool:
+def _usable(field, include_hidden: bool = False,
+            include_password: bool = False) -> bool:
     kind = (field.type or "").lower()
+    if kind == "hidden":
+        return include_hidden
+    if kind == "password":
+        return include_password
     return kind in TEXT_TYPES
 
 
-def _forms(pages: list[Page]):
+def _forms(pages: list[Page], include_hidden: bool = False,
+           include_password: bool = False):
     for page in pages:
         for form in page.forms:
             if (form.method or "").lower() != "post":
                 continue
-            targets = [field for field in form.fields if _usable(field)]
+            targets = [
+                field for field in form.fields
+                if _usable(field, include_hidden, include_password)
+            ]
             if targets:
                 yield page, form, targets[: config.BLIND_TEST_FIELDS]
 
@@ -101,8 +110,12 @@ def run(
     visits: list[str],
     wait: float,
     artifacts: str = "",
+    include_hidden: bool = False,
+    include_password: bool = False,
 ) -> tuple[list[Finding], str]:
-    forms = list(_forms(pages))[: config.BLIND_MAX_FORMS]
+    forms = list(
+        _forms(pages, include_hidden, include_password)
+    )[: config.BLIND_MAX_FORMS]
     if not forms:
         return [], "no post forms to seed"
 

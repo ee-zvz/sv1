@@ -86,15 +86,39 @@ def _value(node: dict) -> str:
     return "1" if kind in ("integer", "number", "boolean") else "test"
 
 
-def _query_parameters(common: list, operation: list) -> list[dict]:
+def _parameters(common: list, operation: list, location: str) -> list[dict]:
+    """Merge path-level and operation-level parameters by name."""
     merged: dict[str, dict] = {}
     for item in list(common) + list(operation):
         if not isinstance(item, dict):
             continue
-        if item.get("in") != "query" or not item.get("name"):
+        if item.get("in") != location or not item.get("name"):
             continue
         merged[str(item["name"])] = item
     return list(merged.values())
+
+
+def _query_parameters(common: list, operation: list) -> list[dict]:
+    return _parameters(common, operation, "query")
+
+
+def _path_parameters(common: list, operation: list) -> list[dict]:
+    return _parameters(common, operation, "path")
+
+
+def _path_values(parameters: list[dict]) -> dict[str, str]:
+    return {
+        str(item["name"]): _value(item)
+        for item in parameters
+    }
+
+
+def _fill_path(template: str, values: dict[str, str]) -> str:
+    """Build the concrete URL used by query/body points."""
+    url = template
+    for name, value in values.items():
+        url = url.replace("{" + name + "}", urllib.parse.quote(value, safe=""))
+    return re.sub(r"\{[^{}/]+\}", "1", url)
 
 
 def _example(spec: dict, schema, depth: int = 0):
@@ -194,8 +218,7 @@ def points(spec: dict, target: str) -> list[InjectionPoint]:
         common = item.get("parameters")
         if not isinstance(common, list):
             common = []
-        path = re.sub(r"\{[^}]+\}", "1", str(raw_path))
-        url = base.rstrip("/") + "/" + path.lstrip("/")
+        path_template = base.rstrip("/") + "/" + str(raw_path).lstrip("/")
         for method in METHODS:
             operation = item.get(method)
             if not isinstance(operation, dict):
@@ -204,6 +227,26 @@ def points(spec: dict, target: str) -> list[InjectionPoint]:
             parameters = operation.get("parameters")
             if not isinstance(parameters, list):
                 parameters = []
+            path_parameters = _path_parameters(common, parameters)
+            path_values = _path_values(path_parameters)
+            url = _fill_path(path_template, path_values)
+
+            # `/users/{id}` is an input, not a fixed "1". Each path parameter
+            # gets its own point; the URL template keeps the other placeholders
+            # so net.send/curl can rebuild the exact route for each test.
+            path_pairs = tuple(
+                (str(item["name"]), _value(item))
+                for item in path_parameters
+            )
+            for name, _value_ in path_pairs:
+                _add(out, seen, InjectionPoint(
+                    url=path_template,
+                    method=method.upper(),
+                    params=path_pairs,
+                    param=name,
+                    source="path",
+                ))
+
             query = _query_parameters(common, parameters)
             if query:
                 pairs = tuple((str(item["name"]), _value(item)) for item in query)
@@ -230,6 +273,11 @@ def points(spec: dict, target: str) -> list[InjectionPoint]:
                     (str(name), str(value))
                     for name, value in body_value.items()
                 )
+                content_type = (
+                    "multipart/form-data" if source == "multipart"
+                    else "application/x-www-form-urlencoded" if source == "form"
+                    else ""
+                )
                 for name, _value_ in pairs:
                     _add(out, seen, InjectionPoint(
                         url=url,
@@ -237,6 +285,7 @@ def points(spec: dict, target: str) -> list[InjectionPoint]:
                         params=pairs,
                         param=name,
                         source=source,
+                        content_type=content_type,
                     ))
             if len(out) >= config.OPENAPI_MAX_POINTS:
                 return out

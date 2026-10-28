@@ -138,12 +138,26 @@ class SarifTests(unittest.TestCase):
         self.assertEqual(run["results"][0]["partialFingerprints"]["sv1Fingerprint"],
                          fingerprint(finding))
         self.assertEqual(run["tool"]["driver"]["version"], config.TOOL_VERSION)
+        invocation = run["invocations"][0]
+        self.assertRegex(invocation["startTimeUtc"], r"^20\d\d-")
+        self.assertRegex(invocation["endTimeUtc"], r"^20\d\d-")
+        self.assertLessEqual(invocation["startTimeUtc"], invocation["endTimeUtc"])
         with tempfile.TemporaryDirectory() as folder:
             path = os.path.join(folder, "out.sarif")
             sarif.write(path, [finding], stats, {"target": "https://example.com/"})
             with open(path, "r", encoding="utf-8") as handle:
                 loaded = json.load(handle)
             self.assertEqual(len(loaded["runs"][0]["results"]), 1)
+
+    def test_execution_successful_tracks_scan_errors(self) -> None:
+        stats = ScanStats(started=100.0, finished=101.0, requests=3, errors=1)
+        payload = sarif.build([], stats, {"target": "https://example.com/"})
+        run = payload["runs"][0]
+        self.assertFalse(run["invocations"][0]["executionSuccessful"])
+        self.assertEqual(run["properties"]["errorCount"], 1)
+
+        clean = sarif.build([], ScanStats(started=100.0, finished=101.0), {})
+        self.assertTrue(clean["runs"][0]["invocations"][0]["executionSuccessful"])
 
 
 class RateLimiterTests(unittest.TestCase):

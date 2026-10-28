@@ -138,7 +138,7 @@ def run(client, points: list[InjectionPoint], callback: Callback,
                 "agent": agent[:80],
                 "time": when,
             },
-            curl=net.curl(point, payload),
+            curl=net.repro_curl(client, point, payload),
         ))
 
     note = f"{len(probes)} url-like point(s) probed, {len(findings)} callback(s)"

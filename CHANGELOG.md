@@ -2,6 +2,130 @@
 
 All notable changes to SV1. Format follows Keep a Changelog.
 
+## 1.4.0 - 2026-10-28
+
+Feature release that closes the deferred P1 gaps and includes the `1.3.5`
+request-boundary security patch. Detection scope is unchanged: XSS, SQLi,
+blind XSS and SSRF; reflection-only stays `MEDIUM`.
+
+### Added
+
+- Multipart `multipart/form-data` support end to end. Direct forms, XHR/fetch
+  bodies captured by `--spa`, and HAR/raw request imports now become text-field
+  injection points. File parts are skipped, not guessed at. Requests and
+  browser proof keep the multipart encoding, and curl replay uses `-F`.
+- OpenAPI **path** parameters are real injection points. `/users/{id}` keeps
+  the placeholder in the finding so the path is visible, while every request,
+  browser proof and curl command builds and encodes the selected route value.
+- `--hidden-fields` and `--password-fields` opt in to hidden and password form
+  inputs. Both values are always preserved in the form mapping (CSRF tokens and
+  login forms keep working), but neither is attacked by default.
+- `--storage-state FILE` loads target cookies into the HTTP session and target
+  cookies + localStorage into Chromium. `--save-storage-state FILE` exports the
+  post-scan browser state. Both paths are target-scoped: cookies must match the
+  target host, localStorage must match the exact origin, expired and secure
+  cookies are filtered, and another host's state is never exported.
+- Unsafe same-target HTTP requests now carry browser-like `Origin` and
+  `Referer` headers. Browser form proof first navigates to the target origin,
+  so a CSRF middleware sees the same origin and the preserved hidden token.
+  JSON and multipart form proof use the same origin-preserving path.
+- Finding curl commands use the live session: target-scoped cookies and session
+  headers are included, path values are concrete, JSON bodies are rebuilt from
+  the original document, and multipart points stay multipart.
+
+### Fixed
+
+- Confirmed XSS detail no longer says `execution not yet proven` after Chromium
+  has actually fired the marker. The proof line and confidence now agree.
+- SARIF invocation times now use wall-clock timestamps instead of passing a
+  monotonic counter to `gmtime`, which produced 1970 evidence dates.
+
+### Security
+
+- The `1.3.5` fixes remain in force: cross-origin redirects cannot carry a
+  body, Chromium aborts a cross-target request with a body, scope paths and
+  IPv6 are canonicalized, SARIF reports real execution status, and build
+  dependencies are OSV-clean.
+- Storage-state import is a boundary, not a cookie dump. It rejects oversized
+  or malformed files, filters every cookie and origin to the target, and never
+  writes third-party state. A `Secure` cookie is not copied into a plain-HTTP
+  session.
+- Preserving hidden and password inputs changes fidelity, not attack surface:
+  the default point set is still visible text inputs only. Opting in is explicit
+  because injecting into a CSRF token or password field can invalidate a form
+  or lock an account.
+
+### Tests
+
+- `tests/test_1_4.py`: 15 unit/CLI regressions for form policy, multipart
+  parsing, SPA/HAR capture, OpenAPI path points, Origin/Referer, session curl,
+  storage-state filtering and the new CLI surface.
+- `tests/test_browser_1_3.py`: 10/10 Chromium integration, adding multipart XHR
+  capture, multipart proof with Origin, hidden-token CSRF proof and
+  localStorage import/export.
+- Default suite: **165 discovered, 154 pass, 11 opt-in skips**.
+- Full lab: **38/38 verified**, 22 confirmed, 16 replayed, 0 unverified,
+  0 errors, 23 pages, 32 points, 1099 requests, 262.8 s. Severity is 13
+  `CRITICAL`, 23 `HIGH`, 2 `MEDIUM`; 21 XSS, 16 SQLI, 1 SSRF. New lab proof:
+  `/csrf` (Origin + hidden token), `/upload` and `/api/form` (multipart), and
+  `/api/path/{id}` (OpenAPI path).
+- Branch coverage: **50.3%** (5,349 statements); the 47.0% floor is unchanged.
+- Public 1.4.0 evidence: Firing Range reflected attribute (1 `HIGH` confirmed,
+  12 requests, 18.4 s) and Altoro search (1 `HIGH` confirmed, 35 requests,
+  35.0 s), both with 0 errors. The SQLite comparison stayed at seven findings
+  (3 confirmed XSS, 2 SQLi, 2 reflection-only `MEDIUM`; 221 requests, 49.2 s).
+
+## 1.3.5 - 2026-10-27
+
+Security patch after the 1.3.4 audit. Detection scope is unchanged: XSS, SQLi,
+blind XSS and SSRF; reflection-only stays `MEDIUM`.
+
+### Security
+
+- A cross-origin redirect can no longer copy a request body. `307`/`308` keep
+  the method and body by design, and `301`/`302` preserve a non-POST body such
+  as `PUT`; when the next hop leaves the target origin, SV1 now refuses the hop
+  before the body is sent. A bodyless cross-origin `GET`/`HEAD` hop and a
+  `301`/`302` POST-to-GET hop remain allowed.
+- Chromium applies the same body rule. A cross-target form post or redirect
+  that still carries `post_data` is aborted by the route guard. If the body
+  cannot be inspected, the guard fails closed.
+- Scope matching canonicalizes dot segments, duplicate slashes, backslashes
+  and percent encoding before comparing a path. `Rule("*", "host", "/app/*")`
+  no longer matches `/app/../admin`, `%2e%2e`, `%252e%252e` or encoded
+  backslash variants. URL rules without an explicit port use the scheme
+  default; bare hosts keep the documented any-port meaning. Host matching also
+  decodes percent-escaped hosts, strips a trailing dot and applies IDNA.
+- IPv6 scope rules now parse and match correctly. `[::1]:8099` is a bracketed
+  host plus a port, not a hostname containing a colon; malformed brackets,
+  ports and authorities fail the scope file closed.
+- Cookies acquired by the HTTP client during login or crawling are imported
+  into Chromium before proof. The browser previously received only the
+  CLI/imported snapshot, so a server-set session produced a `403` during the
+  browser replay. Imported cookies are anchored to the target origin and only
+  target-host cookies are selected; the existing cross-port guard still runs.
+- Build-time `setuptools` pin raised from `78.1.0` to `84.2.1`; the `78.1.0`
+  pin had five OSV advisories, including HIGH `CVE-2025-47273`. Development
+  `coverage` pin lowered from `7.17.0` to `7.16.2`, the newest release that
+  still supports Python 3.10.
+- SARIF `executionSuccessful` now reflects the scan error count instead of
+  always claiming success, and the run carries `errorCount` for CI consumers.
+- CI uses `actions/checkout@v7.0.1`, `actions/setup-python@v7.1.0`, a pip cache
+  keyed by both requirement files, and a read-only repository token.
+
+### Tests
+
+- `tests/test_audit_1_3_5.py`: 20 regressions for redirect bodies,
+  Chromium body isolation, scope canonicalization, IPv6, host encoding and
+  cookie import.
+- `tests/test_browser_1_3.py`: 6/6 Chromium integration, including a
+  server-set cookie that must reach Chromium and a cross-target form body that
+  must never leave it.
+- Default suite: 146 discovered, 139 pass, 7 opt-in skips.
+- Full lab: 31/31 verified, 17 confirmed, 14 replayed, 0 unverified, 0 errors,
+  21 pages, 29 points; severity 10 `CRITICAL`, 18 `HIGH`, 3 `MEDIUM`.
+- Branch coverage: 49.0% against the 47.0% floor.
+
 ## 1.3.4 - 2026-10-27
 
 Verification hardening after the 1.3.3 audit. Detection scope is unchanged:

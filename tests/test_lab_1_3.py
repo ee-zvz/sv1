@@ -135,20 +135,20 @@ class FullLabAcceptanceTests(unittest.TestCase):
         findings = data.get("findings") or []
         stats = data.get("stats") or {}
         counts = data.get("counts") or {}
-        self.assertEqual(len(findings), 31)
-        self.assertEqual(stats.get("verified"), 31)
+        self.assertEqual(len(findings), 38)
+        self.assertEqual(stats.get("verified"), 38)
         self.assertEqual(stats.get("unverified"), 0)
         self.assertEqual(stats.get("errors"), 0)
-        self.assertEqual(stats.get("pages"), 21)
-        self.assertEqual(stats.get("points"), 29)
+        self.assertEqual(stats.get("pages"), 23)
+        self.assertEqual(stats.get("points"), 32)
         self.assertEqual(counts.get("by_severity"), {
-            "CRITICAL": 10,
-            "HIGH": 18,
-            "MEDIUM": 3,
+            "CRITICAL": 13,
+            "HIGH": 23,
+            "MEDIUM": 2,
         })
         self.assertEqual(counts.get("by_type"), {
-            "XSS": 17,
-            "SQLI": 13,
+            "XSS": 21,
+            "SQLI": 16,
             "SSRF": 1,
         })
 
@@ -160,10 +160,25 @@ class FullLabAcceptanceTests(unittest.TestCase):
 
         xhr = by_url.get(BASE.rstrip("/") + "/api/xhr")
         self.assertIsNotNone(xhr)
-        self.assertEqual(xhr["severity"], "MEDIUM")
+        self.assertEqual(xhr["severity"], "HIGH")
+        self.assertEqual(xhr["confidence"], "CONFIRMED")
+
+        for path in ("/csrf", "/upload", "/api/form", "/api/path/{id}"):
+            finding = by_url.get(BASE.rstrip("/") + path)
+            self.assertIsNotNone(finding, path)
+            self.assertEqual(finding["kind"], "XSS", path)
+            self.assertEqual(finding["severity"], "HIGH", path)
+            self.assertEqual(finding["confidence"], "CONFIRMED", path)
+            if path == "/csrf":
+                self.assertIn("Origin:", finding["curl"])
+                self.assertIn("csrf=sv1-csrf-token", finding["curl"])
+            if path in ("/upload", "/api/form"):
+                self.assertIn("-F 'comment=", finding["curl"])
+            if path == "/api/path/{id}":
+                self.assertNotIn("{id}", finding["curl"])
 
         sarif_data = json.loads(sarif.read_text(encoding="utf-8"))
-        self.assertEqual(len(sarif_data["runs"][0]["results"]), 31)
+        self.assertEqual(len(sarif_data["runs"][0]["results"]), 38)
         self.assertTrue(html.is_file())
 
 

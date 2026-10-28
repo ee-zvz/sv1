@@ -153,7 +153,27 @@ def crawl(client: net.Client, start_url: str, max_pages: int, max_depth: int,
     return pages
 
 
-def points_from_page(page: Page) -> list[InjectionPoint]:
+def _injectable(field: FormField, include_hidden: bool,
+                include_password: bool) -> bool:
+    """Hidden/password inputs are values to preserve, not attack by default.
+
+    A hidden input is usually a CSRF token, a session marker or a server-side
+    state field.  Replacing it with a payload corrupts the request and can
+    invalidate the session before the actual field is tested.  Password inputs
+    are credential fields and are equally poor XSS/SQLi targets.  Both remain
+    in the form mapping so the request is complete; only their selection as
+    injection points is opt-in.
+    """
+    kind = (field.type or "").lower()
+    if kind == "hidden":
+        return include_hidden
+    if kind == "password":
+        return include_password
+    return True
+
+
+def points_from_page(page: Page, include_hidden: bool = False,
+                     include_password: bool = False) -> list[InjectionPoint]:
     points: list[InjectionPoint] = []
     parts = urllib.parse.urlsplit(page.url)
 
@@ -184,11 +204,16 @@ def points_from_page(page: Page) -> list[InjectionPoint]:
         fields = form.fields[: config.MAX_FORM_FIELDS]
         if not fields:
             continue
+        # Every field is sent; only injectable fields become points.  A CSRF
+        # token or a password value therefore survives the request unchanged.
         form_pairs = tuple((f.name, f.value) for f in fields)
-        counts = {}
+        content_type = form.enctype if source == "multipart" else ""
+        form_counts: dict[str, int] = {}
         for field in fields:
-            occurrence = counts.get(field.name, 0)
-            counts[field.name] = occurrence + 1
+            occurrence = form_counts.get(field.name, 0)
+            form_counts[field.name] = occurrence + 1
+            if not _injectable(field, include_hidden, include_password):
+                continue
             points.append(
                 InjectionPoint(
                     url=action,
@@ -197,16 +222,18 @@ def points_from_page(page: Page) -> list[InjectionPoint]:
                     param=field.name,
                     source=source,
                     param_index=occurrence,
+                    content_type=content_type,
                 )
             )
     return points
 
 
-def collect_points(pages: list[Page]) -> list[InjectionPoint]:
+def collect_points(pages: list[Page], include_hidden: bool = False,
+                   include_password: bool = False) -> list[InjectionPoint]:
     seen: set[tuple] = set()
     collected: list[InjectionPoint] = []
     for page in pages:
-        for point in points_from_page(page):
+        for point in points_from_page(page, include_hidden, include_password):
             if point.key() in seen:
                 continue
             seen.add(point.key())

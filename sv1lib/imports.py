@@ -13,7 +13,7 @@ import os
 import urllib.parse
 from dataclasses import dataclass, field
 
-from . import config, crawl, jsonbody, net
+from . import config, crawl, formdata, jsonbody, net
 from .models import InjectionPoint
 
 METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE")
@@ -271,6 +271,13 @@ def _body_points(request: ImportedRequest) -> list[InjectionPoint]:
             data,
             method=request.method,
             content_type=request.content_type or "application/json",
+        )
+    if "multipart/form-data" in content_type:
+        return formdata.points(
+            request.url,
+            request.content_type,
+            body,
+            method=request.method,
         )
     if "x-www-form-urlencoded" in content_type:
         pairs = tuple(urllib.parse.parse_qsl(body, keep_blank_values=True))
