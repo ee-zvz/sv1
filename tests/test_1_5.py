@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import stat
 import subprocess
 import sys
 import tempfile
@@ -245,6 +247,10 @@ class CheckpointTests(unittest.TestCase):
                 {"scanners": ["xss"], "time_based": False},
             )
             self.assertTrue(Path(path).exists())
+            if os.name == "posix":
+                self.assertEqual(
+                    stat.S_IMODE(Path(path).stat().st_mode), 0o600,
+                )
             raw = checkpoint.load(path, "https://EXAMPLE.com/")
             points, completed, pairs = checkpoint.restore(raw)
             self.assertEqual(len(points), 1)

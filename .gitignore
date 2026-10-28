@@ -21,6 +21,11 @@ retest.sarif
 *.sqlite3
 
 .env
+# session material: storage state, checkpoints and resume files
+*storage-state*.json
+storage-state*.json
+*checkpoint*.json
+*resume.json
 .vscode/
 .idea/
 .DS_Store

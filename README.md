@@ -7,7 +7,8 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.5.0` adds the real-world operating layer:
+SQLite session history. Release `1.5.1` hardens checkpoint handling and the
+authenticated/sitemap lab proof; `1.5.0` added the real-world operating layer:
 same-origin form login with CSRF preservation, resumable point scans, robots and
 sitemap discovery, and CWE/OWASP/remediation metadata in every output. It keeps
 the `1.4.0` real-application inputs: HAR and raw HTTP request import, nested JSON
@@ -29,7 +30,11 @@ hidden/password form fields with explicit opt-in, session-aware curl, and
 `--storage-state` / `--save-storage-state` for authenticated scans. `1.5.0`
 adds `--login` / `--login-check`, checkpointed `--resume`, `--sitemap` seeds,
 and CWE/OWASP/remediation metadata across console, HTML, JSON, CSV and SARIF.
-The field audit is in [`docs/IMPROVEMENTS.md`](docs/IMPROVEMENTS.md).
+`1.5.1` creates checkpoint temp files with mode `0600`, prints a session-material
+warning for `--resume`, ignores checkpoint/storage-state/resume JSON in Git,
+raises the coverage floor to 51.0%, and proves login-protected and sitemap-only
+pages in the full lab. The field audit is in
+[`docs/IMPROVEMENTS.md`](docs/IMPROVEMENTS.md).
 
 A vulnerability scanner for **XSS**, **SQL Injection**, **Blind XSS** and **SSRF**
 written in Python, running on Windows 11. On start it prints an animated banner
@@ -296,10 +301,11 @@ the `--fail-on` threshold, `2` = the target did not respond or a file could not 
   point options, skips the completed keys and restores prior findings; browser
   proof is revalidated in the new session. The browser, DOM, stored, blind and
   replay phases still run because they depend on the live page and callbacks.
-  Cookies are not stored in the checkpoint, so
-  resume an authenticated scan with the same `--login` options; the checkpoint
-  refuses to mix an authenticated and an anonymous run. This is point-level
-  resume, not an async distributed engine.
+  The cookie jar is not serialized, but header points and curl commands may
+  carry cookies, so the checkpoint is session material, not a progress-only
+  record. Resume an authenticated scan with the same `--login` options; the
+  checkpoint refuses to mix an authenticated and an anonymous run. This is
+  point-level resume, not an async distributed engine.
 - **Sitemaps add seeds, not permissions.** `--sitemap` reads `robots.txt`, follows
   up to three same-origin sitemap files (one index hop), skips assets and refuses
   external hosts. The normal page cap, depth, scope and form parser still apply.
@@ -515,15 +521,16 @@ python sv1.py -u https://site.tld --crawl --db sv1.db --diff
 8x, honours a numeric `Retry-After` (capped at 30s), and recovers gradually
 after 20 healthy responses. `--rps 0` stays unlimited.
 
-> 1.5.0 ships same-origin login, point-level `--resume`, sitemap seeds and
+> 1.5.1 hardens checkpoint files and extends the authenticated/sitemap lab
+> proof. 1.5.0 ships same-origin login, point-level `--resume`, sitemap seeds and
 > CWE/OWASP/remediation metadata. The async engine remains deferred to 1.6.0.
-> Release 1.5.0 keeps redirect scope hop by hop, refuses cross-origin request
+> The release keeps redirect scope hop by hop, refuses cross-origin request
 > bodies, canonicalizes scope paths and IPv6, isolates session headers and
 > cookies on the target origin, imports the live HTTP session into Chromium,
 > and keeps server-set cookie isolation, baseline-aware SQLi replay, HAR/raw
 > request import, nested JSON/raw bodies, XHR POST capture, external JavaScript
 > analysis and nested OpenAPI bodies. CI runs the Chromium integration tests,
-> the full-lab acceptance test, ruff, mypy and a 47.0% coverage floor.
+> the full-lab acceptance test, ruff, mypy and a 51.0% coverage floor.
 
 ---
 
@@ -790,7 +797,8 @@ the full-lab acceptance test run in CI**.
 | Google Firing Range, DOM, 1.2.0 | 25 pages crawled, 20 rendered | **15 HIGH** DOM findings, 0 errors |
 | Altoro Mutual search, 1.3.1 | one GET parameter | **1 HIGH** reflected XSS, confirmed; replay 1/1 |
 | Firing Range, HAR import, 1.3.1 | one imported GET point | **1 HIGH** confirmed; replay 1/1 |
-| Local lab, 1.5.0 | full coverage incl. multipart/path/storage/CSRF | **38/38** findings, 0 unstable; 1099 requests, 261.0 s |
+| Local lab, 1.5.1 | full coverage incl. login/sitemap/private/orphan | **40/40** findings, 0 unstable; 1174 requests, 275.2 s |
+| Local lab, 1.5.0 | retained baseline incl. multipart/path/storage/CSRF | **38/38** findings, 0 unstable; 1099 requests, 261.0 s |
 | Local lab, 1.4.0 | retained baseline | **38/38** findings, 0 unstable; 1099 requests, 262.8 s |
 
 The two fresh 1.5.0 public runs are focused one-parameter checks: Firing Range
@@ -802,16 +810,25 @@ the retained Firing Range corpus are `/url/css_import` (a stylesheet `<link>`
 cannot execute `javascript:` in current Chromium) and `/url/object_data`
 (pinned to the removed Flash type); they stay reflection-only.
 
-The 1.5.0 lab acceptance run: 38/38 verified (22 confirmed in the browser or
-OOB, 16 replayed over HTTP), 0 unstable — CRITICAL 13 / HIGH 23 / MEDIUM 2,
-23 pages, 32 points, 1099 requests, 261.0 s, 0 errors. Evidence:
-[`docs/evidence/local-lab-1.5.0.json`](docs/evidence/local-lab-1.5.0.json) and
-[`local-lab-1.5.0.sarif`](docs/evidence/local-lab-1.5.0.sarif). The
-run uses `--scope 127.0.0.1:8099` and therefore exercises the redirect and
-browser guards. The new proof paths are `/csrf` (hidden token + target Origin),
+The 1.5.1 lab acceptance run: 40/40 verified (24 confirmed in the browser or
+OOB, 16 replayed over HTTP), 0 unstable — CRITICAL 13 / HIGH 25 / MEDIUM 2,
+25 pages, 34 points, 1174 requests, 275.2 s, 0 errors; 23 XSS, 16 SQLI and
+1 SSRF. Evidence:
+[`docs/evidence/local-lab-1.5.1.json`](docs/evidence/local-lab-1.5.1.json) and
+[`local-lab-1.5.1.sarif`](docs/evidence/local-lab-1.5.1.sarif). The run uses
+`--scope 127.0.0.1:8099` and therefore exercises the redirect and browser
+guards. The new proof paths are `/private?q=` (login cookie required; root links
+it only after authentication) and `/orphan?q=` (sitemap-only, unlinked from
+HTML). The earlier proof paths remain `/csrf` (hidden token + target Origin),
 `/upload` and `/api/form` (multipart), and `/api/path/{id}` (OpenAPI path).
-`--spa` now proves `/api/xhr` at `HIGH`, and `/xhr-form` proves multipart
-`FormData`. The 1.3.4 run (31/31, 1012 requests, 240.2 s) remains in
+`--spa` proves `/api/xhr` at `HIGH`, and `/xhr-form` proves multipart `FormData`.
+
+The 1.5.0 lab acceptance run remains 38/38 verified (22 confirmed, 16 replayed),
+0 unstable, CRITICAL 13 / HIGH 23 / MEDIUM 2, 23 pages, 32 points, 1099 requests,
+261.0 s. Evidence:
+[`docs/evidence/local-lab-1.5.0.json`](docs/evidence/local-lab-1.5.0.json) and
+[`local-lab-1.5.0.sarif`](docs/evidence/local-lab-1.5.0.sarif). The 1.3.4 run
+(31/31, 1012 requests, 240.2 s) remains in
 [`docs/evidence/local-lab-1.3.4.json`](docs/evidence/local-lab-1.3.4.json).
 
 External comparison on the same SQLite target and day: SV1 1.5.0 confirmed 3 XSS
@@ -909,28 +926,41 @@ Full scan with P3 + P3.1 + P4 + P5 coverage:
 # scope file, once
 "127.0.0.1:8099" | Set-Content scope-lab.txt
 
+# lab credentials via the environment, never argv
+$env:SV1_USERNAME = 'sv1operator'
+$env:SV1_PASSWORD = 'sv1-lab-password'
+
 python sv1.py -u http://127.0.0.1:8099/ --crawl --stored --js --second-order --dump `
   --spa --external-js --openapi http://127.0.0.1:8099/openapi.json `
-  --blind --blind-visit http://127.0.0.1:8099/blind-admin --ssrf `
+  --blind --blind-visit http://127.0.0.1:8099/blind-admin `
+  --oob http://127.0.0.2:8777 --oob-bind 127.0.0.2:8777 --ssrf `
+  --sitemap --login http://127.0.0.1:8099/login --login-check private `
   --scope scope-lab.txt --db lab-history.db --diff --sarif report.sarif `
   --fail-on high --html report.html
 ```
 
-Result: **38 findings, 38 verified (22 confirmed, 16 replayed), 0 unstable** —
-CRITICAL 13, HIGH 23, MEDIUM 2, 23 pages, 32 injection points, 1099 requests,
-262.8 s (with Chromium).
+Result: **40 findings, 40 verified (24 confirmed, 16 replayed), 0 unstable** —
+CRITICAL 13, HIGH 25, MEDIUM 2, 25 pages, 34 injection points, 1174 requests,
+275.2 s (with Chromium).
+
+`--login` sets a host cookie; Chromium ignores ports when sending it. The route
+guard blocks that cookie from reaching a callback on the same host and a different
+port, so the authenticated lab uses `127.0.0.2:8777` for OOB. Real OOB endpoints
+should already be a different host. The guard is not weakened for the test.
 
 The lab stores guestbook, blind and profile state in memory. Restart
 `lab\server.py` before repeating the full run; otherwise `/profile` already
 contains the second-order payload and its form is replaced by the error page.
 
-- **XSS (21):** 20 confirmed by execution inside Chromium. The new multipart,
-  CSRF and path proofs are `/csrf` (hidden token preserved, target `Origin`),
-  `/upload` and `/api/form` (multipart), and `/api/path/{id}` (OpenAPI path).
-  `/api/xhr` now reaches `HIGH` because its JSON response is rendered through
-  the browser fetch proof. The encoded reflection in `/safe` remains the only
-  `MEDIUM`; `/dom`, `/external`, `/guestbook` and `/blind-admin` keep their
-  existing execution proof.
+- **XSS (23):** 22 confirmed by execution inside Chromium. The login proof is
+  `/private?q=` (session cookie required; the root only links it after login);
+  the sitemap proof is `/orphan?q=` (unlinked, discovered from `robots.txt` →
+  `sitemap.xml`). The earlier multipart, CSRF and path proofs are `/csrf`
+  (hidden token preserved, target `Origin`), `/upload` and `/api/form`
+  (multipart), and `/api/path/{id}` (OpenAPI path). `/api/xhr` reaches `HIGH`
+  because its JSON response is rendered through the browser fetch proof. The
+  encoded reflection in `/safe` remains the only `MEDIUM`; `/dom`, `/external`,
+  `/guestbook` and `/blind-admin` keep their execution proof.
 - **SQLi (16):** MySQL error in `/search`, `/union`, `/waf`, `/upload`,
   `/csrf`, `/api/form`, `/api/path/{id}`, `/api/fetch`, `/api/spa`, `/dynamic`;
   logical injection in `/item` and `/api/item`; `/account` drops to `MEDIUM`
@@ -940,6 +970,13 @@ contains the second-order payload and its form is replaced by the error page.
 - **SSRF (1):** `/fetch?url=` actually requested the callback address, result
   `HIGH` + `CONFIRMED` with arrival time and User-Agent. The test does not follow
   redirects, so the hit comes from the target itself.
+- **`--login`:** posts `sv1operator` / `sv1-lab-password` with the hidden
+  `sv1-login-token` to `/login`, keeps `sid` in the HTTP session and Chromium,
+  and verifies `private`. Anonymous `/private` is `403`; the authenticated root
+  adds `/private?q=hello`, so the crawler reaches it only with the session.
+- **`--sitemap`:** `robots.txt` has an empty `Disallow:` and exposes
+  `sitemap.xml`; the sitemap points at `/orphan?q=hello`, which has no HTML link.
+  `--sitemap` seeds it, and the reflected value is confirmed by execution.
 - **`--blind`:** 16 payloads were stored; one OOB execution was confirmed. The
   `/blind-admin` page is not linked from the index — the crawler never sees it.
   After injection `--blind-visit` opened it, so the script was requested from
@@ -986,7 +1023,7 @@ and `/fetch` as normal pages, while `/blind-admin` is intentionally left unlinke
   scan of the same target is compared against it (`+N new · N open · -N fixed`).
 - **`--retest`:** rechecks replayable findings from the session and skips Blind,
   SSRF, Stored, DOM and UNION. It does not crawl and does not open a browser.
-- **SARIF:** 38 findings, a stable fingerprint per finding, and a file that passes
+- **SARIF:** 40 findings, a stable fingerprint per finding, and a file that passes
   the official SARIF 2.1.0 schema.
 - **`--fail-on`:** `none` = 0, `high` = 1, `critical` = 1 on the lab, and a clean
   target with `high` = 0.
@@ -1059,9 +1096,10 @@ note    database error surfaced (MySQL) - error based injection
   are not written to reports, history or checkpoints; use `SV1_PASSWORD` rather
   than `--password` so the value is not visible in the process list.
 - `--resume` checkpoints the point pass only. The browser/DOM, stored, blind and
-  replay phases run again after a restart. Cookies are not stored, so resume an
-  authenticated scan with the same `--login` options. A checkpoint is sensitive
-  local state: it can contain imported session headers, cookies and curl commands.
+  replay phases run again after a restart. The cookie jar is not serialized, but
+  header points and curl commands may carry cookies; resume an authenticated
+  scan with the same `--login` options. A checkpoint is session material, not a
+  progress-only file.
 - `--sitemap` follows at most three same-origin sitemap files and one index hop.
   Gzipped sitemap archives are not unpacked; submit URLs directly or use
   `--openapi`/`--request` instead.
@@ -1084,12 +1122,15 @@ MIT — see `LICENSE`.
 
 ## Version
 
-`1.5.0` — current public release. It adds same-origin login, resumable point
-scans, sitemap discovery and CWE/OWASP/remediation metadata while keeping the
-real-application inputs: HAR/raw HTTP request import, nested JSON and raw bodies,
-XHR/fetch POST capture, external same-origin JavaScript analysis, nested OpenAPI
-bodies, exact dependency pins, a `pyproject.toml`, and a full-lab Playwright CI
-gate. `1.3.3` added redirect-wide
+`1.5.1` — current public release. It hardens checkpoint files with mode `0600`,
+warns that `--resume` state is session material, ignores checkpoint/storage/resume
+JSON in Git, raises the coverage floor to 51.0%, and extends the full lab to
+login-protected `/private` and sitemap-only `/orphan` proof. `1.5.0` adds
+same-origin login, resumable point scans, sitemap discovery and
+CWE/OWASP/remediation metadata while keeping the real-application inputs:
+HAR/raw HTTP request import, nested JSON and raw bodies, XHR/fetch POST capture,
+external same-origin JavaScript analysis, nested OpenAPI bodies, exact dependency
+pins, a `pyproject.toml`, and a full-lab Playwright CI gate. `1.3.3` added redirect-wide
 scope enforcement, session-header isolation in HTTP and Chromium, imported-cookie
 isolation and split confirmed/replayed counters. `1.3.4` added server-set cookie
 isolation, baseline-aware SQLi replay, blind script-only demotion, stored-XSS

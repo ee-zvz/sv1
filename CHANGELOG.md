@@ -2,6 +2,44 @@
 
 All notable changes to SV1. Format follows Keep a Changelog.
 
+## 1.5.1 - 2026-10-28
+
+Session-material and lab-proof patch. Detection scope is unchanged: XSS, SQLi,
+blind XSS and SSRF; reflection-only remains `MEDIUM`.
+
+### Changed
+
+- Checkpoint temporary files are created through `os.open` with
+  `O_WRONLY | O_CREAT | O_TRUNC` and mode `0o600`, then wrapped with
+  `os.fdopen`; the atomic replace and error cleanup remain unchanged.
+- `--resume` now warns after printing a new checkpoint path that the file may
+  contain session material and must not be committed.
+- `.gitignore` excludes `*storage-state*.json`, `storage-state*.json`,
+  `*checkpoint*.json` and `*resume.json` as session material.
+- The coverage floor in `pyproject.toml` rises from `47.0` to `51.0`; the default
+  suite remains at 51.3% branch coverage.
+- The lab fixture now has a login POST, a `sid` session set, a protected
+  `/private` reflection and a sitemap-only `/orphan` reflection. The full-lab
+  command uses `--sitemap`, `--login` and `--login-check private`, and passes
+  credentials through `SV1_USERNAME` / `SV1_PASSWORD`, never argv.
+- The authenticated lab uses `127.0.0.2:8777` for OOB so the Chromium cookie
+  guard does not read a same-host `sid` cookie as a cross-port leak; the guard is
+  not weakened.
+
+### Tests
+
+- Default suite: **177 discovered, 166 pass, 11 opt-in skips**.
+- Branch coverage: **51.3%** (5,837 statements) against the 51.0% floor;
+  `ruff` clean, `mypy` clean on 41 source files.
+- Chromium integration: **10/10**.
+- Full lab: **40/40 verified**, 24 confirmed, 16 replayed, 0 unverified,
+  0 errors, 25 pages, 34 points, 1174 requests, 275.2 s. Severity is
+  13 `CRITICAL`, 25 `HIGH`, 2 `MEDIUM`; 23 XSS, 16 SQLI, 1 SSRF.
+  SARIF emits 40 results. Evidence:
+  `docs/evidence/local-lab-1.5.1.json` and `local-lab-1.5.1.sarif`.
+- The full-lab assertions cover `/private` and `/orphan` as `XSS`, `HIGH`,
+  `CONFIRMED`, and retain the 1.5.0 proof paths.
+
 ## 1.5.0 - 2026-10-28
 
 Operating-layer release. Detection scope is unchanged: XSS, SQLi, blind XSS and
@@ -26,9 +64,11 @@ and standard finding metadata. The field audit is in
   A second run validates the target and material scan/point options, skips
   completed point keys and restores prior findings; browser proof is revalidated
   in the new session. The browser, DOM, stored, blind and replay phases still run
-  because they depend on the live page and callbacks. Cookies are not stored, and
-  an authenticated checkpoint refuses to resume against an anonymous run. This is
-  point-level resume, not the deferred async engine.
+  because they depend on the live page and callbacks. The cookie jar is not
+  serialized, but header points and curl commands may carry cookies, so the
+  checkpoint is session material, not a progress-only file. An authenticated
+  checkpoint refuses to resume against an anonymous run. This is point-level
+  resume, not the deferred async engine.
 - `--sitemap` discovers same-origin seeds from `robots.txt` and up to three
   sitemap documents, following one sitemap-index hop. External hosts, binary
   assets and out-of-scope URLs are refused; the normal page cap, depth and form

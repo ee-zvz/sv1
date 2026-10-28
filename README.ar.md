@@ -5,7 +5,8 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.5.0` adds the real-world operating layer:
+SQLite session history. Release `1.5.1` hardens checkpoint handling and the
+authenticated/sitemap lab proof; `1.5.0` adds the real-world operating layer:
 same-origin form login with CSRF preservation, resumable point scans, robots and
 sitemap discovery, and CWE/OWASP/remediation metadata in every output. It keeps
 the `1.4.0` inputs: HAR and raw HTTP request import, nested JSON and raw bodies,
@@ -25,7 +26,10 @@ browser replay, OpenAPI path injection, preserved hidden/password fields with
 explicit opt-in, session-aware curl, and `--storage-state` /
 `--save-storage-state` for authenticated scans. `1.5.0` adds login through a
 same-origin form, checkpointed `--resume`, sitemap seeds and CWE/OWASP/remediation
-metadata. راجع مراجعة السوق في [`docs/IMPROVEMENTS.ar.md`](docs/IMPROVEMENTS.ar.md).
+metadata. `1.5.1` يجعل ملفات checkpoint بمود `0600`، ويحذر أن ملف `--resume` مادة
+جلسة، ويضيف `/private` المحمي بالدخول و`/orphan` القادم من sitemap إلى دليل
+المختبر الكامل، ويرفع أرضية التغطية إلى 51.0%.
+راجع مراجعة السوق في [`docs/IMPROVEMENTS.ar.md`](docs/IMPROVEMENTS.ar.md).
 
 أداة فحص ثغرات **XSS** و **SQL Injection** و **Blind XSS** و **SSRF** مكتوبة
 ببايثون، تشتغل على ويندوز 11. عند التشغيل تطلع مقدمة متحركة (لوقو SV1 بتدرّج
@@ -62,9 +66,9 @@ metadata. راجع مراجعة السوق في [`docs/IMPROVEMENTS.ar.md`](docs
   ويتحقق من الهدف وخيارات الفحص واكتشاف النقاط، ويتجاوز المفاتيح المكتملة ويعيد
   النتائج مع إعادة التحقق من إثبات المتصفح. مراحل
   browser/DOM/stored/blind/replay تُعاد لأنها تعتمد على الصفحة والـcallbacks
-  الحية. الكوكيز لا تُحفظ في checkpoint، فأكمل فحصاً مسجّلاً بنفس خيارات
-  `--login`؛ والملف يرفض خلط فحص مسجّل بفحص مجهول. هذا استكمال نقاط، ليس محرك
-  async موزّعاً.
+  الحية. وعاء الكوكيز لا يُحفظ في الملف، لكن نقاط الهيدرات وأوامر curl قد تحمل
+  كوكيز، فالملف مواد جلسة لا ملف تقدّم. أكمل فحصاً مسجّلاً بنفس خيارات `--login`؛ والملف
+  يرفض خلط فحص مسجّل بفحص مجهول. هذا استكمال نقاط، ليس محرك async موزّعاً.
 - **`--sitemap` يضيف بذوراً لا صلاحيات.** يقرأ `robots.txt` ويتبع حتى ثلاثة
   ملفات sitemap على نفس الأصل ومستوى فهرس واحد، ويتخطى الأصول والمواقع
   الخارجية. حدود الصفحات والعمق والنطاق تبقى كما هي.
@@ -433,8 +437,9 @@ python sv1.py -u https://site.tld --crawl --db sv1.db --diff
 ويحترم `Retry-After` الرقمي (بحد 30 ثانية)، ثم يعود تدريجياً بعد 20 رداً
 سليماً. `--rps 0` يبقى بلا حد.
 
-> 1.5.0 أضاف الدخول من نموذج same-origin، و`--resume` لمرحلة النقاط، وبذور
-> sitemap، وتصنيف CWE/OWASP/الإصلاح. محرك async بـ `httpx` ما زال مؤجلاً.
+> 1.5.1 يصلّب checkpoint ويضيف دليل login/sitemap. 1.5.0 أضاف الدخول من نموذج
+> same-origin، و`--resume` لمرحلة النقاط، وبذور sitemap، وتصنيف
+> CWE/OWASP/الإصلاح. محرك async بـ `httpx` ما زال مؤجلاً.
 > الإصدار 1.3.1 يضيف HAR والطلبات الخام وJSON المتداخل وأجسام XHR POST
 > وسكربتات خارجية وOpenAPI متداخل، فوق دقة 1.2.0 وSARIF وfail-on وscope
 > وSQLite diff/retest وتكيّف 429. CI يشغّل اختبار Chromium والمختبر الكامل.
@@ -726,7 +731,8 @@ sv1/
 | Google Firing Range — DOM، 1.2.0 | 25 صفحة زحف، 20 معروضة | **15 HIGH** DOM، 0 أخطاء |
 | Altoro Mutual — بحث، 1.3.1 | معامل GET واحد | **1 HIGH** XSS منعكس، مؤكد؛ إعادة تشغيل 1/1 |
 | Firing Range — استيراد HAR، 1.3.1 | نقطة GET مستوردة | **1 HIGH** مؤكدة؛ إعادة تشغيل 1/1 |
-| المختبر المحلي 1.5.0 | تغطية كاملة + multipart/path/storage/CSRF | **38/38** نتيجة، 0 unstable؛ 1099 طلباً، 261.0 ثانية |
+| المختبر المحلي 1.5.1 | تغطية كاملة + login/sitemap/private/orphan | **40/40** نتيجة، 0 unstable؛ 1174 طلباً، 275.2 ثانية |
+| المختبر المحلي 1.5.0 | خط أساس محفوظ + multipart/path/storage/CSRF | **38/38** نتيجة، 0 unstable؛ 1099 طلباً، 261.0 ثانية |
 | المختبر المحلي 1.4.0 | خط أساس محفوظ | **38/38** نتيجة، 0 unstable؛ 1099 طلباً، 262.8 ثانية |
 
 الفحصان الجديدان هما Firing Range (انعكاس attribute) وAltoro (بحث)، وكلاهما
@@ -736,16 +742,18 @@ sv1/
 `/url/object_data` (نوع Flash محذوف)؛ بقيتا انعكاساً فقط بدون رفعهما إلى
 `HIGH`.
 
-قبول المختبر في 1.5.0: 38/38 موثقة (22 مؤكدة في المتصفح أو OOB، و16 أعادت
-الإرسال عبر HTTP)، 0 unstable — CRITICAL 13 / HIGH 23 / MEDIUM 2، 23 صفحة،
-32 نقطة، 1099 طلباً، 261.0 ثانية، 0 أخطاء. الدليل:
-[`docs/evidence/local-lab-1.5.0.json`](docs/evidence/local-lab-1.5.0.json).
+قبول المختبر في 1.5.1: 40/40 موثقة (24 مؤكدة في المتصفح أو OOB، و16 أعادت
+الإرسال عبر HTTP)، 0 unstable — CRITICAL 13 / HIGH 25 / MEDIUM 2، 25 صفحة،
+34 نقطة، 1174 طلباً، 275.2 ثانية، 0 أخطاء؛ 23 XSS و16 SQLI و1 SSRF. الدليل:
+[`docs/evidence/local-lab-1.5.1.json`](docs/evidence/local-lab-1.5.1.json).
 التشغيل يستخدم `--scope 127.0.0.1:8099` ويمرّ على حماية التحويلات والمتصفح.
-مسارات الإثبات الجديدة هي `/csrf` (توكن مخفي + Origin)، و`/upload` و
-`/api/form` (multipart)، و`/api/path/{id}` (مسار OpenAPI). `--spa` صار يثبت
-`/api/xhr` عند `HIGH`، و`/xhr-form` يثبت multipart `FormData`. تشغيل 1.3.4
-(31/31، 1012 طلباً، 240.2 ثانية) محفوظ في
-[`docs/evidence/local-lab-1.3.4.json`](docs/evidence/local-lab-1.3.4.json).
+مسارات الإثبات الجديدة هي `/private?q=` (كوكي دخول؛ الجذر يربطه بعد الدخول)
+و`/orphan?q=` (من sitemap فقط، غير مربوط في HTML). مسارات 1.5.0 باقية:
+`/csrf` (توكن مخفي + Origin)، و`/upload` و`/api/form` (multipart)، و
+`/api/path/{id}` (مسار OpenAPI). `--spa` يثبت `/api/xhr` عند `HIGH`، و
+`/xhr-form` يثبت multipart `FormData`. تشغيل 1.5.0 (38/38، 1099 طلباً،
+261.0 ثانية) وتشغيل 1.3.4 (31/31، 1012 طلباً، 240.2 ثانية) محفوظان في
+`docs/evidence/`.
 
 مقارنة خارجية على هدف SQLite حقيقي، في نفس اليوم: SV1 1.5.0 أكد 3 XSS و2
 SQLi في 221 طلباً و49.1 ثانية، dalfox 3.2.4 أكد 3 XSS، وsqlmap
@@ -775,22 +783,34 @@ python sv1.py -u http://127.0.0.1:8099/ --crawl --no-banner
 # ملف النطاق مرة واحدة
 "127.0.0.1:8099" | Set-Content scope-lab.txt
 
+# بيانات المختبر عبر البيئة، وليس argv
+$env:SV1_USERNAME = 'sv1operator'
+$env:SV1_PASSWORD = 'sv1-lab-password'
+
 python sv1.py -u http://127.0.0.1:8099/ --crawl --stored --js --second-order --dump `
   --spa --external-js --openapi http://127.0.0.1:8099/openapi.json `
-  --blind --blind-visit http://127.0.0.1:8099/blind-admin --ssrf `
+  --blind --blind-visit http://127.0.0.1:8099/blind-admin `
+  --oob http://127.0.0.2:8777 --oob-bind 127.0.0.2:8777 --ssrf `
+  --sitemap --login http://127.0.0.1:8099/login --login-check private `
   --scope scope-lab.txt --db lab-history.db --diff --sarif report.sarif `
   --fail-on high --html report.html
 ```
 
-النتيجة: **38 نتيجة، 38 موثقة (22 مؤكدة، 16 معادة)، 0 unstable** — CRITICAL 13،
-HIGH 23، MEDIUM 2، 23 صفحة، 32 نقطة حقن، 1099 طلباً، 262.8 ثانية (مع Chromium).
+النتيجة: **40 نتيجة، 40 موثقة (24 مؤكدة، 16 معادة)، 0 unstable** — CRITICAL 13،
+HIGH 25، MEDIUM 2، 25 صفحة، 34 نقطة حقن، 1174 طلباً، 275.2 ثانية (مع Chromium).
+
+`--login` يضبط كوكي على الـ host، وChromium لا يفرّق بالمنفذ عند إرسال الكوكي.
+حارس المسار يمنع الكوكي من الوصول إلى callback على نفس الـ host ومنفذ مختلف،
+لذلك يستخدم المختبر الموثق `127.0.0.2:8777` للـ OOB. هذا لا يضعف الحارس.
 
 المختبر يحتفظ بحالة guestbook وblind وprofile في الذاكرة. أعد تشغيل
 `lab\server.py` قبل تكرار الفحص الكامل؛ وإلا فإن `/profile` يحتوي بايلود
 second-order مسبقًا وتظهر صفحة الخطأ بدل النموذج.
 
-- **XSS (21):** 20 مؤكدة بالتنفيذ داخل Chromium. مسارات الإثبات الجديدة هي
-  `/csrf` (توكن مخفي محفوظ + Origin)، و`/upload` و`/api/form` (multipart)،
+- **XSS (23):** 22 مؤكدة بالتنفيذ داخل Chromium. إثبات الدخول هو `/private?q=`
+  (يتطلب كوكي جلسة؛ الجذر يربطه فقط بعد الدخول)، وإثبات sitemap هو `/orphan?q=`
+  (غير مربوط، اكتُشف من `robots.txt` → `sitemap.xml`). مسارات الإثبات السابقة
+  هي `/csrf` (توكن مخفي محفوظ + Origin)، و`/upload` و`/api/form` (multipart)،
   و`/api/path/{id}` (مسار OpenAPI). `/api/xhr` صار `HIGH` لأن استجابة JSON
   تُعرض عبر إثبات fetch في المتصفح. انعكاس `/safe` المشفّر يبقى `MEDIUM`
   الوحيد؛ `/dom` و`/external` و`/guestbook` و`/blind-admin` يحتفظون بإثبات
@@ -804,6 +824,13 @@ second-order مسبقًا وتظهر صفحة الخطأ بدل النموذج.
 - **SSRF (1):** `/fetch?url=` طلب عنوان الـ callback فعلياً، والنتيجة
   `HIGH` + `CONFIRMED` مع وقت الوصول والـ User-Agent. الاختبار لا يتبع
   redirects، فالـ hit من الهدف نفسه.
+- **`--login`:** يرسل `sv1operator` / `sv1-lab-password` مع
+  `sv1-login-token` المخفي إلى `/login`، ويحفظ `sid` في جلسة HTTP وChromium،
+  ويتحقق من `private`. `/private` بدون جلسة يرجع `403`، والجذر الموثق يضيف
+  `/private?q=hello`، فلا يصل إليه الزاحف إلا بجلسة.
+- **`--sitemap`:** `robots.txt` فيه `Disallow:` فارغ ويعرض `sitemap.xml`،
+  والـ sitemap يشير إلى `/orphan?q=hello` غير المربوط في HTML. `--sitemap`
+  يزرعه، والانعكاس يُؤكد بالتنفيذ.
 - **`--blind`:** 16 بايلوداً خُزّنت؛ تأكد تنفيذ OOB واحد. الصفحة
   `/blind-admin` غير مربوطة بالفهرس — لا يراها الزاحف. بعد الحقن فتحها
   `--blind-visit`، فطلب السكربت من `/t` ثم نفّذ صورة `/e` وأرسل صفحة العرض
@@ -848,7 +875,7 @@ second-order مسبقًا وتظهر صفحة الخطأ بدل النموذج.
   يُقارن بها (`+N new · N open · -N fixed`).
 - **`--retest`:** يعيد فحص النتائج القابلة للإعادة فقط، ويتخطى
   Blind وSSRF وStored وDOM وUNION. لم يزحف ولم يفتح متصفحاً.
-- **SARIF:** 31 نتيجة، بصمة ثابتة لكل نتيجة، وملف يمرّ schema الرسمي
+- **SARIF:** 40 نتيجة، بصمة ثابتة لكل نتيجة، وملف يمرّ schema الرسمي
   SARIF 2.1.0.
 - **`--fail-on`:** `none` = 0، `high` = 1، `critical` = 1 على المختبر،
   وهدف نظيف مع `high` = 0.
@@ -918,9 +945,9 @@ note    database error surfaced (MySQL) - error based injection
   التقارير أو history أو checkpoint؛ استخدم `SV1_PASSWORD` بدل `--password`
   حتى لا تظهر في قائمة العمليات.
 - `--resume` يستكمل مرحلة النقاط فقط. مراحل browser/DOM وstored وblind
-  وreplay تُعاد بعد إعادة التشغيل. الكوكيز لا تُحفظ، فأكمل الفحص المسجّل بنفس
-  خيارات `--login`. ملف checkpoint حالة محلية حساسة: قد يحتوي هيدرات وكوكيز
-  جلسة مستوردة وأوامر curl.
+  وreplay تُعاد بعد إعادة التشغيل. وعاء الكوكيز لا يُحفظ في الملف، لكن نقاط
+  الهيدرات وأوامر curl قد تحمل كوكيز، فالملف مواد جلسة لا ملف تقدّم. أكمل
+  الفحص المسجّل بنفس خيارات `--login`.
 - `--sitemap` يتبع ثلاثة ملفات same-origin ومستوى فهرس واحد. أرشيفات sitemap
   المضغوطة gzip لا تُفك؛ مرر الروابط مباشرة أو استخدم `--openapi`/`--request`.
 - محرك async (`httpx`) ما زال مؤجلاً؛ المحرك الحالي thread pool محدود مع
@@ -942,11 +969,15 @@ MIT — راجع ملف `LICENSE`.
 
 ## الإصدار
 
-`1.5.0` — الإصدار العام الحالي. يضيف الدخول من نموذج same-origin، واستكمال
-مرحلة النقاط عبر checkpoint، وبذور robots/sitemap، وتصنيف CWE/OWASP/الإصلاح،
-مع الحفاظ على مدخلات تطبيقات حقيقية: HAR وطلبات HTTP خام، JSON وأجسام خام
-متداخلة، التقاط XHR/fetch POST، تحليل سكربتات same-origin خارجية، وOpenAPI
-متداخل، وإصدارات مثبتة بدقة، `pyproject.toml`، وبوابة CI تشغّل المختبر الكامل.
+`1.5.1` — الإصدار العام الحالي. يصلّب ملفات checkpoint بمود `0600`، ويحذر أن
+ملف `--resume` مادة جلسة، ويستثني checkpoint/storage-state/resume JSON من Git،
+ويرفع أرضية التغطية إلى 51.0%، ويضيف `/private` المحمي بالدخول و`/orphan`
+القادم من sitemap إلى دليل المختبر الكامل. `1.5.0` يضيف الدخول من نموذج
+same-origin، واستكمال مرحلة النقاط عبر checkpoint، وبذور robots/sitemap،
+وتصنيف CWE/OWASP/الإصلاح، مع الحفاظ على مدخلات تطبيقات حقيقية: HAR وطلبات
+HTTP خام، JSON وأجسام خام متداخلة، التقاط XHR/fetch POST، تحليل سكربتات
+same-origin خارجية، وOpenAPI متداخل، وإصدارات مثبتة بدقة، `pyproject.toml`،
+وبوابة CI تشغّل المختبر الكامل.
 أضاف 1.3.3 فرض النطاق على كل redirect وعزل جلسة HTTP وChromium وفصل
 `confirmed` عن `replayed`. أضاف 1.3.4 عزل كوكيز المتصفح حتى التي يضبطها الهدف،
 وإعادة SQLi بخط أساس جديد، وتخفيض Blind الذي جلب سكربتاً فقط إلى `MEDIUM`،
@@ -954,6 +985,6 @@ MIT — راجع ملف `LICENSE`.
 وتطبيع مسارات النطاق وIPv6، ومزامنة كوكيز جلسة HTTP الحية مع Chromium. ويضيف
 1.4.0 نقاط multipart وإثباتها، ومعاملات مسار OpenAPI، وتفعيل الحقول المخفية
 وكلمات المرور صراحةً، وحالة تخزين محصورة بالهدف، وcurl واعياً بالجلسة.
-الانعكاس وحده يبقى `MEDIUM`، وبوابة التغطية 47.0%.
+الانعكاس وحده يبقى `MEDIUM`، وبوابة التغطية 51.0%.
 تفاصيل التغييرات في `CHANGELOG.md`، ومراجعة السوق في
 `docs/IMPROVEMENTS.ar.md`.

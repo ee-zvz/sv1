@@ -1,10 +1,11 @@
-# SV1 1.5.0 - before/after and external comparison
+# SV1 1.5.1 - before/after and external comparison
 
-This comparison was measured on `1.5.0`. The `1.3.3` / `1.3.4` / `1.4.0` rows
-are kept as history; `1.3.5` is included in `1.4.0` and adds request-boundary
-hardening. `1.5.0` adds login, resume, sitemap and finding metadata without
-changing the detection scope, so the separate SQLite benchmark still stays at
-seven findings and the 38-case lab remains the release gate.
+This comparison was measured on `1.5.0`; the `1.5.1` row is the authenticated
+lab rerun. The `1.3.3` / `1.3.4` / `1.4.0` rows are kept as history; `1.3.5`
+is included in `1.4.0` and adds request-boundary hardening. `1.5.0` added login,
+resume, sitemap and finding metadata without changing the detection scope, so
+the separate SQLite benchmark still stays at seven findings. `1.5.1` adds
+checkpoint hardening and two lab endpoints; it does not change detection.
 
 Date: 2026-10-28
 
@@ -13,7 +14,7 @@ scoreboard. Dalfox is an XSS scanner; sqlmap is a SQL injection engine; SV1
 crawls, scans both classes, proves browser execution and also records
 reflection-only notes. The table keeps those scope differences visible.
 
-The release gate is the 38-case local lab. The external comparison uses a
+The release gate is the 40-case local lab. The external comparison uses a
 separate SQLite target because the lab emulates SQL errors and is not a valid
 sqlmap benchmark. Public runs use Google Firing Range and Altoro Mutual, both
 intentionally vulnerable demos.
@@ -48,18 +49,23 @@ Full-lab comparison on the same day:
 | SV1 1.3.4 | 31/31 | 17 | 14 | 1012 | 240.2 s | 0 |
 | SV1 1.4.0 | 38/38 | 22 | 16 | 1099 | 262.8 s | 0 |
 | SV1 1.5.0 | 38/38 | 22 | 16 | 1099 | 261.0 s | 0 |
+| SV1 1.5.1 | 40/40 | 24 | 16 | 1174 | 275.2 s | 0 |
 
-The 1.5.0 lab run keeps the same 38 findings and proof split; the new login,
-resume, sitemap and metadata paths are covered by `tests/test_1_5.py` rather than
-new lab endpoints. The 1.4.0 lab run adds seven findings across four new paths: `/csrf`
-(hidden-token + Origin; XSS + SQLi), `/upload` (multipart; XSS), `/api/form`
-(multipart; XSS + SQLi), and `/api/path/{id}` (OpenAPI path; XSS + SQLi). The
-previously reflected `/api/xhr` is promoted to `HIGH` but is not an additional
-finding. Severity is now 13 `CRITICAL`, 23 `HIGH`, 2 `MEDIUM`. Evidence:
+The 1.5.1 lab run adds `/private?q=` (login cookie required; root links it only
+after authentication) and `/orphan?q=` (robots/sitemap only, no HTML link). The
+1.5.0 lab run keeps the same 38 findings and proof split; its new login, resume,
+sitemap and metadata paths were covered by `tests/test_1_5.py` rather than new
+lab endpoints. The 1.4.0 lab run adds seven findings across four new paths:
+`/csrf` (hidden-token + Origin; XSS + SQLi), `/upload` (multipart; XSS),
+`/api/form` (multipart; XSS + SQLi), and `/api/path/{id}` (OpenAPI path; XSS +
+SQLi). The previously reflected `/api/xhr` is promoted to `HIGH` but is not an
+additional finding. 1.5.1 severity is 13 `CRITICAL`, 25 `HIGH`, 2 `MEDIUM`.
+Evidence:
 [`local-lab-1.3.3.json`](evidence/local-lab-1.3.3.json),
 [`local-lab-1.3.4.json`](evidence/local-lab-1.3.4.json),
-[`local-lab-1.4.0.json`](evidence/local-lab-1.4.0.json) and
-[`local-lab-1.5.0.json`](evidence/local-lab-1.5.0.json).
+[`local-lab-1.4.0.json`](evidence/local-lab-1.4.0.json),
+[`local-lab-1.5.0.json`](evidence/local-lab-1.5.0.json) and
+[`local-lab-1.5.1.json`](evidence/local-lab-1.5.1.json).
 
 ## 2. External tools, same SQLite target
 
@@ -159,9 +165,10 @@ python sv1.py -u "https://demo.testfire.net/search.jsp?query=test" `
 ## الخلاصة
 
 على نفس الهدف ونفس اليوم: `1.3.3` و`1.3.4` و`1.4.0` و`1.5.0` أعطوا نفس السبع
-نتائج، و`1.5.0` حافظ على 221 طلباً و49.1 ثانية. المختبر الكامل بقي 38/38 لأن
-1.5.0 أضاف طبقة تشغيل (دخول/استكمال/اكتشاف/تصنيف) ولم يغيّر نطاق الكشف. هدف
-SQLite بقي سبع نتائج فلا تراجع في الفئات الأصلية. dalfox وsqlmap أسرع داخل
-تخصصهما، لكن SV1 غطى الصنفين وأثبت تنفيذ XSS داخل Chromium. لا إيجابيات كاذبة
-في أي من الجولات. الدليل العام 1.5.0: Firing Range وAltoro، نتيجة `HIGH`
-مؤكدة لكل هدف، 12 و11 طلباً، 18.0 و13.6 ثانية، بلا أخطاء.
+نتائج، و`1.5.0` حافظ على 221 طلباً و49.1 ثانية. المختبر الكامل في `1.5.1` أصبح
+40/40 (24 مؤكدة، 16 معادة) في 1174 طلباً و275.2 ثانية، بعد إضافة `/private`
+المحمي بالدخول و`/orphan` من sitemap. هدف SQLite بقي سبع نتائج فلا تراجع في
+الفئات الأصلية. dalfox وsqlmap أسرع داخل تخصصهما، لكن SV1 غطى الصنفين وأثبت
+تنفيذ XSS داخل Chromium. لا إيجابيات كاذبة في أي من الجولات. الدليل العام
+1.5.0: Firing Range وAltoro، نتيجة `HIGH` مؤكدة لكل هدف، 12 و11 طلباً،
+18.0 و13.6 ثانية، بلا أخطاء.

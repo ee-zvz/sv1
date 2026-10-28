@@ -106,11 +106,11 @@ rendered page and live callbacks; the expensive point pass is the part that is
 skipped. This is point-level resume, not a claim of a fully asynchronous or
 distributed session.
 
-Session cookies are not stored in the checkpoint. An authenticated scan must be
-resumed with the same `--login` options so the next run rebuilds the session
-before it sends pending payloads. The file can contain request templates and
-reproduction commands, including session headers or cookies imported from a
-HAR. Treat it as sensitive local state. It does not contain the login password.
+The cookie jar is not serialized, but header points and curl commands may carry
+cookies, so the checkpoint is session material, not a progress-only file. An
+authenticated scan must be resumed with the same `--login` options so the next
+run rebuilds the session before it sends pending payloads. It does not contain
+the login password.
 
 ### 3. Public map discovery
 
@@ -146,6 +146,7 @@ quality, repeatability or the ability to reach an authenticated surface.
 
 | Priority | Item | Why it matters | Effort |
 |---|---|---|---|
+| P0 | Recall comparison with dalfox | Measures what we miss, not what we add | Low |
 | P1 | Browser-recorded login / OAuth + SSO | The single POST form is the common case; enterprise apps need a real sequence | High |
 | P1 | Async HTTP engine | The current thread pool works, but long authenticated scans need better scheduling and cancellation | High |
 | P1 | GraphQL and WebSocket points | APIs increasingly expose the same inputs outside HTML forms | Medium |

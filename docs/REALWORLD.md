@@ -1,7 +1,7 @@
 # SV1 - real-world validation
 
 Date: 2026-10-28
-Build: `1.5.0`
+Build: `1.5.0` public evidence; `1.5.1` lab evidence
 Platform: Windows 11, Python 3.14.6, Playwright Chromium (headless)
 
 This document records what SV1 actually found and proved outside the local lab.
@@ -13,6 +13,23 @@ Only public, intentionally vulnerable demos were used:
   demo with an expired certificate.
 
 No third-party production application was scanned.
+
+## 1.5.1 lab evidence
+
+The patch extends the full lab with an authenticated root and a sitemap-only
+page. Both are real reflections with Chromium execution proof:
+
+| Target | Command scope | Result | Errors |
+|---|---|---|---:|
+| Local lab `/private?q=` | login POST, `sid` session, `--login-check private` | 1 `HIGH` / `CONFIRMED` XSS | 0 |
+| Local lab `/orphan?q=` | `--sitemap` from `robots.txt`, no HTML link | 1 `HIGH` / `CONFIRMED` XSS | 0 |
+
+Full 1.5.1 run: **40/40 verified**, 24 confirmed, 16 replayed, 0 unstable,
+25 pages, 34 points, 1174 requests, 275.2 s, 0 errors. Severity is 13
+`CRITICAL`, 25 `HIGH`, 2 `MEDIUM`; 23 XSS, 16 SQLI and 1 SSRF. The SARIF file
+contains 40 results. Evidence:
+[`local-lab-1.5.1.json`](evidence/local-lab-1.5.1.json) and
+[`local-lab-1.5.1.sarif`](evidence/local-lab-1.5.1.sarif).
 
 ## 1.5.0 public evidence
 
@@ -67,6 +84,8 @@ Raw evidence:
 - [Altoro 1.4.0 JSON](evidence/altoro-1.4.0.json)
 - [Firing Range dalfox 3.2.4](evidence/dalfox-firing-1.3.4.json)
 - [Altoro dalfox 3.2.4](evidence/dalfox-altoro-1.3.4.json)
+- [Full-lab 1.5.1 JSON](evidence/local-lab-1.5.1.json)
+- [Full-lab 1.5.1 SARIF](evidence/local-lab-1.5.1.sarif)
 - [Full-lab 1.5.0 JSON](evidence/local-lab-1.5.0.json)
 - [Full-lab 1.5.0 SARIF](evidence/local-lab-1.5.0.sarif)
 - [Full-lab 1.4.0 JSON](evidence/local-lab-1.4.0.json)
@@ -85,11 +104,17 @@ the two 1.4.0 public scans, and the two fresh 1.5.0 public scans. The older runs
 are from 1.2.0/1.2.1/1.3.1/1.4.0; their evidence files are kept so the history
 is auditable.
 
-The 1.5.0 full lab is separate from the public total: 38/38 verified, 22
-confirmed, 16 replayed, 0 unstable, 23 pages, 32 points, 1099 requests, 261.0 s,
-0 errors. Severity: 13 `CRITICAL`, 23 `HIGH`, 2 `MEDIUM`; 21 XSS, 16 SQLI,
+The 1.5.1 full lab is separate from the public total: 40/40 verified, 24
+confirmed, 16 replayed, 0 unstable, 25 pages, 34 points, 1174 requests, 275.2 s,
+0 errors. Severity: 13 `CRITICAL`, 25 `HIGH`, 2 `MEDIUM`; 23 XSS, 16 SQLI,
 1 SSRF. The lab was started fresh and used `--scope 127.0.0.1:8099`, so redirect
-and browser guards were active.
+and browser guards were active. The 1.5.0 lab remains 38/38, 22 confirmed,
+16 replayed, 23 pages, 32 points, 1099 requests, 261.0 s.
+
+The authenticated run sets a host cookie (`sid`). Chromium ignores ports when
+sending cookies, so the browser guard correctly blocks a callback on the same
+host and a different port. The test therefore uses `127.0.0.2:8777` for OOB;
+the guard is not weakened.
 
 The separate SQLite target stayed at seven findings in `1.5.0`: 3 confirmed XSS,
 2 SQLi, and 2 reflection-only `MEDIUM`; 221 requests, 49.1 s, 0 errors. It uses
@@ -129,6 +154,8 @@ and the exact local-lab command are in [`COMPARISON.md`](COMPARISON.md).
 
 الدليل العام الحالي هو فحصان حديثان على نسخة `1.5.0`: Firing Range وAltoro،
 وكلاهما أعطى XSS عالي الخطورة مؤكداً بتنفيذ Chromium فعلي. الإجمالي التراكمي
-للعينات العامة 63/63 بلا أخطاء (8 تشغيلات). المختبر الكامل 38/38، وهدف SQLite
-بقي سبع نتائج دون تراجع. المقارنة مع dalfox وsqlmap على نفس الهدف موجودة في
-`COMPARISON.md`، وتظهر أن SV1 أبطأ لكنه يثبت التنفيذ ويغطي XSS وSQLi معاً.
+للعينات العامة 63/63 بلا أخطاء (8 تشغيلات). المختبر الكامل في `1.5.1` أصبح
+40/40 (24 مؤكدة، 16 معادة) في 275.2 ثانية، مع `/private` المحمي بالدخول
+و`/orphan` القادم من sitemap. هدف SQLite بقي سبع نتائج دون تراجع. المقارنة مع
+dalfox وsqlmap على نفس الهدف موجودة في `COMPARISON.md`، وتظهر أن SV1 أبطأ
+لكنه يثبت التنفيذ ويغطي XSS وSQLi معاً.

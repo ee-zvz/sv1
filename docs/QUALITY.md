@@ -1,12 +1,14 @@
-# SV1 1.5.0 - quality gates
+# SV1 1.5.1 - quality gates
 
 Date: 2026-10-28
 
-`1.5.0` adds the operating layer around the existing detection engine. The four
+`1.5.1` is a session-material and lab-proof patch. Checkpoint temporary files
+are created with mode `0600`, `--resume` warns before a new file is committed,
+storage/checkpoint/resume JSON are ignored, and the coverage floor is 51.0%.
+The full lab now proves login-protected `/private` and sitemap-only `/orphan`.
+`1.5.0` added the operating layer around the existing detection engine. The four
 scanners remain XSS, SQLi, blind XSS and SSRF; reflection-only results remain
-`MEDIUM`. The new work closes the practical gaps found in the field audit:
-same-origin login, point-level resume, robots/sitemap discovery and standard
-finding metadata. Detection and proof rules are unchanged.
+`MEDIUM`. Detection and proof rules are unchanged.
 
 ## What changed
 
@@ -19,9 +21,12 @@ finding metadata. Detection and proof rules are unchanged.
 | Finding metadata | Severity, confidence, evidence | Adds CWE, OWASP 2021 and remediation to console, HTML, JSON, CSV (including `remediation`) and SARIF |
 | Existing guarantees | Multipart, OpenAPI paths, hidden/password opt-in, storage state, origin-aware proof | All remain in force |
 
-The `1.3.4` verification changes also remain in force: baseline-aware SQLi
-replay, server-set cookie isolation, blind script-only demotion, stored-XSS
-payload fallback, safe-method-only retries and the 47.0% coverage floor.
+`1.5.1` adds atomic checkpoint temp files with mode `0600`, the `--resume`
+session-material warning, session-artifact ignore rules, the 51.0% floor, and
+login/sitemap proof for `/private` and `/orphan`. The `1.3.4` verification
+changes also remain in force: baseline-aware SQLi replay, server-set cookie
+isolation, blind script-only demotion, stored-XSS payload fallback and
+safe-method-only retries.
 
 ## Gates
 
@@ -39,25 +44,25 @@ Results on Windows 11 / Python 3.14.6:
 - `mypy`: pass, 41 source files.
 - default tests: **177 discovered, 166 pass, 11 opt-in tests skipped**.
 - Chromium integration: **10/10**.
-- full lab: **38/38 verified**, 22 confirmed, 16 replayed, 0 unverified, 0 errors,
-  23 pages, 32 points; 13 `CRITICAL`, 23 `HIGH`, 2 `MEDIUM`;
-  21 XSS, 16 SQLI, 1 SSRF.
-- default branch coverage: **51.3%** (5,835 statements); the CI floor remains
-  **47.0%**.
+- full lab: **40/40 verified**, 24 confirmed, 16 replayed, 0 unverified, 0 errors,
+  25 pages, 34 points; 13 `CRITICAL`, 25 `HIGH`, 2 `MEDIUM`;
+  23 XSS, 16 SQLI, 1 SSRF; 1174 requests, 275.2 s.
+- default branch coverage: **51.3%** (5,837 statements); the CI floor is
+  **51.0%**.
 
 Coverage of the new and touched paths:
 
-| Module | 1.5.0 |
+| Module | 1.5.1 |
 |---|---:|
 | `auth.py` | 73.3% |
-| `checkpoint.py` | 77.4% |
+| `checkpoint.py` | 77.6% |
 | `discovery.py` | 65.8% |
 | `models.py` | 95.1% |
 | `sarif.py` | 93.1% |
 | `formdata.py` | 68.1% |
 | `storage.py` | 72.4% |
 | `scope.py` | 75.5% |
-| `net.py` | 76.2% |
+| `net.py` | 76.5% |
 | `browser.py` | 16.1% (integration is separate) |
 | `blind.py` | 85.9% |
 | `stored.py` | 90.7% |
@@ -67,7 +72,7 @@ Coverage of the new and touched paths:
 | `sqli.py` | 8.7% (full-lab path is separate) |
 
 The default suite still does not launch Chromium; the two opt-in jobs remain
-the release gate for browser execution and the 38-case lab.
+the release gate for browser execution and the 40-case lab.
 
 ## Public evidence
 
@@ -93,6 +98,8 @@ The full comparison is in [`COMPARISON.md`](COMPARISON.md).
 
 Raw evidence: [`firing-range-1.5.0.json`](evidence/firing-range-1.5.0.json),
 [`altoro-1.5.0.json`](evidence/altoro-1.5.0.json),
+[`local-lab-1.5.1.json`](evidence/local-lab-1.5.1.json),
+[`local-lab-1.5.1.sarif`](evidence/local-lab-1.5.1.sarif),
 [`local-lab-1.5.0.json`](evidence/local-lab-1.5.0.json) and
 [`local-lab-1.5.0.sarif`](evidence/local-lab-1.5.0.sarif). The 1.4.0 public JSON
 stays as history.
@@ -120,16 +127,22 @@ stays as history.
   opt-in. CI runs those tests separately.
 - `sqli.py` is exercised end-to-end by the full lab; the focused unit suite only
   covers its simpler helpers.
-- The 38-case lab includes the new proof paths `/csrf`, `/upload`, `/api/form`
-  and `/api/path/{id}`. Restart the lab before repeating it because profile,
-  guestbook and blind state live in memory.
+- The 40-case lab includes `/private` (login token + `sid` session, root link
+  visible only after login) and `/orphan` (robots/sitemap only, no HTML link),
+  plus the earlier `/csrf`, `/upload`, `/api/form` and `/api/path/{id}` paths.
+  Restart the lab before repeating it because profile, guestbook and blind state
+  live in memory.
+- With `--login`, the lab uses `127.0.0.2:8777` for OOB. Chromium cookies ignore
+  ports, so the route guard would correctly block a same-host callback carrying
+  `sid`; the test uses a different loopback host instead of weakening the guard.
 
 ## الخلاصة
 
-`1.5.0` يضيف طبقة التشغيل حول محرك الكشف نفسه: تسجيل دخول من نفس الأصل مع
-حفظ CSRF، واستكمال مرحلة النقاط من checkpoint، وبذور robots/sitemap، وتصنيف
-CWE/OWASP/الإصلاح في كل مخرج. لا تتغير قاعدة الإثبات: الانعكاس وحده `MEDIUM`.
+`1.5.1` يصلّب ملفات checkpoint بمود `0600`، ويحذر أن ملف `--resume` مادة جلسة،
+ويستثني ملفات الجلسة من Git، ويرفع أرضية التغطية إلى 51.0%. يضيف المختبر
+الكامل `/private` المحمي بالدخول و`/orphan` القادم من sitemap. لا تتغير قاعدة
+الإثبات: الانعكاس وحده `MEDIUM`.
 الاختبارات 177 مكتشفاً (166 ينجح، 11 اختيارياً)، Chromium 10/10، المختبر
-الكامل 38/38 في 261.0 ثانية، والتغطية 51.3% فوق أرضية 47.0%. الدليل العام
-الجديد من 1.5.0: Firing Range نتيجة `HIGH` مؤكدة في 12 طلباً و18.0 ثانية،
-وAltoro نتيجة `HIGH` مؤكدة في 11 طلباً و13.6 ثانية، بلا أخطاء.
+الكامل 40/40 في 275.2 ثانية، والتغطية 51.3% فوق أرضية 51.0%. الدليل العام من
+1.5.0 باقٍ: Firing Range نتيجة `HIGH` مؤكدة في 12 طلباً و18.0 ثانية، وAltoro
+نتيجة `HIGH` مؤكدة في 11 طلباً و13.6 ثانية، بلا أخطاء.

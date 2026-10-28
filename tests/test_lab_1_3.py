@@ -25,6 +25,8 @@ from sv1lib import browser as browser_mod
 ROOT = Path(__file__).resolve().parent.parent
 PORT = 8099
 BASE = f"http://127.0.0.1:{PORT}/"
+LAB_USER = "sv1operator"
+LAB_PASSWORD = "sv1-lab-password"
 
 
 def _ready(url: str, timeout: float = 12.0) -> bool:
@@ -100,7 +102,16 @@ class FullLabAcceptanceTests(unittest.TestCase):
             "--blind",
             "--blind-visit",
             BASE + "blind-admin",
+            "--oob",
+            "http://127.0.0.2:8777",
+            "--oob-bind",
+            "127.0.0.2:8777",
             "--ssrf",
+            "--sitemap",
+            "--login",
+            BASE + "login",
+            "--login-check",
+            "private",
             "--scope",
             str(self.scope),
             "--db",
@@ -118,9 +129,13 @@ class FullLabAcceptanceTests(unittest.TestCase):
             "--artifacts",
             str(artifacts),
         ]
+        env = dict(os.environ)
+        env["SV1_USERNAME"] = LAB_USER
+        env["SV1_PASSWORD"] = LAB_PASSWORD
         result = subprocess.run(
             command,
             cwd=str(ROOT),
+            env=env,
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -135,19 +150,21 @@ class FullLabAcceptanceTests(unittest.TestCase):
         findings = data.get("findings") or []
         stats = data.get("stats") or {}
         counts = data.get("counts") or {}
-        self.assertEqual(len(findings), 38)
-        self.assertEqual(stats.get("verified"), 38)
+        self.assertEqual(len(findings), 40)
+        self.assertEqual(stats.get("verified"), 40)
+        self.assertEqual(stats.get("confirmed"), 24)
+        self.assertEqual(stats.get("replayed"), 16)
         self.assertEqual(stats.get("unverified"), 0)
         self.assertEqual(stats.get("errors"), 0)
-        self.assertEqual(stats.get("pages"), 23)
-        self.assertEqual(stats.get("points"), 32)
+        self.assertEqual(stats.get("pages"), 25)
+        self.assertEqual(stats.get("points"), 34)
         self.assertEqual(counts.get("by_severity"), {
             "CRITICAL": 13,
-            "HIGH": 23,
+            "HIGH": 25,
             "MEDIUM": 2,
         })
         self.assertEqual(counts.get("by_type"), {
-            "XSS": 21,
+            "XSS": 23,
             "SQLI": 16,
             "SSRF": 1,
         })
@@ -177,8 +194,15 @@ class FullLabAcceptanceTests(unittest.TestCase):
             if path == "/api/path/{id}":
                 self.assertNotIn("{id}", finding["curl"])
 
+        for path in ("/private", "/orphan"):
+            finding = by_url.get(BASE.rstrip("/") + path)
+            self.assertIsNotNone(finding, path)
+            self.assertEqual(finding["kind"], "XSS", path)
+            self.assertEqual(finding["severity"], "HIGH", path)
+            self.assertEqual(finding["confidence"], "CONFIRMED", path)
+
         sarif_data = json.loads(sarif.read_text(encoding="utf-8"))
-        self.assertEqual(len(sarif_data["runs"][0]["results"]), 38)
+        self.assertEqual(len(sarif_data["runs"][0]["results"]), 40)
         self.assertTrue(html.is_file())
 
 

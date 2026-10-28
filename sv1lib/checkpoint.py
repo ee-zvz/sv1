@@ -9,10 +9,9 @@ is still pending.
 The file is JSON and is written atomically. It contains request templates and
 findings, so treat it as sensitive: imported header/cookie points can carry
 session material and reproduction commands can contain the live cookie. It does
-not store login passwords or the operator's CLI credential arguments. Session
-cookies are not stored either: an authenticated scan must be resumed with the
-same ``--login`` options so the next run rebuilds the session before it sends
-pending payloads.
+not store login passwords or the operator's CLI credential arguments. The cookie
+jar is not serialized, but header points and curl commands may carry cookies, so
+the file is session material, not a progress-only record.
 """
 
 from __future__ import annotations
@@ -135,7 +134,12 @@ def save(path: str, target: str, points: list[InjectionPoint],
     }
     temporary = f"{path}.{os.getpid()}.tmp"
     try:
-        with open(temporary, "w", encoding="utf-8") as handle:
+        descriptor = os.open(
+            temporary,
+            os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+            0o600,
+        )
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
             json.dump(payload, handle, ensure_ascii=False, indent=2, default=str)
         os.replace(temporary, path)
     except (OSError, TypeError, ValueError):

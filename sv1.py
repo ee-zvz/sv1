@@ -882,6 +882,7 @@ def run(args: argparse.Namespace) -> int:
             report.info(f"resume  {checkpoint_mod.summary(snapshot)}")
         else:
             report.info(f"resume  no checkpoint yet; writing {os.path.abspath(args.resume)}")
+            report.warn("resume  file may contain session material; do not commit it")
 
     if login_action and not args.login_attack:
         before = len(points)

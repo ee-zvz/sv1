@@ -6,6 +6,7 @@ import html
 import json
 import random
 import re
+import secrets
 import string
 import sys
 import time
@@ -54,6 +55,19 @@ GUESTBOOK: list[tuple[str, str]] = []
 BLIND: list[str] = []
 PROFILE: dict[str, str] = {"name": "guest"}
 CSRF_TOKEN = "sv1-csrf-token"
+LOGIN_TOKEN = "sv1-login-token"
+LOGIN_USER = "sv1operator"
+LOGIN_PASSWORD = "sv1-lab-password"
+SESSIONS: set[str] = set()
+
+
+def _session_id(cookie_header: str) -> str:
+    """Return a valid sid from a Cookie header, or an empty string."""
+    for part in (cookie_header or "").split(";"):
+        name, _, value = part.strip().partition("=")
+        if name == "sid" and value in SESSIONS:
+            return value
+    return ""
 
 
 def _looks_sql(value: str) -> bool:
@@ -246,7 +260,68 @@ class Handler(BaseHTTPRequestHandler):
         query = parse_qs(parts.query, keep_blank_values=True)
 
         if parts.path == "/":
-            self._send(INDEX)
+            body = INDEX
+            if _session_id(self.headers.get("Cookie", "")):
+                body = body.replace(
+                    '  <p><a href="/blind">blind</a></p>',
+                    '  <p><a href="/private?q=hello">private</a></p>\n'
+                    '  <p><a href="/blind">blind</a></p>',
+                )
+            self._send(body)
+            return
+
+        if parts.path == "/login":
+            self._send(
+                "<html><body><h1>login</h1>"
+                "<form method='post' action='/login'>"
+                f"<input type='hidden' name='csrf' value='{LOGIN_TOKEN}'>"
+                "<input type='text' name='username' value=''>"
+                "<input type='password' name='password' value=''>"
+                "<button type='submit'>sign in</button>"
+                "</form></body></html>"
+            )
+            return
+
+        if parts.path == "/private":
+            if not _session_id(self.headers.get("Cookie", "")):
+                self._send(
+                    "<html><body><h1>login required</h1></body></html>",
+                    403,
+                )
+                return
+            term = query.get("q", [""])[0]
+            self._send(
+                "<html><body><h1>private</h1>"
+                f"<div>{term}</div></body></html>"
+            )
+            return
+
+        if parts.path == "/robots.txt":
+            host = self.headers.get("Host") or f"127.0.0.1:{PORT}"
+            self._send(
+                "User-agent: *\nDisallow:\n"
+                f"Sitemap: http://{host}/sitemap.xml\n",
+                content_type="text/plain; charset=utf-8",
+            )
+            return
+
+        if parts.path == "/sitemap.xml":
+            host = self.headers.get("Host") or f"127.0.0.1:{PORT}"
+            self._send(
+                '<?xml version="1.0" encoding="UTF-8"?>'
+                '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+                f"<url><loc>http://{host}/orphan?q=hello</loc></url>"
+                "</urlset>",
+                content_type="application/xml; charset=utf-8",
+            )
+            return
+
+        if parts.path == "/orphan":
+            term = query.get("q", [""])[0]
+            self._send(
+                "<html><body><h1>orphan</h1>"
+                f"<div>{term}</div></body></html>"
+            )
             return
 
         if parts.path == "/search":                       # reflective xss + sqli error
@@ -665,6 +740,29 @@ class Handler(BaseHTTPRequestHandler):
             data = parse_qs(body, keep_blank_values=True)
         name = data.get("name", [""])[0]
         message = data.get("message", [""])[0]
+
+        if path == "/login":
+            token = data.get("csrf", [""])[0]
+            username = data.get("username", [""])[0]
+            password = data.get("password", [""])[0]
+            if (
+                token != LOGIN_TOKEN
+                or username != LOGIN_USER
+                or password != LOGIN_PASSWORD
+            ):
+                self._send(
+                    "<html><body><h1>denied</h1><p>login refused</p></body></html>",
+                    403,
+                )
+                return
+            session = secrets.token_urlsafe(24)
+            SESSIONS.add(session)
+            self.send_response(302)
+            self.send_header("Location", "/private")
+            self.send_header("Set-Cookie", f"sid={session}; Path=/; HttpOnly")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
 
         if path == "/csrf":
             token = data.get("csrf", [""])[0]
