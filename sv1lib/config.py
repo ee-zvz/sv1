@@ -160,6 +160,11 @@ BLIND_VISIT_WAIT = 3.0          # callback wait when a local admin visit exists
 BLIND_MAX_VISITS = 3            # admin pages opened after seeding
 SSRF_MAX_POINTS = 15            # url-like points probed per run
 
+# --- sitemap discovery -----------------------------------------------------
+SITEMAP_MAX_BYTES = 2_000_000   # one sitemap body read cap
+SITEMAP_MAX_FILES = 3           # sitemap documents read per run
+SITEMAP_MAX_URLS = 100          # seeds added from sitemaps
+
 # --- history / CI ----------------------------------------------------------
 HISTORY_SCHEMA_VERSION = 1
 FAIL_ON_CHOICES = ("any", "none", "low", "medium", "high", "critical")
@@ -168,6 +173,7 @@ FAIL_ON_CHOICES = ("any", "none", "low", "medium", "high", "critical")
 CSV_FIELDS = (
     "severity", "kind", "url", "method", "param",
     "payload", "confidence", "technique", "evidence", "curl",
+    "cwe", "owasp", "remediation",
 )
 
 SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}

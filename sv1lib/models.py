@@ -139,9 +139,31 @@ class Explore:
     requests: list[CapturedRequest] = field(default_factory=list)
 
 
+FINDING_META = {
+    "XSS": (
+        "CWE-79",
+        "A03:2021 Injection",
+        "Encode output for the exact HTML, attribute, URL or JavaScript context; "
+        "use a framework auto-escaper and a restrictive Content-Security-Policy.",
+    ),
+    "SQLI": (
+        "CWE-89",
+        "A03:2021 Injection",
+        "Use parameterized queries or prepared statements; never concatenate "
+        "request data into SQL, and validate the type before the query.",
+    ),
+    "SSRF": (
+        "CWE-918",
+        "A10:2021 Server-Side Request Forgery",
+        "Allowlist destination schemes, hosts and ports; resolve and re-check "
+        "after redirects, and block link-local/cloud metadata ranges.",
+    ),
+}
+
+
 @dataclass
 class Finding:
-    kind: str                   # "XSS" | "SQLI"
+    kind: str                   # "XSS" | "SQLI" | "SSRF"
     severity: str               # CRITICAL | HIGH | MEDIUM | LOW | INFO
     url: str
     method: str
@@ -155,6 +177,20 @@ class Finding:
     curl: str = ""              # exact reproduction command
     data: dict[str, str] = field(default_factory=dict)  # dumped values (user/db/tables)
     alternatives: list[str] = field(default_factory=list)  # other confirmed payloads
+    cwe: str = ""
+    owasp: str = ""
+    remediation: str = ""
+
+    def __post_init__(self) -> None:
+        meta = FINDING_META.get((self.kind or "").upper())
+        if meta is None:
+            return
+        if not self.cwe:
+            self.cwe = meta[0]
+        if not self.owasp:
+            self.owasp = meta[1]
+        if not self.remediation:
+            self.remediation = meta[2]
 
     def to_row(self) -> dict[str, Any]:
         return {
@@ -168,6 +204,9 @@ class Finding:
             "technique": self.technique,
             "evidence": self.evidence.replace("\n", " ")[:400],
             "curl": self.curl,
+            "cwe": self.cwe,
+            "owasp": self.owasp,
+            "remediation": self.remediation,
         }
 
     def to_dict(self) -> dict[str, Any]:

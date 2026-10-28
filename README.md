@@ -7,11 +7,13 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.4.0` keeps the real-application inputs
-introduced in `1.3.0` and closes the deferred P1 gaps: HAR and raw HTTP request
-import, nested JSON and raw bodies, XHR/fetch POST capture, same-origin external
-JavaScript analysis, nested OpenAPI bodies, multipart text fields, OpenAPI path
-parameters, hidden/password opt-in, and target-scoped Playwright storage state.
+SQLite session history. Release `1.5.0` adds the real-world operating layer:
+same-origin form login with CSRF preservation, resumable point scans, robots and
+sitemap discovery, and CWE/OWASP/remediation metadata in every output. It keeps
+the `1.4.0` real-application inputs: HAR and raw HTTP request import, nested JSON
+and raw bodies, XHR/fetch POST capture, same-origin external JavaScript analysis,
+nested OpenAPI bodies, multipart text fields, OpenAPI path parameters,
+hidden/password opt-in, and target-scoped Playwright storage state.
 Reflection alone stays `MEDIUM`; `HIGH` needs execution.
 `1.3.1` added exact dependency pins, a `pyproject.toml`, a full-lab CI gate, and
 replay-enabled Altoro evidence. `1.3.2` added one version source, ruff/mypy and
@@ -24,7 +26,10 @@ cross-origin request bodies, canonicalizes scope paths and IPv6, imports the
 live HTTP session into Chromium, and refreshes the build dependencies. `1.4.0`
 adds multipart points and browser replay, OpenAPI path injection, preserved
 hidden/password form fields with explicit opt-in, session-aware curl, and
-`--storage-state` / `--save-storage-state` for authenticated scans.
+`--storage-state` / `--save-storage-state` for authenticated scans. `1.5.0`
+adds `--login` / `--login-check`, checkpointed `--resume`, `--sitemap` seeds,
+and CWE/OWASP/remediation metadata across console, HTML, JSON, CSV and SARIF.
+The field audit is in [`docs/IMPROVEMENTS.md`](docs/IMPROVEMENTS.md).
 
 A vulnerability scanner for **XSS**, **SQL Injection**, **Blind XSS** and **SSRF**
 written in Python, running on Windows 11. On start it prints an animated banner
@@ -113,6 +118,15 @@ python sv1.py -u <URL> [options]
 | `--request FILE` | Import one raw HTTP request file (method, path, headers, body) |
 | `--storage-state FILE` | Load target-scoped Playwright cookies + localStorage |
 | `--save-storage-state FILE` | Write target-scoped browser state after the scan |
+| `--login [URL]` | Log in through a same-origin POST form before crawling; no URL means the target |
+| `--username USER` | Login username, or use `SV1_USERNAME` |
+| `--password PASS` | Login password, or use `SV1_PASSWORD` (preferred) |
+| `--login-user-field NAME` | Explicit username input name |
+| `--login-pass-field NAME` | Explicit password input name |
+| `--login-check TEXT` | Require this text in the post-login response |
+| `--login-attack` | Also fuzz the login form username field (off by default) |
+| `--sitemap` | Seed the crawl from `robots.txt` and same-origin sitemaps |
+| `--resume FILE` | Resume a point scan from an atomic checkpoint file |
 | `--hidden-fields` | Probe hidden form inputs too (values are preserved by default) |
 | `--password-fields` | Probe password inputs too (off by default) |
 | `--external-js` | Read same-origin external scripts for DOM source/sink analysis |
@@ -173,6 +187,19 @@ python sv1.py -u https://site.tld --har session.har --xss --sqli
 
 # One raw HTTP request, including its body and headers
 python sv1.py -u https://site.tld --request request.txt
+
+# Login once, then crawl only the authenticated surface
+$env:SV1_USERNAME = "operator"
+$env:SV1_PASSWORD = "correct horse battery staple"
+python sv1.py -u https://app.tld/dashboard --login https://app.tld/login `
+  --login-check "Sign out" --crawl --xss --sqli
+
+# Seed a crawl from robots.txt / sitemap.xml
+python sv1.py -u https://site.tld --crawl --sitemap
+
+# Resume the point pass after an interruption
+python sv1.py -u https://site.tld --crawl --xss --sqli --resume scan.json
+python sv1.py -u https://site.tld --crawl --xss --sqli --resume scan.json
 
 # Raw body template: only the first * becomes the payload
 python sv1.py -u https://site.tld/api/search --method POST `
@@ -249,6 +276,36 @@ the `--fail-on` threshold, `2` = the target did not respond or a file could not 
 - **Honest severity.** Reflected XSS starts at `MEDIUM` in the scan output.
   Chromium promotion to `HIGH`/`CONFIRMED` happens only after the marker executes.
   A JSON or XHR reflection stays `MEDIUM` until Chromium proves an executable path.
+
+### Login, resume and discovery (1.5.0)
+
+- **Login is a real request, not a token paste.** `--login URL` finds a
+  same-origin POST form with a password field, preserves hidden CSRF values and
+  submits the supplied credentials once. The live HTTP jar is then imported into
+  Chromium, so browser proof runs inside the authenticated session. A missing
+  password or a failed check exits `2`; the scanner does not silently continue
+  anonymously.
+- **The login form is not attacked by default.** Fuzzing the username field can
+  lock an account, so it is removed from the point set and from the stored/blind/
+  second-order form passes unless `--login-attack` is explicit. Use
+  `--login-check TEXT` for a reliable success test. If `--scope` is active, the
+  login URL must also be inside it. Use `--storage-state` / HAR for OAuth, SSO,
+  JavaScript-only login or MFA.
+- **Progress is durable.** `--resume FILE` writes an atomic JSON checkpoint after
+  every completed point. A second run validates the target and material scan/
+  point options, skips the completed keys and restores prior findings; browser
+  proof is revalidated in the new session. The browser, DOM, stored, blind and
+  replay phases still run because they depend on the live page and callbacks.
+  Cookies are not stored in the checkpoint, so
+  resume an authenticated scan with the same `--login` options; the checkpoint
+  refuses to mix an authenticated and an anonymous run. This is point-level
+  resume, not an async distributed engine.
+- **Sitemaps add seeds, not permissions.** `--sitemap` reads `robots.txt`, follows
+  up to three same-origin sitemap files (one index hop), skips assets and refuses
+  external hosts. The normal page cap, depth, scope and form parser still apply.
+- **Findings are ticket-ready.** XSS/SQLI/SSRF carry CWE, OWASP 2021 and a short
+  remediation. They appear in the console, HTML, JSON, CSV and SARIF. Severity is
+  unchanged.
 
 ### Form fidelity and authenticated state (1.4.0)
 
@@ -458,8 +515,9 @@ python sv1.py -u https://site.tld --crawl --db sv1.db --diff
 8x, honours a numeric `Retry-After` (capped at 30s), and recovers gradually
 after 20 healthy responses. `--rps 0` stays unlimited.
 
-> 1.5.0 later: async engine on `httpx` and `--resume`.
-> Release 1.4.0 checks redirect scope hop by hop, refuses cross-origin request
+> 1.5.0 ships same-origin login, point-level `--resume`, sitemap seeds and
+> CWE/OWASP/remediation metadata. The async engine remains deferred to 1.6.0.
+> Release 1.5.0 keeps redirect scope hop by hop, refuses cross-origin request
 > bodies, canonicalizes scope paths and IPv6, isolates session headers and
 > cookies on the target origin, imports the live HTTP session into Chromium,
 > and keeps server-set cookie isolation, baseline-aware SQLi replay, HAR/raw
@@ -717,33 +775,38 @@ Public, intentionally vulnerable demo targets only. Raw evidence and the exact
 commands: [`docs/REALWORLD.md`](docs/REALWORLD.md). The same-target comparison
 against dalfox and sqlmap is in [`docs/COMPARISON.md`](docs/COMPARISON.md).
 
-Live-site validation: **6 runs, 78 pages, 51 injection points, 607 requests,
-61 findings, 61/61 verified, 0 errors**. Automated tests: **165 discovered,
-154 pass by default, 11 opt-in tests skipped; the Chromium integration tests and
+Live-site validation: **8 runs, 80 pages, 53 injection points, 630 requests,
+63 findings, 63/63 verified, 0 errors**. Automated tests: **177 discovered,
+166 pass by default, 11 opt-in tests skipped; the Chromium integration tests and
 the full-lab acceptance test run in CI**.
 
 | Target | Scope | Result |
 |---|---|---|
+| Google Firing Range, reflected attribute, 1.5.0 | one GET parameter | **1 HIGH confirmed** XSS; 12 requests, 18.0 s, 0 errors |
+| Altoro Mutual search, 1.5.0 | one GET parameter, expired TLS | **1 HIGH confirmed** XSS; 11 requests, 13.6 s, 0 errors |
 | Google Firing Range, reflected attribute, 1.4.0 | one GET parameter | **1 HIGH confirmed** XSS; 12 requests, 18.4 s, 0 errors |
 | Altoro Mutual search, 1.4.0 | one GET parameter, expired TLS | **1 HIGH confirmed** XSS; 35 requests, 35.0 s, 0 errors |
 | Google Firing Range, reflected, 1.2.1 | 49 pages, 47 points | 42 findings — **40 HIGH** confirmed in Chromium, 2 MEDIUM; replay 42/42, 0 unstable |
 | Google Firing Range, DOM, 1.2.0 | 25 pages crawled, 20 rendered | **15 HIGH** DOM findings, 0 errors |
 | Altoro Mutual search, 1.3.1 | one GET parameter | **1 HIGH** reflected XSS, confirmed; replay 1/1 |
 | Firing Range, HAR import, 1.3.1 | one imported GET point | **1 HIGH** confirmed; replay 1/1 |
-| Local lab, 1.4.0 | full coverage incl. multipart/path/storage/CSRF | **38/38** findings, 0 unstable; 1099 requests, 262.8 s |
+| Local lab, 1.5.0 | full coverage incl. multipart/path/storage/CSRF | **38/38** findings, 0 unstable; 1099 requests, 261.0 s |
+| Local lab, 1.4.0 | retained baseline | **38/38** findings, 0 unstable; 1099 requests, 262.8 s |
 
-The two fresh 1.4.0 public runs are focused one-parameter checks: Firing Range
+The two fresh 1.5.0 public runs are focused one-parameter checks: Firing Range
 reflected attribute and Altoro search, each `HIGH` confirmed with an executed
-Chromium marker. The older reflected Firing Range (1.2.1), DOM (1.2.0), Altoro
-(1.3.1) and HAR (1.3.1) runs are retained for history. The two `MEDIUM` cases in
+Chromium marker. The older 1.4.0 public pair and the reflected Firing Range
+(1.2.1), DOM (1.2.0), Altoro (1.3.1) and HAR (1.3.1) runs are retained for
+history. The two `MEDIUM` cases in
 the retained Firing Range corpus are `/url/css_import` (a stylesheet `<link>`
 cannot execute `javascript:` in current Chromium) and `/url/object_data`
 (pinned to the removed Flash type); they stay reflection-only.
 
-The 1.4.0 lab acceptance run: 38/38 verified (22 confirmed in the browser or
+The 1.5.0 lab acceptance run: 38/38 verified (22 confirmed in the browser or
 OOB, 16 replayed over HTTP), 0 unstable — CRITICAL 13 / HIGH 23 / MEDIUM 2,
-23 pages, 32 points, 1099 requests, 262.8 s, 0 errors. Evidence:
-[`docs/evidence/local-lab-1.4.0.json`](docs/evidence/local-lab-1.4.0.json). The
+23 pages, 32 points, 1099 requests, 261.0 s, 0 errors. Evidence:
+[`docs/evidence/local-lab-1.5.0.json`](docs/evidence/local-lab-1.5.0.json) and
+[`local-lab-1.5.0.sarif`](docs/evidence/local-lab-1.5.0.sarif). The
 run uses `--scope 127.0.0.1:8099` and therefore exercises the redirect and
 browser guards. The new proof paths are `/csrf` (hidden token + target Origin),
 `/upload` and `/api/form` (multipart), and `/api/path/{id}` (OpenAPI path).
@@ -751,8 +814,8 @@ browser guards. The new proof paths are `/csrf` (hidden token + target Origin),
 `FormData`. The 1.3.4 run (31/31, 1012 requests, 240.2 s) remains in
 [`docs/evidence/local-lab-1.3.4.json`](docs/evidence/local-lab-1.3.4.json).
 
-External comparison on the same SQLite target and day: SV1 1.4.0 confirmed 3 XSS
-and 2 SQLi in 221 requests and 49.2 s, dalfox 3.2.4 confirmed 3 XSS, sqlmap
+External comparison on the same SQLite target and day: SV1 1.5.0 confirmed 3 XSS
+and 2 SQLi in 221 requests and 49.1 s, dalfox 3.2.4 confirmed 3 XSS, sqlmap
 1.10.10.27#dev confirmed 2 SQLi; all reported zero false positives. SV1 added
 two explicit reflection-only `MEDIUM` notes. The specialists are faster in their
 lanes; SV1 costs more because it crawls, covers both classes and proves
@@ -775,6 +838,9 @@ sv1/
 │   ├── imports.py      HAR / raw HTTP request import
 │   ├── formdata.py     multipart/form-data text-field parser
 │   ├── storage.py      target-scoped Playwright storage state
+│   ├── auth.py         same-origin login form bootstrap
+│   ├── checkpoint.py   atomic point-scan checkpoint / resume
+│   ├── discovery.py    robots.txt + sitemap seed discovery
 │   ├── identity.py     stable finding fingerprint (history/SARIF)
 │   ├── history.py      SQLite: sessions, findings, diff, retest
 │   ├── scope.py        host/path allowlist
@@ -954,9 +1020,9 @@ note    database error surfaced (MySQL) - error based injection
   bodies up to 200 KB. Multipart POST bodies are skipped. Requires Chromium;
   skipped with `--no-browser`.
 - `--openapi`: JSON only (export YAML to JSON), reads `servers[0]` and `paths`,
-  does not inject `{param}` inside the path, capped at 80 points and 6 fields per
-  operation. JSON bodies are flattened to scalar leaves; form/multipart bodies
-  remain top-level.
+  turns `{param}` path placeholders into points, and is capped at 80 points and
+  6 fields per operation. JSON bodies are flattened to scalar leaves;
+  form/multipart bodies remain top-level.
 - `--har`/`--request`: same-origin session material only; cookies and headers are
   static from the file. A rotating CSRF token or short-lived session needs a fresh
   capture/proxy. Imported values are not printed to the console.
@@ -986,7 +1052,21 @@ note    database error surfaced (MySQL) - error based injection
 - WAF/flood protection can flip results. Lower `--rps` when needed.
 - Time-based scanning is slow by nature: every payload waits several seconds.
 - `--stored`, `--second-order` and `--blind` write data to the target.
-- Pages behind a login need `--cookie` or `-H` (the browser uses the same cookies).
+- `--login` supports a single same-origin POST form with a password field and
+  preserves hidden CSRF values. The login URL must be inside `--scope` when a
+  scope file is used. OAuth, SSO, JavaScript-only login and MFA need
+  `--storage-state`, a HAR, or a browser-recorded sequence. Login credentials
+  are not written to reports, history or checkpoints; use `SV1_PASSWORD` rather
+  than `--password` so the value is not visible in the process list.
+- `--resume` checkpoints the point pass only. The browser/DOM, stored, blind and
+  replay phases run again after a restart. Cookies are not stored, so resume an
+  authenticated scan with the same `--login` options. A checkpoint is sensitive
+  local state: it can contain imported session headers, cookies and curl commands.
+- `--sitemap` follows at most three same-origin sitemap files and one index hop.
+  Gzipped sitemap archives are not unpacked; submit URLs directly or use
+  `--openapi`/`--request` instead.
+- The async `httpx` engine is still deferred; the current engine is a bounded
+  thread pool with adaptive rate limiting.
 - `--scope` defines scan, redirect and top-level navigation targets. SPA pages
   may still load external assets while rendering, but those requests do not get
   the operator's headers or cookies; it is not a network wall.
@@ -994,8 +1074,7 @@ note    database error surfaced (MySQL) - error based injection
   SSRF, Stored, DOM and UNION need a browser or a full extraction, so they are
   skipped. The latest session for the same `-u` is the reference.
 - `--db` has no automatic pruning; delete the file or archive old sessions manually.
-- `--resume` and the async engine (`httpx`) are deferred to 1.5.0. Curl
-  reproduction is included since 1.2.0.
+- Curl reproduction is included since 1.2.0.
 
 ---
 
@@ -1005,10 +1084,12 @@ MIT — see `LICENSE`.
 
 ## Version
 
-`1.4.0` — current public release. It keeps real-application inputs: HAR/raw HTTP
-request import, nested JSON and raw bodies, XHR/fetch POST capture, external
-same-origin JavaScript analysis, nested OpenAPI bodies, exact dependency pins, a
-`pyproject.toml`, and a full-lab Playwright CI gate. `1.3.3` added redirect-wide
+`1.5.0` — current public release. It adds same-origin login, resumable point
+scans, sitemap discovery and CWE/OWASP/remediation metadata while keeping the
+real-application inputs: HAR/raw HTTP request import, nested JSON and raw bodies,
+XHR/fetch POST capture, external same-origin JavaScript analysis, nested OpenAPI
+bodies, exact dependency pins, a `pyproject.toml`, and a full-lab Playwright CI
+gate. `1.3.3` added redirect-wide
 scope enforcement, session-header isolation in HTTP and Chromium, imported-cookie
 isolation and split confirmed/replayed counters. `1.3.4` added server-set cookie
 isolation, baseline-aware SQLi replay, blind script-only demotion, stored-XSS
@@ -1017,4 +1098,6 @@ payload fallback, safe-method-only transport retries, and a 47.0% coverage floor
 syncs the live HTTP cookie jar into Chromium, and refreshes the build pins.
 `1.4.0` adds multipart text points and browser proof, OpenAPI path parameters,
 hidden/password opt-in, target-scoped storage state, and session-aware curl.
-Reflection alone remains `MEDIUM`. Change details in `CHANGELOG.md`.
+`1.5.0` adds login bootstrap, resumable point checkpoints, sitemap seeds and
+standard weakness metadata. Reflection alone remains `MEDIUM`. Change details in
+`CHANGELOG.md`; the field audit is in `docs/IMPROVEMENTS.md`.

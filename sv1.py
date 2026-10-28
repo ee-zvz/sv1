@@ -22,8 +22,10 @@ if sys.version_info < (3, 10):
     sys.stderr.write("SV1 needs Python 3.10 or newer\n")
     raise SystemExit(2)
 
-from sv1lib import banner, blind, config, crawl, domxss, hidden, imports as imports_mod, jsparse, net, oob, openapi, report, spa, sqli, ssrf
+from sv1lib import auth, banner, blind, config, crawl, discovery, domxss, hidden
+from sv1lib import imports as imports_mod, jsparse, net, oob, openapi, report, spa, sqli, ssrf
 from sv1lib import browser as browser_mod
+from sv1lib import checkpoint as checkpoint_mod
 from sv1lib import history as history_mod
 from sv1lib import policy, sarif, scope as scope_mod
 from sv1lib import secondorder, storage, stored, verify, xss
@@ -118,6 +120,24 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
                         help="playwright storage-state json (target cookies + localStorage)")
     parser.add_argument("--save-storage-state", default="", metavar="FILE",
                         help="write target-scoped browser state after the scan")
+    parser.add_argument("--login", nargs="?", const="auto", default="", metavar="URL",
+                        help="log in through a same-origin form before crawling (auto = target)")
+    parser.add_argument("--username", default=os.environ.get("SV1_USERNAME", ""),
+                        help="login username (or set SV1_USERNAME)")
+    parser.add_argument("--password", default=os.environ.get("SV1_PASSWORD", ""),
+                        help="login password (prefer SV1_PASSWORD over argv)")
+    parser.add_argument("--login-user-field", default="", metavar="NAME",
+                        help="explicit username input name")
+    parser.add_argument("--login-pass-field", default="", metavar="NAME",
+                        help="explicit password input name")
+    parser.add_argument("--login-check", default="", metavar="TEXT",
+                        help="require this text after login (recommended)")
+    parser.add_argument("--login-attack", action="store_true",
+                        help="also fuzz the username field of the login form")
+    parser.add_argument("--sitemap", action="store_true",
+                        help="seed the crawler from robots.txt and sitemap.xml")
+    parser.add_argument("--resume", default="", metavar="FILE",
+                        help="resume a point scan from a checkpoint file")
     parser.add_argument("--hidden-fields", dest="hidden_fields", action="store_true",
                         help="inject into hidden form inputs (off by default; may overwrite CSRF tokens)")
     parser.add_argument("--password-fields", dest="password_fields", action="store_true",
@@ -538,6 +558,9 @@ def run(args: argparse.Namespace) -> int:
     if args.retest and args.diff:
         report.warn("--diff is ignored during retest")
         args.diff = False
+    if args.retest and args.resume:
+        report.bad("--resume cannot be combined with --retest")
+        return 2
 
     scope_rules = None
     if args.scope:
@@ -624,6 +647,37 @@ def run(args: argparse.Namespace) -> int:
         scope=scope_rules.allows if scope_rules is not None else None,
     )
 
+    login_action = ""
+    login_ok = False
+    if args.login:
+        if not args.username or not args.password:
+            report.bad("login needs --username and --password (or SV1_USERNAME/SV1_PASSWORD)")
+            client.close()
+            if history is not None:
+                history.close()
+            return 2
+        result = auth.login(
+            client,
+            target,
+            login_url=args.login,
+            username=args.username,
+            password=args.password,
+            username_field=args.login_user_field,
+            password_field=args.login_pass_field,
+            check=args.login_check,
+        )
+        if not result.ok:
+            report.bad(f"login - {result.note}")
+            client.close()
+            if history is not None:
+                history.close()
+            return 2
+        login_ok = True
+        login_action = result.action
+        report.good(f"login   {result.note}")
+        if not args.login_check:
+            report.warn("login   pass --login-check TEXT to require a post-login marker")
+
     if args.retest:
         if history is None:
             report.bad("retest - history is not available")
@@ -638,6 +692,14 @@ def run(args: argparse.Namespace) -> int:
     pages_limit = max(1, args.pages) if args.crawl else 1
 
     report.section("recon")
+    sitemap_seeds: list[str] = []
+    if args.sitemap:
+        sitemap_seeds, sitemap_note = discovery.discover(
+            client,
+            target,
+            allows=scope_rules.allows if scope_rules is not None else None,
+        )
+        report.info(f"sitemap {sitemap_note}")
     spinner = report.Spinner("crawling").start()
     start = time.monotonic()
     pages = crawl.crawl(
@@ -646,6 +708,7 @@ def run(args: argparse.Namespace) -> int:
         pages_limit,
         depth,
         allows=scope_rules.allows if scope_rules is not None else None,
+        seeds=sitemap_seeds,
     )
     if not pages:
         response = client.fetch(target)
@@ -770,9 +833,98 @@ def run(args: argparse.Namespace) -> int:
                 + ("  ·  blind oob" if args.blind else "")
                 + ("  ·  ssrf oob" if args.ssrf else ""))
 
+    checkpoint_meta = {
+        "crawl": bool(args.crawl),
+        "depth": depth,
+        "scanners": scanners,
+        "time_based": bool(args.time_based),
+        "union": not args.no_union,
+        "dump": bool(args.dump),
+        "second_order": bool(args.second_order),
+        "blind": bool(args.blind),
+        "ssrf": bool(args.ssrf),
+        "stored": bool(args.stored),
+        "params": bool(args.params),
+        "hidden_fields": bool(args.hidden_fields),
+        "password_fields": bool(args.password_fields),
+        "login_attack": bool(args.login_attack),
+        "js": bool(args.js),
+        "spa": bool(args.spa),
+        "openapi": bool(args.openapi),
+        "login": bool(args.login),
+        "login_ok": login_ok,
+    }
+    findings: list = []
+    pairs: list[tuple] = []
+    completed: set[str] = set()
+    if args.resume:
+        if os.path.exists(args.resume):
+            try:
+                snapshot = checkpoint_mod.load(args.resume, target)
+                compatible, reason = checkpoint_mod.compatible(snapshot, checkpoint_meta)
+            except checkpoint_mod.CheckpointError as exc:
+                report.bad(f"resume - {exc}")
+                client.close()
+                if history is not None:
+                    history.close()
+                return 2
+            if not compatible:
+                report.bad(f"resume - {reason}")
+                client.close()
+                if history is not None:
+                    history.close()
+                return 2
+            snapshot_points, completed, pairs = checkpoint_mod.restore(snapshot)
+            if snapshot_points:
+                points = snapshot_points
+                stats.points = len(points)
+            findings = [finding for finding, _point in pairs]
+            report.info(f"resume  {checkpoint_mod.summary(snapshot)}")
+        else:
+            report.info(f"resume  no checkpoint yet; writing {os.path.abspath(args.resume)}")
+
+    if login_action and not args.login_attack:
+        before = len(points)
+        points = [point for point in points if not auth.skip_point(point, login_action)]
+        if len(points) != before:
+            report.info(f"login   skipped {before - len(points)} credential point(s)")
+        skipped_forms = 0
+        for page in pages:
+            kept = []
+            for form in page.forms:
+                if auth.skip_form(page.url, form, login_action):
+                    skipped_forms += 1
+                else:
+                    kept.append(form)
+            page.forms = kept
+        if skipped_forms:
+            report.info(f"login   skipped {skipped_forms} credential form(s) in later phases")
+        stats.points = len(points)
+
+    pending_points = [
+        point for point in points
+        if checkpoint_mod.key(point) not in completed
+    ]
+    if completed:
+        report.info(f"resume  {len(completed)} point(s) already complete, "
+                    f"{len(pending_points)} pending")
+
+    checkpoint_failed = False
+
+    def save_checkpoint() -> None:
+        nonlocal checkpoint_failed
+        if not args.resume or checkpoint_failed:
+            return
+        try:
+            checkpoint_mod.save(
+                args.resume, target, points, completed, pairs,
+                stats, checkpoint_meta,
+            )
+        except (OSError, TypeError, ValueError) as exc:
+            checkpoint_failed = True
+            report.warn(f"checkpoint write failed - {exc}")
+
     report.section("scan")
-    findings = []
-    pairs = []
     failures = 0
     done = 0
 
@@ -787,7 +939,7 @@ def run(args: argparse.Namespace) -> int:
                 not args.no_union,
                 args.dump,
             ): point
-            for point in points
+            for point in pending_points
         }
         try:
             for future in as_completed(futures):
@@ -797,6 +949,7 @@ def run(args: argparse.Namespace) -> int:
                     found = future.result()
                 except Exception as exc:  # a broken page must not kill the run
                     failures += 1
+                    save_checkpoint()
                     if args.verbose:
                         sys.stdout.write("\r\x1b[2K")
                         report.bad(f"{point.label()} - {exc}")
@@ -808,10 +961,12 @@ def run(args: argparse.Namespace) -> int:
                     findings.append(finding)
                     pairs.append((finding, point))
                     report.print_finding(finding, len(findings))
+                completed.add(checkpoint_mod.key(point))
+                save_checkpoint()
                 if not sys.stdout.isatty():
                     continue
                 sys.stdout.write(
-                    f"\r\x1b[2K  {report.DIM}scanning {done}/{len(points)}"
+                    f"\r\x1b[2K  {report.DIM}scanning {done}/{len(pending_points)}"
                     f"  ·  {len(findings)} finding(s){report.RESET}"
                 )
                 sys.stdout.flush()
@@ -819,9 +974,11 @@ def run(args: argparse.Namespace) -> int:
             report.warn("interrupted - reporting what finished")
             for future in futures:
                 future.cancel()
+            save_checkpoint()
 
     if sys.stdout.isatty():
         sys.stdout.write("\r\x1b[2K")
+    save_checkpoint()
 
     callback = None
     if args.blind or args.ssrf:
@@ -955,6 +1112,11 @@ def run(args: argparse.Namespace) -> int:
             if not doubles:
                 report.info("no stored value reached a query")
 
+        if pairs and args.no_verify:
+            stats.confirmed += sum(
+                1 for finding, _point in pairs
+                if finding.confidence == "CONFIRMED"
+            )
         if pairs and not args.no_verify:
             pending = [(f, p) for f, p in pairs if f.confidence != "CONFIRMED"]
             proven = len(pairs) - len(pending)
@@ -999,6 +1161,7 @@ def run(args: argparse.Namespace) -> int:
     stats.errors = client.errors + failures
     stats.finished = time.monotonic()
     findings = report.sort_findings(findings)
+    save_checkpoint()
 
     meta = {
         "target": target,
@@ -1023,6 +1186,10 @@ def run(args: argparse.Namespace) -> int:
         "storage_state": bool(args.storage_state),
         "saved_storage_state": os.path.abspath(args.save_storage_state)
         if args.save_storage_state else "",
+        "login": bool(args.login),
+        "login_ok": login_ok,
+        "sitemap": bool(args.sitemap),
+        "resume": os.path.abspath(args.resume) if args.resume else "",
         "dump": bool(args.dump),
         "spa": bool(args.spa),
         "openapi": bool(args.openapi),

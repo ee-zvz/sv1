@@ -158,6 +158,9 @@ def print_finding(finding, index: int) -> None:
             f"  {GREY}data    {RESET}{DIM}{clean(label, 8):<8}{RESET}"
             f"{clean(value, 110)}\n"
         )
+    if getattr(finding, "cwe", ""):
+        class_line = f"{finding.cwe}  {getattr(finding, 'owasp', '')}".strip()
+        sys.stdout.write(f"  {GREY}class   {RESET}{DIM}{clean(class_line)}{RESET}\n")
     if finding.detail:
         sys.stdout.write(f"  {GREY}note    {RESET}{clean(finding.detail)}\n")
     if finding.evidence:
@@ -303,6 +306,8 @@ def export_html(path: str, findings: list, stats, meta: dict) -> str:
     <div class="row"><b>target</b><code>{escape(clean(finding.method))} {escape(clean(finding.url))}</code></div>
     <div class="row"><b>param</b><code>{escape(clean(finding.param))}</code></div>
     <div class="row"><b>payload</b><code class="payload">{escape(clean(finding.payload))}</code></div>
+    {f'<div class="row"><b>class</b><span>{escape(clean(finding.cwe))} · {escape(clean(finding.owasp))}</span></div>' if getattr(finding, "cwe", "") else ''}
+    {f'<div class="row"><b>fix</b><span>{escape(clean(finding.remediation))}</span></div>' if getattr(finding, "remediation", "") else ''}
     {f'<div class="row"><b>note</b><span>{escape(clean(finding.detail))}</span></div>' if finding.detail else ''}
     {f'<div class="row"><b>proof</b><span class="proof">{escape(clean(finding.evidence))}</span></div>' if finding.evidence else ''}
     {f'<div class="row"><b>curl</b><code>{escape(clean(finding.curl))}</code></div>' if getattr(finding, "curl", "") else ''}

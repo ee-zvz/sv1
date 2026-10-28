@@ -2,6 +2,86 @@
 
 All notable changes to SV1. Format follows Keep a Changelog.
 
+## 1.5.0 - 2026-10-28
+
+Operating-layer release. Detection scope is unchanged: XSS, SQLi, blind XSS and
+SSRF; reflection-only remains `MEDIUM`. The release closes the gaps that stopped
+the proof-first model from reaching real applications: login, discovery, restart
+and standard finding metadata. The field audit is in
+[`docs/IMPROVEMENTS.md`](docs/IMPROVEMENTS.md).
+
+### Added
+
+- `--login [URL]` bootstraps a scan through a same-origin POST form. It finds
+  the password form, preserves hidden CSRF fields, sends the credentials once and
+  keeps the resulting cookies in the live HTTP session. Chromium imports that
+  session before execution proof. `--login-check TEXT` requires a post-login
+  marker; `--login-user-field` / `--login-pass-field` override field detection;
+  `--username` / `--password` fall back to `SV1_USERNAME` / `SV1_PASSWORD`.
+  A failed login exits `2` instead of silently scanning anonymously.
+- The login form's username field is removed from the point set and from the
+  stored/blind/second-order form passes unless `--login-attack` is explicit, so
+  an authenticated scan does not become a credential-stuffing test.
+- `--resume FILE` writes an atomic JSON checkpoint after every completed point.
+  A second run validates the target and material scan/point options, skips
+  completed point keys and restores prior findings; browser proof is revalidated
+  in the new session. The browser, DOM, stored, blind and replay phases still run
+  because they depend on the live page and callbacks. Cookies are not stored, and
+  an authenticated checkpoint refuses to resume against an anonymous run. This is
+  point-level resume, not the deferred async engine.
+- `--sitemap` discovers same-origin seeds from `robots.txt` and up to three
+  sitemap documents, following one sitemap-index hop. External hosts, binary
+  assets and out-of-scope URLs are refused; the normal page cap, depth and form
+  parser still apply.
+- Every XSS, SQLI and SSRF finding now carries `cwe`, `owasp` and `remediation`.
+  XSS maps to CWE-79 / A03:2021, SQLi to CWE-89 / A03:2021 and SSRF to CWE-918 /
+  A10:2021. The console, HTML report, JSON, CSV and SARIF expose the metadata.
+- `tests/test_1_5.py`: 12 regressions for login form detection and CSRF
+  preservation, wrong-password rejection, text-field password rejection, CLI
+  login, sitemap filtering, checkpoint round-trip and mismatch refusal, resume
+  CLI, and CWE/OWASP/remediation output in CSV and SARIF.
+
+### Security
+
+- Login credentials are never printed and are not written to a finding, history
+  row or checkpoint. `SV1_PASSWORD` is the documented form because argv is
+  visible in the process list.
+- Login actions must be same-origin HTTP(S). The normal Origin/Referer request
+  policy applies, and the login form is not attacked unless explicitly requested.
+- A checkpoint is sensitive local state: it can contain imported session headers,
+  cookies and curl reproduction commands. It does not contain the login password.
+- Sitemap discovery is same-origin, size-capped, page-capped and scope-aware;
+  it adds seeds, not permissions.
+
+### Limits
+
+- The async `httpx` engine remains deferred. The current engine is a bounded
+  thread pool with adaptive rate limiting.
+- `--login` covers the single-form case. OAuth, SSO, JavaScript-only login and
+  time-based MFA need `--storage-state`, a HAR, or a browser-recorded sequence.
+- `--resume` does not checkpoint the browser/DOM, stored, blind or replay phases;
+  these rerun after a restart.
+- Gzipped sitemap archives are not unpacked.
+
+### Tests
+
+- Default suite: **177 discovered, 166 pass, 11 opt-in skips**.
+- Branch coverage: **51.3%** (5,835 statements) against the 47.0% floor;
+  `ruff` clean, `mypy` clean on 41 source files.
+- Chromium integration: **10/10**.
+- Full lab: **38/38 verified**, 22 confirmed, 16 replayed, 0 unverified,
+  0 errors, 23 pages, 32 points, 1099 requests, 261.0 s. Severity is
+  13 `CRITICAL`, 23 `HIGH`, 2 `MEDIUM`; 21 XSS, 16 SQLI, 1 SSRF.
+  Evidence: `docs/evidence/local-lab-1.5.0.json` and
+  `local-lab-1.5.0.sarif`.
+- Public 1.5.0: Firing Range reflected attribute, 1 `HIGH`/`CONFIRMED` XSS,
+  12 requests, 18.0 s; Altoro Mutual search, 1 `HIGH`/`CONFIRMED` XSS,
+  11 requests, 13.6 s; both 0 errors. Evidence:
+  `docs/evidence/firing-range-1.5.0.json` and `altoro-1.5.0.json`.
+- SQLite comparison: same seven findings (3 confirmed XSS, 2 SQLi, 2
+  reflection-only `MEDIUM`), 221 requests, 49.1 s, 0 false positives. Evidence:
+  `docs/evidence/sv1-real-1.5.0.json`.
+
 ## 1.4.0 - 2026-10-28
 
 Feature release that closes the deferred P1 gaps and includes the `1.3.5`

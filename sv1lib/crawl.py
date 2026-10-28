@@ -118,10 +118,13 @@ def form_endpoint(page_url: str, form: Form) -> str:
 
 
 def crawl(client: net.Client, start_url: str, max_pages: int, max_depth: int,
-          allows=None) -> list[Page]:
+          allows=None, seeds: list[str] | None = None) -> list[Page]:
     seen: set[str] = set()
     pages: list[Page] = []
     queue: list[tuple[str, int]] = [(start_url, 0)]
+    for seed in seeds or []:
+        if seed and seed != start_url:
+            queue.append((seed, 0))
     while queue and len(pages) < max_pages:
         url, depth = queue.pop(0)
         if url in seen:

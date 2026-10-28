@@ -67,9 +67,16 @@ def build(findings: list, stats, meta: dict) -> dict:
                 },
                 "defaultConfiguration": {"level": LEVEL.get(finding.severity, "warning")},
                 "properties": {
-                    "tags": ["security", finding.kind.lower(), finding.technique or "generic"],
+                    "tags": [
+                        "security", finding.kind.lower(),
+                        finding.technique or "generic",
+                        getattr(finding, "cwe", "") or "CWE",
+                    ],
                     "precision": "high" if finding.confidence == "CONFIRMED" else "medium",
                     "security-severity": str(SECURITY_SCORE.get(finding.severity, 5.5)),
+                    "cwe": getattr(finding, "cwe", ""),
+                    "owasp": getattr(finding, "owasp", ""),
+                    "remediation": getattr(finding, "remediation", ""),
                 },
             }
         )
@@ -89,6 +96,9 @@ def build(findings: list, stats, meta: dict) -> dict:
             "detail": finding.detail,
             "data": finding.data,
             "artifact": finding.artifact,
+            "cwe": getattr(finding, "cwe", ""),
+            "owasp": getattr(finding, "owasp", ""),
+            "remediation": getattr(finding, "remediation", ""),
             "security-severity": str(SECURITY_SCORE.get(finding.severity, 5.5)),
         }
         results.append(
