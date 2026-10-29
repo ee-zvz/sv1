@@ -7,8 +7,11 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.5.1` hardens checkpoint handling and the
-authenticated/sitemap lab proof; `1.5.0` added the real-world operating layer:
+SQLite session history. Release `1.5.2` closes the two reflected payload gaps:
+`data:text/javascript` for `<script src>` and quote-free event handlers for bare
+attributes. The corrected page-level recall is **43/43 GET pages**. `1.5.1`
+hardens checkpoint handling and the authenticated/sitemap lab proof; `1.5.0`
+added the real-world operating layer:
 same-origin form login with CSRF preservation, resumable point scans, robots and
 sitemap discovery, and CWE/OWASP/remediation metadata in every output. It keeps
 the `1.4.0` real-application inputs: HAR and raw HTTP request import, nested JSON
@@ -70,8 +73,10 @@ CI runs the same checks in the `quality` job. Details:
 [`docs/QUALITY.md`](docs/QUALITY.md).
 
 The first page-level recall baseline is in
-[`docs/RECALL.md`](docs/RECALL.md): 48 Firing Range reflected pages, SV1 versus
-dalfox 3.2.4, with the missed contexts listed explicitly.
+[`docs/RECALL.md`](docs/RECALL.md): 47 Firing Range reflected GET pages plus one
+POST form, SV1 versus dalfox 3.2.4. After the 1.5.2 payload fixes SV1 reaches
+**43/43 GET pages**; the form is reported separately and the four scope
+decisions are listed once.
 
 The browser step is optional, but required for execution proof (real XSS, DOM,
 Stored), for visiting the admin page in Blind XSS, and for SPA crawling. Without
@@ -1127,7 +1132,10 @@ MIT — see `LICENSE`.
 
 ## Version
 
-`1.5.1` — current public release. It hardens checkpoint files with mode `0600`,
+`1.5.2` — current public release. It closes the two reflected payload gaps from
+the Firing Range recall baseline (`data:text/javascript` for `<script src>` and
+quote-free event handlers for bare attributes), and corrects the page-level table
+to **43/43 GET pages**. `1.5.1` hardens checkpoint files with mode `0600`,
 warns that `--resume` state is session material, ignores checkpoint/storage/resume
 JSON in Git, raises the coverage floor to 51.0%, and extends the full lab to
 login-protected `/private` and sitemap-only `/orphan` proof. `1.5.0` adds

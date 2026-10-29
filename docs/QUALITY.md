@@ -97,12 +97,19 @@ marker.
 The full comparison is in [`COMPARISON.md`](COMPARISON.md).
 
 The page-level recall baseline is separate from these single-target runs. On
-the 48-page Firing Range reflected section, SV1 reported 42 pages (40 execution
-proofs), or 87.5% of the index. Dalfox 3.2.4 reported 44 pages after a two-pass
-run (40 parsed-DOM `V`), so the union is 44: SV1 42/44 = 95.5%, dalfox 44/44 =
-100%. The four pages neither tool reported are Flash, JSON, plaintext and JSONP,
-outside the modern HTML scope. The full table, the missed list and the roadmap
-are in [`RECALL.md`](RECALL.md).
+the Firing Range reflected section the index is **47 GET pages plus one POST
+form**. Counting unique paths (not findings), SV1 1.5.1 reported 41 of the 43
+GET pages in the union (95.3%; 39 execution proofs) and dalfox 3.2.4 reported
+43/43 (100%; 39 parsed-DOM `V`). The earlier 42/44 table mixed the POST form
+into the GET denominator; the corrected baseline is 41/43. SV1 1.5.2 closes the
+two payload gaps (`data:text/javascript` for `<script src>` and a quote-free
+bare-attribute handler) and reaches **43/43 GET pages with 41 execution
+proofs**; dalfox remains 43/43 seen and 39 `V`. The form is 1/1 at both tools
+and is reported separately. The four pages neither tool reported are Flash,
+JSON, plaintext and JSONP, outside the modern HTML scope. The full table, the
+single scope-decision list and the roadmap are in [`RECALL.md`](RECALL.md); the
+machine-readable calculation is
+[`firing-range-reflected-recall-1.5.2.json`](evidence/firing-range-reflected-recall-1.5.2.json).
 
 Raw evidence: [`firing-range-1.5.0.json`](evidence/firing-range-1.5.0.json),
 [`altoro-1.5.0.json`](evidence/altoro-1.5.0.json),

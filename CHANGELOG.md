@@ -2,6 +2,37 @@
 
 All notable changes to SV1. Format follows Keep a Changelog.
 
+## 1.5.2 - 2026-10-29
+
+Reflected recall payload patch. Detection scope is unchanged: XSS, SQLi, blind
+XSS and SSRF; reflection-only remains `MEDIUM`; `HIGH` still needs execution.
+
+### Fixed
+
+- A reflection inside `<script src>` now tries
+  `data:text/javascript,alert(...)` before the closing-tag fallbacks. The
+  quoted form uses the opposite JS quote; the bare form uses
+  `alert(/token/)` so it survives an unquoted attribute.
+- A reflection inside a bare (unquoted) attribute now tries
+  `onmouseover=alert(/token/)` and `onfocus=alert(/token/)` before the quoted
+  handlers, so a server that strips `"` and `'` no longer blocks the payload.
+- The recall table counts unique page paths, not findings. The 47 GET pages are
+  the main denominator; the POST `form` page is reported separately. The
+  previous table mixed the POST form into the 48-page total and showed 42/44
+  instead of the page-level 41/43.
+
+### Tests
+
+- Default suite: **179 discovered, 168 pass, 11 opt-in skips**.
+- Branch coverage: **51.4%** (5,843 statements) against the 51.0% floor;
+  `ruff` clean, `mypy` clean on 40 source files.
+
+### Evidence
+
+- Firing Range reflected: `docs/evidence/firing-range-reflected-1.5.2.json`.
+- Recall summary: `docs/evidence/firing-range-reflected-recall-1.5.2.json`.
+- Manual Chromium proof: `docs/evidence/firing-range-reflected-manual-proof.txt`.
+
 ## 1.5.1 - 2026-10-28
 
 Session-material and lab-proof patch. Detection scope is unchanged: XSS, SQLi,

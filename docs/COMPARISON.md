@@ -99,9 +99,12 @@ Raw evidence: [`dalfox-real-1.3.4.json`](evidence/dalfox-real-1.3.4.json),
 The same URL was given to each XSS tool on 2026-10-27. No authenticated or
 third-party target was used.
 
-The page-level recall baseline on the full 48-page reflected section is
-measured separately in [`RECALL.md`](RECALL.md). It keeps the same proof split
-and lists every page one tool missed.
+The page-level recall baseline on the Firing Range reflected section is
+measured separately in [`RECALL.md`](RECALL.md): **47 GET pages plus one POST
+form**, unique paths rather than findings. The corrected baseline is SV1 41/43
+(95.3%) and dalfox 43/43; after the 1.5.2 payload fixes SV1 reaches 43/43 GET
+with 41 execution proofs. The table keeps the same proof split and lists every
+page one tool missed.
 
 | Target | Tool | Finding | Requests | Wall time | Errors |
 |---|---|---|---:|---:|---:|

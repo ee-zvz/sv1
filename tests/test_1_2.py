@@ -285,12 +285,33 @@ class ContextTests(unittest.TestCase):
             self.assertEqual((site.kind, site.tag), ("raw", tag))
             self.assertTrue(context.payloads(site, "sv1TOKEN")[0].startswith(f"</{tag}>"))
 
-    def test_script_src_is_an_attribute_not_code(self) -> None:
-        text = '<script src="https://cdn.example/sv1TOKEN"></script>'
+    def test_script_src_gets_a_javascript_data_url_first(self) -> None:
+        for quote, call in (('"', "alert('sv1TOKEN')"), ("'", 'alert("sv1TOKEN")')):
+            text = f"<script src={quote}https://cdn.example/sv1TOKEN{quote}></script>"
+            site = context.analyze(text, text.index("sv1TOKEN"))
+            self.assertEqual((site.kind, site.tag, site.attr), ("attr", "script", "src"))
+            payloads = context.payloads(site, "sv1TOKEN")
+            self.assertTrue(payloads[0].startswith("data:text/javascript,"))
+            self.assertIn(call, payloads[0])
+            self.assertTrue(any("</script><svg/onload=" in item for item in payloads))
+
+    def test_script_src_unquoted_uses_a_quote_free_data_url(self) -> None:
+        text = "<script src=sv1TOKEN></script>"
         site = context.analyze(text, text.index("sv1TOKEN"))
-        self.assertEqual((site.kind, site.tag, site.attr), ("attr", "script", "src"))
+        self.assertEqual((site.kind, site.tag, site.attr, site.quote), ("attr", "script", "src", ""))
         payload = context.payloads(site, "sv1TOKEN")[0]
-        self.assertIn("</script><svg/onload=", payload)
+        self.assertEqual(payload, "data:text/javascript,alert(/sv1TOKEN/)")
+        self.assertNotIn('"', payload)
+        self.assertNotIn("'", payload)
+
+    def test_unquoted_attribute_gets_a_quote_free_event_handler(self) -> None:
+        text = "<div title=sv1TOKEN>x</div>"
+        site = context.analyze(text, text.index("sv1TOKEN"))
+        self.assertEqual((site.kind, site.attr, site.quote), ("attr", "title", ""))
+        payload = context.payloads(site, "sv1TOKEN")[0]
+        self.assertEqual(payload, "sv1TOKEN onmouseover=alert(/sv1TOKEN/) x=")
+        self.assertNotIn('"', payload)
+        self.assertNotIn("'", payload)
 
     def test_iframe_srcdoc_gets_markup_inside_the_attribute(self) -> None:
         text = '<iframe srcdoc="sv1TOKEN"></iframe>'
