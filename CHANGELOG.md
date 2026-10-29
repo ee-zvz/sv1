@@ -2,6 +2,60 @@
 
 All notable changes to SV1. Format follows Keep a Changelog.
 
+## 1.6.1 - 2026-10-29
+
+Proof-gate repair. Detection rules are unchanged; the release gate now covers
+the point types that 1.6.0 shipped instead of re-running the old 34-point set.
+
+### Fixed
+
+- The full-lab gate now runs `--path --headers --cookies` and requires a
+  `HIGH`/`CONFIRMED` execution finding for all three new carriers:
+  `/catalog/{sv1_path_2}?ref=home`, `/header-xss` and `/cookie-xss`.
+- Added the missing lab routes: a crawled path-segment page, a page that
+  reflects `X-Forwarded-For`, and a page that reflects the `prefs` cookie.
+- `SV1_LAB_EVIDENCE=FILE` copies the gate JSON and SARIF out of the temporary
+  run, so a release is not accepted without a stored report.
+- The Firing Range recall section no longer infers that 1.5.2 numbers survive
+  1.6.x. The new measurement script counts query findings separately from
+  header/cookie findings.
+
+### Evidence
+
+- Full lab: `docs/evidence/local-lab-1.6.1.json` and
+  `docs/evidence/local-lab-1.6.1.sarif`.
+- Firing Range reflected: `docs/evidence/firing-range-reflected-1.6.1.json`.
+- Firing Range carriers: `docs/evidence/firing-range-carriers-1.6.1.json`.
+- Recall summary: `docs/evidence/firing-range-reflected-recall-1.6.1.json`.
+
+### Tests
+
+- Default suite: **203 discovered, 190 pass, 13 opt-in skips**; the new
+  recall regression test reproduces the published 43/43 measurement. `ruff`
+  and `mypy` are clean; branch coverage is **52.6%** (6,075 statements) against
+  the 51.0% floor.
+- Full lab: **43/43 verified**, 27 confirmed, 16 replayed, 0 unverified,
+  0 errors, 28 pages, 150 points, 4201 requests, 655.7 s; 13 `CRITICAL`,
+  28 `HIGH`, 2 `MEDIUM`; 26 XSS, 16 SQLI, 1 SSRF. The three new carriers are
+  `/catalog/{sv1_path_2}?ref=home`, `/header-xss` and `/cookie-xss`, all
+  `HIGH`/`CONFIRMED`.
+- Firing Range reflected re-measured, not inferred: **49 pages, 47 points,
+  515 requests, 0 errors, 206.3 s**; **44 findings** (42 `HIGH`, 2 `MEDIUM`),
+  **43/43 GET recall**, **41/43 GET execution proofs**, POST form 1/1 `HIGH`.
+  The one-request increase over 1.5.2 is the passive WAF probe; detection and
+  proof rules are unchanged.
+- Carrier scan on the same public corpus: **323 points** (47 query, 80 path,
+  147 header, 49 cookie), **3088 requests**, 0 errors, 1136.6 s; 42 `HIGH`,
+  81 `MEDIUM`, 0 unverified. The 79 new path findings are reflection-only
+  404/500 error-page echoes and stayed `MEDIUM`; the public target reflected no
+  header or cookie. Header/cookie execution proof remains the lab gate.
+
+### Scope
+
+- This patch repairs the proof gate; it does not add WebSocket, GraphQL,
+  interactsh/DNS OOB, ProofBench, or first-class fragment points. Those remain
+  `1.7.0` work and are not claimed by `1.6.x`.
+
 ## 1.6.0 - 2026-10-29
 
 Coverage 2.0. Detection scope is still XSS, SQLi, blind XSS and SSRF;

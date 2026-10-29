@@ -7,14 +7,17 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.6.0` is **Coverage 2.0**: every discovered
-route is also a path-segment input (`--path`), header and cookie points follow
-all crawled pages and can be promoted to `HIGH` by Chromium execution, and an
-explicit scope file can authorize API/SPA origins so the crawler, XHR capture,
-JavaScript mining and DOM analysis reach them without leaking the target
-session. It adds passive WAF fingerprinting and updates finding metadata to
-OWASP Top 10:2025 (`A05:2025 Injection`, `A01:2025 Broken Access Control`).
-The reflected recall remains **43/43 GET pages**. `1.5.2` closed the
+SQLite session history. Release `1.6.1` repairs the proof gate for **Coverage
+2.0**: the full lab now proves path-segment, header and cookie XSS in Chromium
+(`--path --headers --cookies`) instead of re-running the old 34-point set.
+`1.6.0` added Coverage 2.0: every discovered route is also a path-segment input
+(`--path`), header and cookie points follow all crawled pages and can be
+promoted to `HIGH` by Chromium execution, and an explicit scope file can
+authorize API/SPA origins so the crawler, XHR capture, JavaScript mining and DOM
+analysis reach them without leaking the target session. It adds passive WAF
+fingerprinting and updates finding metadata to OWASP Top 10:2025 (`A05:2025
+Injection`, `A01:2025 Broken Access Control`). The reflected recall remains
+**43/43 GET pages**, now re-measured on 1.6.1. `1.5.2` closed the
 `data:text/javascript` and quote-free event-handler reflection gaps; `1.5.1`
 hardened checkpoint handling and the authenticated/sitemap lab proof; `1.5.0`
 added the real-world operating layer:
@@ -42,8 +45,10 @@ and CWE/OWASP/remediation metadata across console, HTML, JSON, CSV and SARIF.
 `1.5.1` creates checkpoint temp files with mode `0600`, prints a session-material
 warning for `--resume`, ignores checkpoint/storage-state/resume JSON in Git,
 raises the coverage floor to 51.0%, and proves login-protected and sitemap-only
-pages in the full lab. `1.6.0` keeps that proof bar while widening coverage. The
-field audit is in [`docs/IMPROVEMENTS.md`](docs/IMPROVEMENTS.md).
+pages in the full lab. `1.6.0` keeps that proof bar while widening coverage.
+`1.6.1` makes the full-lab gate exercise the widened carriers directly: 43/43
+verified, including path-segment, header and cookie XSS. The field audit is in
+[`docs/IMPROVEMENTS.md`](docs/IMPROVEMENTS.md).
 
 A vulnerability scanner for **XSS**, **SQL Injection**, **Blind XSS** and **SSRF**
 written in Python, running on Windows 11. On start it prints an animated banner
@@ -82,7 +87,9 @@ The first page-level recall baseline is in
 [`docs/RECALL.md`](docs/RECALL.md): 47 Firing Range reflected GET pages plus one
 POST form, SV1 versus dalfox 3.2.4. After the 1.5.2 payload fixes SV1 reaches
 **43/43 GET pages**; the form is reported separately and the four scope
-decisions are listed once.
+decisions are listed once. `1.6.1` re-runs the corpus rather than reusing 1.5.2
+numbers: 49 pages, 47 points, 515 requests, 0 errors, 206.3 s, 44 findings
+(42 `HIGH`, 2 `MEDIUM`), **43/43 recall** and **41/43 GET execution proofs**.
 
 The browser step is optional, but required for execution proof (real XSS, DOM,
 Stored), for visiting the admin page in Blind XSS, and for SPA crawling. Without
@@ -577,12 +584,14 @@ python sv1.py -u https://site.tld --crawl --db sv1.db --diff
 8x, honours a numeric `Retry-After` (capped at 30s), and recovers gradually
 after 20 healthy responses. `--rps 0` stays unlimited.
 
-> 1.6.0 ships Coverage 2.0: path-segment points, route-wide header/cookie
-> coverage with Chromium proof, scope-authorized cross-origin discovery, passive
-> WAF fingerprinting and OWASP 2025 metadata. 1.5.1 hardened checkpoint files
-> and extended the authenticated/sitemap lab proof. 1.5.0 added same-origin
-> login, point-level `--resume`, sitemap seeds and CWE/OWASP/remediation
-> metadata. The async engine remains deferred beyond 1.6.0. The release keeps
+> 1.6.1 repairs the proof gate for 1.6.0 Coverage 2.0: the full lab now proves
+> path-segment, header and cookie XSS in Chromium. 1.6.0 added path-segment
+> points, route-wide header/cookie coverage, scope-authorized cross-origin
+> discovery, passive WAF fingerprinting and OWASP 2025 metadata. 1.5.1 hardened
+> checkpoint files and extended the authenticated/sitemap lab proof. 1.5.0 added
+> same-origin login, point-level `--resume`, sitemap seeds and
+> CWE/OWASP/remediation metadata. The async engine remains deferred beyond
+> 1.6.x. The release keeps
 > redirect scope hop by hop, refuses cross-origin request bodies, canonicalizes
 > scope paths and IPv6, isolates session headers and cookies on the target
 > origin, imports the live HTTP session into Chromium, and keeps server-set
@@ -843,8 +852,8 @@ commands: [`docs/REALWORLD.md`](docs/REALWORLD.md). The same-target comparison
 against dalfox and sqlmap is in [`docs/COMPARISON.md`](docs/COMPARISON.md).
 
 Live-site validation: **8 runs, 80 pages, 53 injection points, 630 requests,
-63 findings, 63/63 verified, 0 errors**. Automated tests: **202 discovered,
-189 pass by default, 13 opt-in tests skipped; the Chromium integration tests and
+63 findings, 63/63 verified, 0 errors**. Automated tests: **203 discovered,
+190 pass by default, 13 opt-in tests skipped; the Chromium integration tests and
 the full-lab acceptance test run in CI**.
 
 | Target | Scope | Result |
@@ -857,26 +866,40 @@ the full-lab acceptance test run in CI**.
 | Google Firing Range, DOM, 1.2.0 | 25 pages crawled, 20 rendered | **15 HIGH** DOM findings, 0 errors |
 | Altoro Mutual search, 1.3.1 | one GET parameter | **1 HIGH** reflected XSS, confirmed; replay 1/1 |
 | Firing Range, HAR import, 1.3.1 | one imported GET point | **1 HIGH** confirmed; replay 1/1 |
+| Firing Range, reflected, 1.6.1 | crawled GET corpus, 47 points | 44 findings — **42 HIGH**, 2 MEDIUM; 43/43 recall, 41/43 GET execution; 515 requests, 206.3 s |
+| Firing Range, carriers, 1.6.1 | 323 points, path/header/cookie | 123 findings — **42 HIGH**, 81 MEDIUM; 79 path echoes stayed MEDIUM; no header/cookie reflection; 3088 requests, 1136.6 s |
+| Local lab, 1.6.1 | full gate incl. path/header/cookie carriers | **43/43** findings, 0 unstable; 28 pages, 150 points; 655.7 s |
 | Local lab, 1.6.0 | full gate incl. login/sitemap/private/orphan | **40/40** findings, 0 unstable; 274.0 s |
 | Local lab, 1.5.1 | full coverage incl. login/sitemap/private/orphan | **40/40** findings, 0 unstable; 1174 requests, 275.2 s |
 | Local lab, 1.5.0 | retained baseline incl. multipart/path/storage/CSRF | **38/38** findings, 0 unstable; 1099 requests, 261.0 s |
 | Local lab, 1.4.0 | retained baseline | **38/38** findings, 0 unstable; 1099 requests, 262.8 s |
 
-The two fresh 1.5.0 public runs are focused one-parameter checks: Firing Range
-reflected attribute and Altoro search, each `HIGH` confirmed with an executed
-Chromium marker. The older 1.4.0 public pair and the reflected Firing Range
-(1.2.1), DOM (1.2.0), Altoro (1.3.1) and HAR (1.3.1) runs are retained for
-history. The two `MEDIUM` cases in
+The fresh 1.6.1 public run re-measures the whole Firing Range reflected corpus:
+44 findings, 43/43 page recall, 41/43 GET execution proofs and 2 `MEDIUM`
+HTTP replays. A separate carrier run exercised 323 points: 79 path-segment
+echoes in the 404/500 template stayed `MEDIUM`, no header or cookie was
+reflected by this target, and no new `HIGH` appeared. The lab gate proves the
+header/cookie carriers directly. The 1.5.0 public pair remains focused
+one-parameter checks:
+Firing Range reflected attribute and Altoro search, each `HIGH` confirmed with
+an executed Chromium marker. The older 1.4.0 public pair and the reflected
+Firing Range (1.2.1), DOM (1.2.0), Altoro (1.3.1) and HAR (1.3.1) runs are
+retained for history. The two `MEDIUM` cases in
 the retained Firing Range corpus are `/url/css_import` (a stylesheet `<link>`
 cannot execute `javascript:` in current Chromium) and `/url/object_data`
 (pinned to the removed Flash type); they stay reflection-only.
 
-The 1.6.0 lab gate re-runs the same 40 cases: 40/40 verified (24 confirmed in
-the browser or OOB, 16 replayed over HTTP), 0 unstable — CRITICAL 13 / HIGH 25 /
-MEDIUM 2, 25 pages, 34 points, 274.0 s, 0 errors; 23 XSS, 16 SQLI and 1 SSRF.
-The passive WAF probe adds one ordinary request and does not change detection.
-The gate is enforced by `tests/test_lab_1_3.py`; the 1.5.1 report below remains
-the stored JSON/SARIF evidence for the same corpus.
+The 1.6.1 lab gate exercises 43 cases, including the three carriers that 1.6.0
+shipped but did not gate: 43/43 verified (27 confirmed in the browser or OOB,
+16 replayed over HTTP), 0 unstable — CRITICAL 13 / HIGH 28 / MEDIUM 2,
+28 pages, 150 points, 4201 requests, 655.7 s, 0 errors; 26 XSS, 16 SQLI and
+1 SSRF. The new proofs are `/catalog/{sv1_path_2}?ref=home` (path segment),
+`/header-xss` (`X-Forwarded-For`) and `/cookie-xss` (`prefs`), all
+`HIGH`/`CONFIRMED`. The gate runs `--path --headers --cookies` against
+`--pages 40`; evidence:
+[`docs/evidence/local-lab-1.6.1.json`](docs/evidence/local-lab-1.6.1.json) and
+[`local-lab-1.6.1.sarif`](docs/evidence/local-lab-1.6.1.sarif).
+The 1.6.0 gate remains in history at 40/40, 25 pages and 34 points.
 
 The 1.5.1 lab acceptance run: 40/40 verified (24 confirmed in the browser or
 OOB, 16 replayed over HTTP), 0 unstable — CRITICAL 13 / HIGH 25 / MEDIUM 2,
@@ -1003,7 +1026,8 @@ Full scan with P3 + P3.1 + P4 + P5 coverage:
 $env:SV1_USERNAME = 'sv1operator'
 $env:SV1_PASSWORD = 'sv1-lab-password'
 
-python sv1.py -u http://127.0.0.1:8099/ --crawl --stored --js --second-order --dump `
+python sv1.py -u http://127.0.0.1:8099/ --crawl --pages 40 --path --headers --cookies `
+  --cookie "prefs=hello" --stored --js --second-order --dump `
   --spa --external-js --openapi http://127.0.0.1:8099/openapi.json `
   --blind --blind-visit http://127.0.0.1:8099/blind-admin `
   --oob http://127.0.0.2:8777 --oob-bind 127.0.0.2:8777 --ssrf `
@@ -1012,9 +1036,9 @@ python sv1.py -u http://127.0.0.1:8099/ --crawl --stored --js --second-order --d
   --fail-on high --html report.html
 ```
 
-Result: **40 findings, 40 verified (24 confirmed, 16 replayed), 0 unstable** —
-CRITICAL 13, HIGH 25, MEDIUM 2, 25 pages, 34 injection points, 1174 requests,
-275.2 s (with Chromium).
+Result: **43 findings, 43 verified (27 confirmed, 16 replayed), 0 unstable** —
+CRITICAL 13, HIGH 28, MEDIUM 2, 28 pages, 150 injection points, 4201 requests,
+655.7 s (with Chromium).
 
 `--login` sets a host cookie; Chromium ignores ports when sending it. The route
 guard blocks that cookie from reaching a callback on the same host and a different
@@ -1025,7 +1049,9 @@ The lab stores guestbook, blind and profile state in memory. Restart
 `lab\server.py` before repeating the full run; otherwise `/profile` already
 contains the second-order payload and its form is replaced by the error page.
 
-- **XSS (23):** 22 confirmed by execution inside Chromium. The login proof is
+- **XSS (26):** 25 confirmed by execution inside Chromium. The new carriers are
+  `/catalog/{sv1_path_2}?ref=home` (path segment), `/header-xss`
+  (`X-Forwarded-For`) and `/cookie-xss` (`prefs`). The login proof is
   `/private?q=` (session cookie required; the root only links it after login);
   the sitemap proof is `/orphan?q=` (unlinked, discovered from `robots.txt` →
   `sitemap.xml`). The earlier multipart, CSRF and path proofs are `/csrf`
@@ -1096,7 +1122,7 @@ and `/fetch` as normal pages, while `/blind-admin` is intentionally left unlinke
   scan of the same target is compared against it (`+N new · N open · -N fixed`).
 - **`--retest`:** rechecks replayable findings from the session and skips Blind,
   SSRF, Stored, DOM and UNION. It does not crawl and does not open a browser.
-- **SARIF:** 40 findings, a stable fingerprint per finding, and a file that passes
+- **SARIF:** 43 findings, a stable fingerprint per finding, and a file that passes
   the official SARIF 2.1.0 schema.
 - **`--fail-on`:** `none` = 0, `high` = 1, `critical` = 1 on the lab, and a clean
   target with `high` = 0.
@@ -1204,11 +1230,14 @@ MIT — see `LICENSE`.
 
 ## Version
 
-`1.6.0` — current public release. Coverage 2.0 adds opt-in path-segment points,
+`1.6.1` — current public release. Proof-gate repair for Coverage 2.0: the full
+lab now proves path-segment, header and cookie XSS in Chromium
+(`43/43` verified, 28 pages, 150 points), and the Firing Range reflected recall
+is re-measured rather than inferred. `1.6.0` added opt-in path-segment points,
 header and cookie points on every discovered page with Chromium proof, scoped
 cross-origin crawl/XHR/JavaScript discovery, passive WAF fingerprinting and
 OWASP Top 10:2025 metadata. The reflection/proof boundary is unchanged, and the
-Firing Range reflected recall is still **43/43 GET pages**. `1.5.2` closes the
+Firing Range reflected recall remains **43/43 GET pages**. `1.5.2` closes the
 two reflected payload gaps from that baseline (`data:text/javascript` for
 `<script src>` and quote-free event handlers for bare attributes). `1.5.1`
 hardens checkpoint files with mode `0600`,

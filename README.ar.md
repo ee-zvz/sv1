@@ -5,12 +5,15 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.6.0` is **Coverage 2.0**: `--path` turns every
-URL path segment into a replayable point; `--headers` and `--cookies` follow every
-discovered page and header/cookie XSS can be proved in Chromium; an explicit
-`--scope` can authorize an API/SPA origin without sending the target session
-there; one passive GET fingerprints a named WAF; and findings map to OWASP Top
-10:2025. The reflected recall remains **43/43 GET pages**. The previous release
+SQLite session history. Release `1.6.1` repairs the proof gate for **Coverage
+2.0**: the full lab now proves path-segment, header and cookie XSS in Chromium
+(`--path --headers --cookies`) instead of re-running the old 34-point set.
+`1.6.0` added Coverage 2.0: `--path` turns every URL path segment into a
+replayable point; `--headers` and `--cookies` follow every discovered page and
+header/cookie XSS can be proved in Chromium; an explicit `--scope` can authorize
+an API/SPA origin without sending the target session there; one passive GET
+fingerprints a named WAF; and findings map to OWASP Top 10:2025. The reflected
+recall remains **43/43 GET pages**, now re-measured on 1.6.1. The previous release
 `1.5.2` يغلق فجوتَي الاسترجاع في الـpayloads:
 `data:text/javascript` لـ`<script src>` وevent handler بلا اقتباسات للـattribute
 العاري؛ الجدول المصحح **43/43 صفحة GET**. `1.5.1` hardens checkpoint handling
@@ -445,7 +448,9 @@ python sv1.py -u https://site.tld --crawl --db sv1.db --diff
 ويحترم `Retry-After` الرقمي (بحد 30 ثانية)، ثم يعود تدريجياً بعد 20 رداً
 سليماً. `--rps 0` يبقى بلا حد.
 
-> 1.5.1 يصلّب checkpoint ويضيف دليل login/sitemap. 1.5.0 أضاف الدخول من نموذج
+> 1.6.1 يصلح بوابة إثبات Coverage 2.0 ويشغّل `--path --headers --cookies` في
+> المختبر الكامل. 1.6.0 أضاف path/header/cookie وscope وبصمة WAF. 1.5.1
+> يصلّب checkpoint ويضيف دليل login/sitemap. 1.5.0 أضاف الدخول من نموذج
 > same-origin، و`--resume` لمرحلة النقاط، وبذور sitemap، وتصنيف
 > CWE/OWASP/الإصلاح. محرك async بـ `httpx` ما زال مؤجلاً.
 > الإصدار 1.3.1 يضيف HAR والطلبات الخام وJSON المتداخل وأجسام XHR POST
@@ -727,7 +732,7 @@ sv1/
 أهداف عامة مصابة عمدًا فقط. الأوامر والأدلة الخام: [`docs/REALWORLD.md`](docs/REALWORLD.md).
 المقارنة بنفس الهدف ضد dalfox وsqlmap: [`docs/COMPARISON.md`](docs/COMPARISON.md).
 
-تحقق المواقع الحية: **8 تشغيلات، 80 صفحة، 53 نقطة حقن، 630 طلباً، 63 نتيجة، 63/63 موثقة، 0 أخطاء**. الاختبارات: **177 مكتشفاً، 166 ينجح افتراضياً، 11 اختباراً اختيارياً متجاوزاً؛ اختبارات Chromium واختبار المختبر الكامل تعمل في CI**.
+تحقق المواقع الحية: **8 تشغيلات، 80 صفحة، 53 نقطة حقن، 630 طلباً، 63 نتيجة، 63/63 موثقة، 0 أخطاء** (تاريخي). آخر بوابة اختبار: **203 مكتشفاً، 190 ينجح افتراضياً، 13 اختباراً اختيارياً متجاوزاً؛ اختبارات Chromium واختبار المختبر الكامل تعمل في CI**.
 
 | الهدف | النطاق | النتيجة |
 |---|---|---|
@@ -739,6 +744,10 @@ sv1/
 | Google Firing Range — DOM، 1.2.0 | 25 صفحة زحف، 20 معروضة | **15 HIGH** DOM، 0 أخطاء |
 | Altoro Mutual — بحث، 1.3.1 | معامل GET واحد | **1 HIGH** XSS منعكس، مؤكد؛ إعادة تشغيل 1/1 |
 | Firing Range — استيراد HAR، 1.3.1 | نقطة GET مستوردة | **1 HIGH** مؤكدة؛ إعادة تشغيل 1/1 |
+| Firing Range — منعكس، 1.6.1 | 49 صفحة، 47 نقطة | 44 نتيجة — **42 HIGH**، 2 MEDIUM؛ 43/43 استرجاع، 41/43 إثبات GET؛ 515 طلباً، 206.3 ثانية |
+| Firing Range — ناقلون، 1.6.1 | 323 نقطة، path/header/cookie | 123 نتيجة — **42 HIGH**، 81 MEDIUM؛ 79 انعكاس path بقي MEDIUM؛ لا انعكاس header/cookie؛ 3088 طلباً، 1136.6 ثانية |
+| المختبر المحلي 1.6.1 | بوابة كاملة + path/header/cookie | **43/43** نتيجة، 0 unstable؛ 28 صفحة، 150 نقطة؛ 655.7 ثانية |
+| المختبر المحلي 1.6.0 | بوابة كاملة + login/sitemap/private/orphan | **40/40** نتيجة، 0 unstable؛ 274.0 ثانية |
 | المختبر المحلي 1.5.1 | تغطية كاملة + login/sitemap/private/orphan | **40/40** نتيجة، 0 unstable؛ 1174 طلباً، 275.2 ثانية |
 | المختبر المحلي 1.5.0 | خط أساس محفوظ + multipart/path/storage/CSRF | **38/38** نتيجة، 0 unstable؛ 1099 طلباً، 261.0 ثانية |
 | المختبر المحلي 1.4.0 | خط أساس محفوظ | **38/38** نتيجة، 0 unstable؛ 1099 طلباً، 262.8 ثانية |
@@ -749,6 +758,26 @@ sv1/
 (رابط stylesheet لا ينفّذ `javascript:` في Chromium الحالي) و
 `/url/object_data` (نوع Flash محذوف)؛ بقيتا انعكاساً فقط بدون رفعهما إلى
 `HIGH`.
+
+قبول المختبر في 1.6.1: 43/43 موثقة (27 مؤكدة في المتصفح أو OOB، و16 أعادت
+الإرسال عبر HTTP)، 0 unstable — CRITICAL 13 / HIGH 28 / MEDIUM 2، 28 صفحة،
+150 نقطة، 4201 طلباً، 655.7 ثانية، 0 أخطاء؛ 26 XSS و16 SQLI و1 SSRF. المسارات
+الجديدة: `/catalog/{sv1_path_2}?ref=home` (مقطع مسار)، `/header-xss`
+(`X-Forwarded-For`) و`/cookie-xss` (`prefs`)، وكلها `HIGH`/`CONFIRMED`.
+الدليل: [`docs/evidence/local-lab-1.6.1.json`](docs/evidence/local-lab-1.6.1.json).
+
+قياس 1.6.1 على Firing Range (reflected) أُعيد ولم يُنقل من 1.5.2:
+49 صفحة، 47 نقطة، 515 طلباً، 0 أخطاء، 206.3 ثانية؛ 44 نتيجة (42 `HIGH`،
+2 `MEDIUM`)، استرجاع **43/43 صفحة GET**، وإثبات تنفيذ **41/43**، ونموذج POST
+1/1. الزيادة طلب واحد عن 1.5.2 هي فحص WAF السلبي. الدليل:
+[`docs/evidence/firing-range-reflected-1.6.1.json`](docs/evidence/firing-range-reflected-1.6.1.json)
+و[`firing-range-reflected-recall-1.6.1.json`](docs/evidence/firing-range-reflected-recall-1.6.1.json).
+
+فحص الناقلين العام: 323 نقطة (47 query + 80 path + 147 header + 49 cookie)،
+3088 طلباً، 0 أخطاء، 1136.6 ثانية؛ 123 نتيجة (42 `HIGH`، 81 `MEDIUM`). الـ79
+الجديدة من `--path` هي انعكاسات قالب 404/500 وبقيت `MEDIUM` بعد replay؛
+لا انعكاس header أو cookie على هذا الهدف. إثباتهما في المختبر عبر
+`/header-xss` و`/cookie-xss`.
 
 قبول المختبر في 1.5.1: 40/40 موثقة (24 مؤكدة في المتصفح أو OOB، و16 أعادت
 الإرسال عبر HTTP)، 0 unstable — CRITICAL 13 / HIGH 25 / MEDIUM 2، 25 صفحة،
@@ -795,7 +824,8 @@ python sv1.py -u http://127.0.0.1:8099/ --crawl --no-banner
 $env:SV1_USERNAME = 'sv1operator'
 $env:SV1_PASSWORD = 'sv1-lab-password'
 
-python sv1.py -u http://127.0.0.1:8099/ --crawl --stored --js --second-order --dump `
+python sv1.py -u http://127.0.0.1:8099/ --crawl --pages 40 --path --headers --cookies `
+  --cookie "prefs=hello" --stored --js --second-order --dump `
   --spa --external-js --openapi http://127.0.0.1:8099/openapi.json `
   --blind --blind-visit http://127.0.0.1:8099/blind-admin `
   --oob http://127.0.0.2:8777 --oob-bind 127.0.0.2:8777 --ssrf `
@@ -804,8 +834,8 @@ python sv1.py -u http://127.0.0.1:8099/ --crawl --stored --js --second-order --d
   --fail-on high --html report.html
 ```
 
-النتيجة: **40 نتيجة، 40 موثقة (24 مؤكدة، 16 معادة)، 0 unstable** — CRITICAL 13،
-HIGH 25، MEDIUM 2، 25 صفحة، 34 نقطة حقن، 1174 طلباً، 275.2 ثانية (مع Chromium).
+النتيجة: **43 نتيجة، 43 موثقة (27 مؤكدة، 16 معادة)، 0 unstable** — CRITICAL 13،
+HIGH 28، MEDIUM 2، 28 صفحة، 150 نقطة حقن، 4201 طلباً، 655.7 ثانية (مع Chromium).
 
 `--login` يضبط كوكي على الـ host، وChromium لا يفرّق بالمنفذ عند إرسال الكوكي.
 حارس المسار يمنع الكوكي من الوصول إلى callback على نفس الـ host ومنفذ مختلف،
@@ -815,7 +845,9 @@ HIGH 25، MEDIUM 2، 25 صفحة، 34 نقطة حقن، 1174 طلباً، 275.2 
 `lab\server.py` قبل تكرار الفحص الكامل؛ وإلا فإن `/profile` يحتوي بايلود
 second-order مسبقًا وتظهر صفحة الخطأ بدل النموذج.
 
-- **XSS (23):** 22 مؤكدة بالتنفيذ داخل Chromium. إثبات الدخول هو `/private?q=`
+- **XSS (26):** 25 مؤكدة بالتنفيذ داخل Chromium. الناقلون الجدد:
+  `/catalog/{sv1_path_2}?ref=home` (مقطع مسار)، `/header-xss`
+  (`X-Forwarded-For`) و`/cookie-xss` (`prefs`). إثبات الدخول هو `/private?q=`
   (يتطلب كوكي جلسة؛ الجذر يربطه فقط بعد الدخول)، وإثبات sitemap هو `/orphan?q=`
   (غير مربوط، اكتُشف من `robots.txt` → `sitemap.xml`). مسارات الإثبات السابقة
   هي `/csrf` (توكن مخفي محفوظ + Origin)، و`/upload` و`/api/form` (multipart)،
@@ -883,7 +915,7 @@ second-order مسبقًا وتظهر صفحة الخطأ بدل النموذج.
   يُقارن بها (`+N new · N open · -N fixed`).
 - **`--retest`:** يعيد فحص النتائج القابلة للإعادة فقط، ويتخطى
   Blind وSSRF وStored وDOM وUNION. لم يزحف ولم يفتح متصفحاً.
-- **SARIF:** 40 نتيجة، بصمة ثابتة لكل نتيجة، وملف يمرّ schema الرسمي
+- **SARIF:** 43 نتيجة، بصمة ثابتة لكل نتيجة، وملف يمرّ schema الرسمي
   SARIF 2.1.0.
 - **`--fail-on`:** `none` = 0، `high` = 1، `critical` = 1 على المختبر،
   وهدف نظيف مع `high` = 0.
@@ -977,9 +1009,13 @@ MIT — راجع ملف `LICENSE`.
 
 ## الإصدار
 
-`1.5.2` — الإصدار العام الحالي. يغلق فجوتَي الاسترجاع في الـpayloads:
-`data:text/javascript` لـ`<script src>` وevent handler بلا اقتباسات للـattribute
-العاري، ويصحح جدول الاسترجاع إلى **43/43 صفحة GET**. `1.5.1` يصلّب ملفات
+`1.6.1` — الإصدار العام الحالي. إصلاح بوابة الإثبات لـCoverage 2.0: المختبر
+الكامل يثبت XSS لمقطع المسار والهيدر والكوكي داخل Chromium
+(`43/43`، 28 صفحة، 150 نقطة). `1.6.0` أضاف `--path` ونقاط الهيدر/الكوكي على
+كل صفحة، ونطاقاً متعدد الأصول، وبصمة WAF سلبية، وتصنيف OWASP 2025. `1.5.2`
+يغلق فجوتَي الاسترجاع في الـpayloads: `data:text/javascript` لـ`<script src>`
+وevent handler بلا اقتباسات للـattribute العاري، ويصحح جدول الاسترجاع إلى
+**43/43 صفحة GET**. `1.5.1` يصلّب ملفات
 checkpoint بمود `0600`، ويحذر أن ملف `--resume` مادة جلسة، ويستثني
 checkpoint/storage-state/resume JSON من Git، ويرفع أرضية التغطية إلى 51.0%،
 ويضيف `/private` المحمي بالدخول و`/orphan` القادم من sitemap إلى دليل المختبر

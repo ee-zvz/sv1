@@ -1,9 +1,10 @@
 # SV1 — قياس الاسترجاع على Firing Range (reflected)
 
 - **التاريخ:** 2026-10-29
-- **SV1:** 1.5.2 (هذا القياس) — الأساس 1.5.1 (`9e2dcc4`)
-- **1.6.0:** يوسّع المدخلات (path/header/cookie/scope) ولا يغيّر محرك
-  reflected؛ أرقام Firing Range أعلاه تبقى مرجع العلاقة الحالية.
+- **SV1:** 1.6.1 (هذا القياس) — الأساس 1.5.2 (`v1.5.2`)، وقبله 1.5.1 (`9e2dcc4`)
+- **1.6.0/1.6.1:** وسّعا المدخلات (path/header/cookie/scope)، وهذا يغيّر
+  مجموعة النقاط والطلبات. لذلك أُعيد القياس على 1.6.1 بدل نقل أرقام 1.5.2.
+  القياس أدناه هو قياس فعلي على الكود المنشور، وليس استنتاجاً من ثبات الكاشف.
 - **المنافس:** dalfox 3.2.4
 - **الهدف:** `https://public-firing-range.appspot.com/reflected/`
 
@@ -43,17 +44,17 @@ dalfox archive SHA-256:
 المقام الرئيسي: **43 صفحة GET** (اتحاد ما وجدته الأداتان بعد استبعاد أربع
 صفحات خارج نطاق HTML الحديث). صفحة النموذج POST منفصلة.
 
-| المقياس | SV1 1.5.1 | SV1 1.5.2 | dalfox 3.2.4 |
-|---|---:|---:|---:|
-| صفحات GET شافها | 41 | **43** | 43 |
-| صفحات GET أثبتها | 39 | **41** | 39 `V` |
-| شافها الاثنان | 41 | **43** | 43 |
-| dalfox فقط | 2 | 0 | — |
-| اتحاد GET | 43 | 43 | 43 |
-| الاسترجاع مقابل الاتحاد | 41/43 = **95.3%** | **43/43 = 100.0%** | **43/43 = 100.0%** |
-| من أصل 47 GET | 41/47 = 87.2% | **43/47 = 91.5%** | 43/47 = 91.5% |
-| صفحات فاتته | 6 | 4 | 4 |
-| POST `form` (منفصلة) | 1/1 `HIGH` | 1/1 `HIGH` | 1/1 `V` |
+| المقياس | SV1 1.5.1 | SV1 1.5.2 | SV1 1.6.1 | dalfox 3.2.4 |
+|---|---:|---:|---:|---:|
+| صفحات GET شافها | 41 | **43** | **43** | 43 |
+| صفحات GET أثبتها | 39 | **41** | **41** | 39 `V` |
+| شافها الاثنان | 41 | **43** | **43** | 43 |
+| dalfox فقط | 2 | 0 | 0 | — |
+| اتحاد GET | 43 | 43 | 43 | 43 |
+| الاسترجاع مقابل الاتحاد | 41/43 = **95.3%** | **43/43 = 100.0%** | **43/43 = 100.0%** | **43/43 = 100.0%** |
+| من أصل 47 GET | 41/47 = 87.2% | **43/47 = 91.5%** | **43/47 = 91.5%** | 43/47 = 91.5% |
+| صفحات فاتته | 6 | 4 | 4 | 4 |
+| POST `form` (منفصلة) | 1/1 `HIGH` | 1/1 `HIGH` | 1/1 `HIGH` | 1/1 `V` |
 
 **الرقم الرئيسي: 43/43 = 100.0% بعد الإصلاح، مقابل 41/43 = 95.3% قبله.**
 المقام واحد: 43 صفحة GET. الأربع الباقية قرارات نطاق، وليست فجوات كشف.
@@ -64,11 +65,55 @@ dalfox archive SHA-256:
 التشغيل عبر HTTP فقط (`css_import` و`object_data`). لذلك تأكيد GET هو
 **41/43**، بينما الاسترجاع **43/43**.
 
+تفصيل 1.6.1 (القياس الحالي): نفس الفهرس، **49 صفحة**، **47 نقطة**،
+**515 طلباً**، 0 أخطاء، **206.3 ثانية**. النتائج **44**؛ منها **42 `HIGH`**
+(42 تأكيد تنفيذ Chromium، منها 1 لصفحة POST) و**2 `MEDIUM`** أعادتا
+التشغيل عبر HTTP (`css_import` و`object_data`). تأكيد GET **41/43**،
+والاسترجاع **43/43**. الفرق عن 1.5.2 طلب واحد فقط، وهو فحص WAF السلبي؛
+لم يتغيّر الكاشف أو قاعدة الإثبات.
+
+أمر 1.6.1:
+
+```powershell
+python sv1.py -u https://public-firing-range.appspot.com/reflected/ \
+  --crawl --depth 1 --pages 60 --xss --rps 6 --threads 8 --timeout 20 \
+  --browser --fail-on none --no-banner \
+  -o docs/evidence/firing-range-reflected-1.6.1.json
+```
+
+الدليل: [`firing-range-reflected-1.6.1.json`](evidence/firing-range-reflected-1.6.1.json)
+و[`firing-range-reflected-recall-1.6.1.json`](evidence/firing-range-reflected-recall-1.6.1.json).
+
 dalfox شاف **43/43** صفحة GET، لكن **39 فقط `V`**. الأربع `R` هي
 `script_src`، `iframe_attribute_value`، وفلترا `filteredcharsets`
 (`body/SpaceDoubleQuoteSlashEquals` و`attribute_unquoted/DoubleQuoteSinglequote`)؛
 لم تُحسب مثبتة. `V` عند dalfox موضع قابل للتنفيذ في DOM المُحلّل، وليس
 تنفيذ Chromium.
+
+## فحص الناقلين 1.6.1
+
+هذا فحص تغطية عام، وليس بديلاً عن بوابة المختبر. شغّل نفس الفهرس مع
+`--path --headers --cookies`:
+
+```powershell
+python sv1.py -u https://public-firing-range.appspot.com/reflected/ \
+  --crawl --depth 1 --pages 60 --path --headers --cookies \
+  --cookie "prefs=hello" --xss --rps 6 --threads 8 --timeout 20 \
+  --browser --fail-on none --no-banner \
+  -o docs/evidence/firing-range-carriers-1.6.1.json
+```
+
+النتيجة: **49 صفحة، 323 نقطة** (47 query + 80 path + 147 header + 49 cookie)،
+**3088 طلباً**، 0 أخطاء، **1136.6 ثانية**. الـquery بقي كما هو: 44 نتيجة
+(42 `HIGH`، 2 `MEDIUM`). أضاف `--path` **79 نتيجة `MEDIUM`** فقط: مقطع المسار
+ينعكس في قالب خطأ 404/500، فيُعاد عبر HTTP ولا يُرفع إلى `HIGH`. لم يُعثر على
+انعكاس لـheader أو cookie على هذا الهدف (0 نتائج). مجموع findings **123**:
+42 `HIGH` و81 `MEDIUM` معاد تشغيلها، 0 unverified.
+
+هذا يثبت أن توسيع الناقلين لم يخفّض قاعدة الإثبات: 79 انعكاساً جديداً بقي
+`MEDIUM`، والـ`HIGH` الوحيد جاء من تنفيذ Chromium على query. إثبات
+header/cookie نفسه على المختبر: `/header-xss` و`/cookie-xss`، وكلاهما
+`HIGH`/`CONFIRMED` في بوابة 1.6.1.
 
 ## الفجوتان أُغلقتا
 

@@ -44,6 +44,9 @@ INDEX = """<!doctype html>
   <p><a href="/profile">profile</a></p>
   <p><a href="/blind">blind</a></p>
   <p><a href="/fetch?url=http://127.0.0.1:8099/">fetch</a></p>
+  <p><a href="/catalog/42?ref=home">catalog path</a></p>
+  <p><a href="/header-xss">header xss</a></p>
+  <p><a href="/cookie-xss">cookie xss</a></p>
   <form action="/feedback" method="post">
     <input type="text" name="name" value="">
     <input type="text" name="message" value="">
@@ -332,6 +335,14 @@ class Handler(BaseHTTPRequestHandler):
             self._send(f"<html><body><h1>results</h1><div>{term}</div></body></html>")
             return
 
+        if parts.path.startswith("/catalog/"):            # path segment xss
+            ident = unquote(parts.path[len("/catalog/"):])
+            self._send(
+                "<html><body><h1>catalog</h1>"
+                f"<div>item: {ident}</div></body></html>"
+            )
+            return
+
         if parts.path == "/item":                         # boolean based sqli
             ident = query.get("id", ["1"])[0]
             if _is_false(ident):
@@ -453,6 +464,14 @@ class Handler(BaseHTTPRequestHandler):
             self._send(UNION_PAGE)
             return
 
+        if parts.path == "/header-xss":                   # header reflected into html
+            forwarded = self.headers.get("X-Forwarded-For", "")
+            self._send(
+                "<html><body><h1>header xss</h1>"
+                f"<div>{forwarded}</div></body></html>"
+            )
+            return
+
         if parts.path == "/header":                       # header based sqli
             forwarded = self.headers.get("X-Forwarded-For", "")
             if "'" in forwarded or '"' in forwarded:
@@ -461,6 +480,20 @@ class Handler(BaseHTTPRequestHandler):
             self._send(
                 "<html><body><h1>header</h1>"
                 f"<p>client: {forwarded}</p><p>name: widget</p></body></html>"
+            )
+            return
+
+        if parts.path == "/cookie-xss":                   # cookie reflected into html
+            raw_cookie = self.headers.get("Cookie", "")
+            prefs = ""
+            for part in raw_cookie.split(";"):
+                name, _, value = part.strip().partition("=")
+                if name == "prefs":
+                    prefs = unquote(value)
+                    break
+            self._send(
+                "<html><body><h1>cookie xss</h1>"
+                f"<div>{prefs}</div></body></html>"
             )
             return
 

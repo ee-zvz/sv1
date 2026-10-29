@@ -1,3 +1,3 @@
 """SV1 - the only version string in the source tree."""
 
-__version__ = "1.6.0"
+__version__ = "1.6.1"

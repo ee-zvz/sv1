@@ -576,7 +576,18 @@ OAuth/SSO/JavaScript/MFA تحتاج storage state أو HAR أو تسلسل مت�
 **قبول 1.6.0:** 189 اختباراً ناجحاً و13 opt-in skip، تغطية فروع 52.6%،
 `ruff`/`mypy` نظيفان، و12/12 اختبار Chromium. بوابة المختبر الكامل نجحت:
 40/40 مُتحققاً (24 تأكيداً، 16 replay)، 0 أخطاء، 25 صفحة، 34 نقطة، 274.0 ثانية.
-لم تتغير قاعدة الإثبات: الانعكاس `MEDIUM`، والتنفيذ أو replay أو OOB هو `HIGH`.
+
+**قبول 1.6.1:** 190/203 اختباراً ناجحاً و13 opt-in skip، `ruff`/`mypy` نظيفان،
+و12/12 اختبار Chromium. بوابة المختبر الكامل صارت تشغّل `--path --headers
+--cookies`: 43/43 مُتحققاً (27 تأكيداً، 16 replay)، 0 أخطاء، 28 صفحة، 150 نقطة،
+4201 طلب، 655.7 ثانية. المسارات الجديدة `/catalog/{sv1_path_2}?ref=home` و
+`/header-xss` و`/cookie-xss` كلها `HIGH`/`CONFIRMED`. أُعيد قياس Firing Range
+بدل نقل أرقام 1.5.2: 49 صفحة، 47 نقطة، 515 طلباً، 0 أخطاء، 206.3 ثانية؛
+44 نتيجة (42 `HIGH`، 2 `MEDIUM`)، استرجاع **43/43**، وإثبات GET **41/43**،
+ونموذج POST 1/1. فحص الناقلين العام: 323 نقطة و3088 طلباً في 1136.6 ثانية؛
+123 نتيجة (42 `HIGH`، 81 `MEDIUM`)؛ 79 انعكاس path في قالب 404/500 بقي
+`MEDIUM`، ولا انعكاس header/cookie على الهدف. قاعدة الإثبات لم تتغير:
+الانعكاس `MEDIUM`، والتنفيذ أو replay أو OOB هو `HIGH`.
 
 ---
 
@@ -603,6 +614,7 @@ P5.0.10 ✅ (1.5.0: login + resume + sitemap + CWE/OWASP/إصلاح)
 P5.0.11 ✅ (1.5.1: checkpoint 0600 + مواد جلسة + دليل login/sitemap)
 P5.0.12 ✅ (1.5.2: فجوتا recall + جدول 43/43 GET + قرارات النطاق)
 P5.1   ✅ (1.6.0: path + header/cookie proof + scope cross-origin + WAF + OWASP 2025)
+P5.1.1 ✅ (1.6.1: بوابة path/header/cookie + دليل 43/43 + قياس recall فعلي)
 P5.2 ←   (1.7.0: Juice Shop baseline + session integrity + modern XSS + OOB interactsh؛ async لاحقاً)
 ```
 

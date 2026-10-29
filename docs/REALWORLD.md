@@ -1,7 +1,7 @@
 # SV1 - real-world validation
 
-Date: 2026-10-28
-Build: `1.5.0` public evidence; `1.5.1` lab evidence
+Date: 2026-10-29
+Build: `1.6.1` public and lab evidence; `1.5.x` historical
 Platform: Windows 11, Python 3.14.6, Playwright Chromium (headless)
 
 This document records what SV1 actually found and proved outside the local lab.
@@ -13,6 +13,32 @@ Only public, intentionally vulnerable demos were used:
   demo with an expired certificate.
 
 No third-party production application was scanned.
+
+## 1.6.1 public evidence
+
+The Firing Range reflected corpus was re-measured on 1.6.1 rather than inferred
+from 1.5.2: 49 pages crawled, 47 points, 515 requests, 0 errors, 206.3 s. It
+reported 44 findings: 42 `HIGH` (41 GET execution proofs plus the POST form)
+and 2 `MEDIUM` HTTP replays. Page-level recall is **43/43 GET pages**. The
+one-request increase over 1.5.2 is the passive WAF probe.
+
+| Target | Command scope | Result | Requests | Wall time | Errors |
+|---|---|---|---:|---:|---:|
+| Firing Range, reflected | crawled GET corpus, `--xss --browser` | 44 findings, 42 `HIGH`, 2 `MEDIUM` | 515 | 206.3 s | 0 |
+| Firing Range, carriers | 323 points, `--path --headers --cookies` | 123 findings, 42 `HIGH`, 81 `MEDIUM` | 3088 | 1136.6 s | 0 |
+| Local lab 1.6.1 | full gate, `--path --headers --cookies` | 43/43 verified, 27 confirmed, 16 replayed | 4201 | 655.7 s | 0 |
+
+The carrier run added 79 path-segment echoes from the server's 404/500
+template; all stayed `MEDIUM` after HTTP replay and none became `HIGH`. The
+public target reflected no header or cookie. Header/cookie execution proof is
+the lab gate, not inferred from this target.
+
+Evidence:
+[`firing-range-carriers-1.6.1.json`](evidence/firing-range-carriers-1.6.1.json),
+[`firing-range-reflected-1.6.1.json`](evidence/firing-range-reflected-1.6.1.json),
+[`firing-range-reflected-recall-1.6.1.json`](evidence/firing-range-reflected-recall-1.6.1.json),
+[`local-lab-1.6.1.json`](evidence/local-lab-1.6.1.json) and
+[`local-lab-1.6.1.sarif`](evidence/local-lab-1.6.1.sarif).
 
 ## 1.5.1 lab evidence
 

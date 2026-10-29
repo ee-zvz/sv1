@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -91,6 +92,13 @@ class FullLabAcceptanceTests(unittest.TestCase):
             "-u",
             BASE,
             "--crawl",
+            "--pages",
+            "40",
+            "--path",
+            "--headers",
+            "--cookies",
+            "--cookie",
+            "prefs=hello",
             "--stored",
             "--js",
             "--second-order",
@@ -140,31 +148,38 @@ class FullLabAcceptanceTests(unittest.TestCase):
             text=True,
             encoding="utf-8",
             errors="replace",
-            timeout=600,
+            timeout=900,
         )
         message = (result.stdout[-2500:] + "\n" + result.stderr[-2500:]).strip()
         self.assertEqual(result.returncode, 0, message)
         self.assertTrue(output.is_file(), message)
 
         data = json.loads(output.read_text(encoding="utf-8"))
+        evidence = os.environ.get("SV1_LAB_EVIDENCE", "").strip()
+        if evidence:
+            destination = Path(evidence)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(output, Path(evidence + ".json"))
+            shutil.copy2(sarif, Path(evidence + ".sarif"))
+
         findings = data.get("findings") or []
         stats = data.get("stats") or {}
         counts = data.get("counts") or {}
-        self.assertEqual(len(findings), 40)
-        self.assertEqual(stats.get("verified"), 40)
-        self.assertEqual(stats.get("confirmed"), 24)
+        self.assertEqual(len(findings), 43)
+        self.assertEqual(stats.get("verified"), 43)
+        self.assertEqual(stats.get("confirmed"), 27)
         self.assertEqual(stats.get("replayed"), 16)
         self.assertEqual(stats.get("unverified"), 0)
         self.assertEqual(stats.get("errors"), 0)
-        self.assertEqual(stats.get("pages"), 25)
-        self.assertEqual(stats.get("points"), 34)
+        self.assertEqual(stats.get("pages"), 28)
+        self.assertEqual(stats.get("points"), 150)
         self.assertEqual(counts.get("by_severity"), {
             "CRITICAL": 13,
-            "HIGH": 25,
+            "HIGH": 28,
             "MEDIUM": 2,
         })
         self.assertEqual(counts.get("by_type"), {
-            "XSS": 23,
+            "XSS": 26,
             "SQLI": 16,
             "SSRF": 1,
         })
@@ -201,8 +216,31 @@ class FullLabAcceptanceTests(unittest.TestCase):
             self.assertEqual(finding["severity"], "HIGH", path)
             self.assertEqual(finding["confidence"], "CONFIRMED", path)
 
+        path_finding = by_url.get(
+            BASE + "catalog/{sv1_path_2}?ref=home"
+        )
+        self.assertIsNotNone(path_finding, "path-segment XSS")
+        self.assertEqual(path_finding["kind"], "XSS")
+        self.assertEqual(path_finding["severity"], "HIGH")
+        self.assertEqual(path_finding["confidence"], "CONFIRMED")
+        self.assertEqual(path_finding["param"], "sv1_path_2")
+
+        header_finding = by_url.get(BASE + "header-xss")
+        self.assertIsNotNone(header_finding, "header XSS")
+        self.assertEqual(header_finding["kind"], "XSS")
+        self.assertEqual(header_finding["severity"], "HIGH")
+        self.assertEqual(header_finding["confidence"], "CONFIRMED")
+        self.assertEqual(header_finding["param"], "X-Forwarded-For")
+
+        cookie_finding = by_url.get(BASE + "cookie-xss")
+        self.assertIsNotNone(cookie_finding, "cookie XSS")
+        self.assertEqual(cookie_finding["kind"], "XSS")
+        self.assertEqual(cookie_finding["severity"], "HIGH")
+        self.assertEqual(cookie_finding["confidence"], "CONFIRMED")
+        self.assertEqual(cookie_finding["param"], "prefs")
+
         sarif_data = json.loads(sarif.read_text(encoding="utf-8"))
-        self.assertEqual(len(sarif_data["runs"][0]["results"]), 40)
+        self.assertEqual(len(sarif_data["runs"][0]["results"]), 43)
         self.assertTrue(html.is_file())
 
 
