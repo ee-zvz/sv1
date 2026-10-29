@@ -93,7 +93,7 @@ dalfox شاف **43/43** صفحة GET، لكن **39 فقط `V`**. الأربع `R
 | `/reflected/url/object_param` | `<param name="src">` لـFlash | خارج النطاق: Flash ميت في Chromium الحديث؛ السياق لا ينفّذ. |
 | `/reflected/contentsniffing/json` | `application/json` | خارج النطاق الحالي: المتصفح الحديث لا يعيد sniffing إلى HTML. |
 | `/reflected/contentsniffing/plaintext` | `text/plain` | خارج النطاق الحالي: سلوك IE قديم، لا HTML. |
-| `/reflected/jsoncallback` | `application/json` (JSONP) | فئة منفصلة: ينفّذ عند تضمينه كـ`<script>src` وليس HTML XSS. |
+| `/reflected/jsoncallback` | `application/json` (JSONP) | فئة منفصلة: ينفّذ عند تضمينه كـ`<script src>` وليس HTML XSS. |
 
 dalfox لم يرَ هذه الأربع أيضاً؛ لم يفت أي صفحة HTML. الأربع `R` عنده
 داخل الـ43 وليست من هذه القائمة.

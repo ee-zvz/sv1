@@ -17,9 +17,9 @@ XSS and SSRF; reflection-only remains `MEDIUM`; `HIGH` still needs execution.
   `onmouseover=alert(/token/)` and `onfocus=alert(/token/)` before the quoted
   handlers, so a server that strips `"` and `'` no longer blocks the payload.
 - The recall table counts unique page paths, not findings. The 47 GET pages are
-  the main denominator; the POST `form` page is reported separately. The
-  previous table mixed the POST form into the 48-page total and showed 42/44
-  instead of the page-level 41/43.
+  the index; the main denominator is their 43-page union, and the POST `form`
+  page is reported separately. The previous table mixed the POST form into the
+  48-link total and showed 42/44 instead of the page-level 41/43.
 
 ### Tests
 
