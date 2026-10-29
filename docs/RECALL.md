@@ -1,9 +1,9 @@
 # SV1 — قياس الاسترجاع على Firing Range (reflected)
 
-**التاريخ:** 2026-10-28 (dalfox pass 2: 2026-10-29)
-**SV1:** 1.5.1 (`9e2dcc4`)
-**المنافس:** dalfox 3.2.4
-**الهدف:** `https://public-firing-range.appspot.com/reflected/`
+- **التاريخ:** 2026-10-28 (dalfox pass 2: 2026-10-29)
+- **SV1:** 1.5.1 (`9e2dcc4`)
+- **المنافس:** dalfox 3.2.4
+- **الهدف:** `https://public-firing-range.appspot.com/reflected/`
 
 dalfox archive SHA-256:
 `28100d9355a1c767facd571a180d08b87d4de61167b3db99d56e4d8a6601d69a`.
@@ -66,7 +66,7 @@ Chromium.
 
 المرحلة الثانية أضافت ست صفحات كانت غائبة في الأولى: `title`، `textarea`،
 `noscript`، `js_assignment`، وفلترَي `filteredcharsets`. الأربع الباقية هي
-خارج نطاق HTML الحديث، لا نقص في سقف البايلودات.
+خارج نطاق HTML الحديث؛ لا تُحسب فجوة HTML، مع بقاء سقف 200 أقل من الافتراضي.
 
 لو حذفنا أربع صفحات خارج نطاق HTML الحديث — `object_param` (Flash)،
 `contentsniffing/json`، `contentsniffing/plaintext`، و`jsoncallback` (JSONP) —
