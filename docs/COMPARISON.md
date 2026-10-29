@@ -99,6 +99,10 @@ Raw evidence: [`dalfox-real-1.3.4.json`](evidence/dalfox-real-1.3.4.json),
 The same URL was given to each XSS tool on 2026-10-27. No authenticated or
 third-party target was used.
 
+The page-level recall baseline on the full 48-page reflected section is
+measured separately in [`RECALL.md`](RECALL.md). It keeps the same proof split
+and lists every page one tool missed.
+
 | Target | Tool | Finding | Requests | Wall time | Errors |
 |---|---|---|---:|---:|---:|
 | Firing Range reflected attribute | SV1 1.5.0 | 1 `HIGH` / `CONFIRMED` XSS | 12 | 18.0 s | 0 |

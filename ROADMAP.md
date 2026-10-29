@@ -510,6 +510,42 @@ OAuth/SSO/JavaScript/MFA تحتاج storage state أو HAR أو تسلسل مت�
 
 ---
 
+## P5.0.12 — أول قياس استرجاع على Firing Range ✅
+
+قياس، وليس إصداراً. السؤال: كم صفحة يراها SV1 من قسم `reflected`، وليس كم
+نتيجة يثبتها فقط. الفهرس فيه **48 صفحة**؛ شُغّل SV1 1.5.1 مع
+`--pages 60` (الافتراضي 25 كان سيقصّه)، ثم dalfox 3.2.4 على نفس الـmanifest.
+
+| البند | الحالة |
+|---|---|
+| عدّ فهرس `/reflected/` وبناء manifest بنفس الطلبات (GET + POST) | ✅ |
+| SV1 1.5.1: 42/48 صفحة، 40 تأكيد تنفيذ + 2 replay | ✅ |
+| dalfox 3.2.4 على نفس الـ48، وليس على رابط واحد | ✅ |
+| dalfox بعد مرحلتين (30 ثم 200): 44/44 من الاتحاد، 40 `V` | ✅ |
+| SV1 مقابل الاتحاد: 42/44 = **95.5%**، dalfox 100% | ✅ |
+| قائمة كل صفحة فاتت أداة، مع سبب السياق/البايلود | ✅ |
+| إغلاق `data:` script src وevent handler بلا اقتباسات | P5.1 |
+| قرار JSONP وإعادة القياس | P5.1 |
+
+**الخلاصة:** SV1 شاف **42/48 = 87.5%** من الفهرس، و**42/44 = 95.5%** من
+اتحاد الأداتين. dalfox، بعد المرحلة الثانية، شاف **44/44 = 100%** من الاتحاد
+(40 `V` فقط). الأربع التي لم يرها أي منهما — `object_param` (Flash)،
+`contentsniffing/json`، `contentsniffing/plaintext`، و`jsoncallback` (JSONP) —
+خارج نطاق HTML الحديث، وليست فجوات كشف.
+
+ست صفحات فاتت SV1: `url/script_src`، `url/object_param`،
+`contentsniffing/json`، `contentsniffing/plaintext`، `jsoncallback`، و
+`filteredcharsets/attribute_unquoted/DoubleQuoteSinglequote`.
+اثنتان فقط فجوة HTML حقيقية: `script_src` (بايلود `data:text/javascript`)
+وevent handler بلا اقتباسات بعد فلتر `"`/`'`. `jsoncallback` فئة JSONP
+منفصلة، والباقي Flash/JSON/plaintext خارج نطاق المتصفح الحديث.
+
+**الدليل:** [`docs/RECALL.md`](docs/RECALL.md)،
+[`docs/evidence/firing-range-reflected-1.5.1.json`](docs/evidence/firing-range-reflected-1.5.1.json)،
+و[`docs/evidence/dalfox-reflected-3.2.4.json`](docs/evidence/dalfox-reflected-3.2.4.json).
+
+---
+
 ## ترتيب التنفيذ المقترح
 
 ```
@@ -531,7 +567,7 @@ P5.0.8 ✅ (1.3.5: جسم redirect + تطبيع scope + IPv6 + مزامنة كو
 P5.0.9 ✅ (1.4.0: multipart + مسار OpenAPI + حقول مخفية + storage state + curl جلسة)
 P5.0.10 ✅ (1.5.0: login + resume + sitemap + CWE/OWASP/إصلاح)
 P5.0.11 ✅ (1.5.1: checkpoint 0600 + مواد جلسة + دليل login/sitemap)
-P5.1 ←   (1.6.0: محرك async + GraphQL/WebSocket + تسلسل دخول مسجّل)
+P5.1 ←   (1.6.0: فجوتا recall + قرار JSONP + session integrity + modern XSS؛ async لاحقاً)
 ```
 
 P5.0 اكتمل: SV1 يصدّر SARIF صالحاً، يفرض نطاقاً، يحفظ الجلسات ويقارنها،

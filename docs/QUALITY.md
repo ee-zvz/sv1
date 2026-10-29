@@ -96,6 +96,14 @@ a parsed reflection / DOM marker; SV1's evidence is an actual Chromium `alert`
 marker.
 The full comparison is in [`COMPARISON.md`](COMPARISON.md).
 
+The page-level recall baseline is separate from these single-target runs. On
+the 48-page Firing Range reflected section, SV1 reported 42 pages (40 execution
+proofs), or 87.5% of the index. Dalfox 3.2.4 reported 44 pages after a two-pass
+run (40 parsed-DOM `V`), so the union is 44: SV1 42/44 = 95.5%, dalfox 44/44 =
+100%. The four pages neither tool reported are Flash, JSON, plaintext and JSONP,
+outside the modern HTML scope. The full table, the missed list and the roadmap
+are in [`RECALL.md`](RECALL.md).
+
 Raw evidence: [`firing-range-1.5.0.json`](evidence/firing-range-1.5.0.json),
 [`altoro-1.5.0.json`](evidence/altoro-1.5.0.json),
 [`local-lab-1.5.1.json`](evidence/local-lab-1.5.1.json),
