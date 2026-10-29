@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "sv1"
 dynamic = ["version"]
-description = "XSS, SQL injection, blind XSS and SSRF scanner with Chromium execution proof"
+description = "Proof-first XSS, SQL injection, blind XSS and SSRF scanner with Chromium execution proof"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {file = "LICENSE"}

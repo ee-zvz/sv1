@@ -555,6 +555,31 @@ OAuth/SSO/JavaScript/MFA تحتاج storage state أو HAR أو تسلسل مت�
 
 ---
 
+## P5.1 — 1.6.0: Coverage 2.0 (الشريحة الأولى) ✅
+
+هدف الشريحة: كل مسار وصفحة اكتشفها الزاحف تصبح مدخلاً قابلاً للإثبات، بدون
+تخفيف قاعدة `HIGH = تنفيذ أو replay`.
+
+| البند | الحالة |
+|---|---|
+| `--path`: كل segment في كل صفحة مكتشفة، مع إعادة بناء المسار الأصلي | ✅ |
+| `--headers` / `--cookies`: على كل صفحة، وليس الهدف فقط | ✅ |
+| إثبات Chromium لهيدر وكوكي XSS مع استعادة الكوكي بعد الزيارة | ✅ |
+| scope يسمح بأصل API/SPA إضافي للزحف وXHR وJS والدوم، بلا إرسال جلسة الهدف | ✅ |
+| بصمة WAF سلبية (Cloudflare/Akamai/Imperva/F5/AWS/ModSecurity/…) | ✅ |
+| OWASP Top 10:2025: XSS/SQLi = A05، SSRF = A01 | ✅ |
+| اختبارات path/carrier/scope/WAF + اختبارات Chromium للهيدر والكوكي | ✅ |
+| Juice Shop baseline على تطبيق حقيقي | ⏳ الشريحة التالية |
+| interactsh وDNS OOB وGraphQL/WebSocket | ⏳ لاحقاً |
+| محرك async وتسلسل دخول مسجّل/OAuth/MFA | ⏳ لاحقاً |
+
+**قبول 1.6.0:** 189 اختباراً ناجحاً و13 opt-in skip، تغطية فروع 52.6%،
+`ruff`/`mypy` نظيفان، و12/12 اختبار Chromium. بوابة المختبر الكامل نجحت:
+40/40 مُتحققاً (24 تأكيداً، 16 replay)، 0 أخطاء، 25 صفحة، 34 نقطة، 274.0 ثانية.
+لم تتغير قاعدة الإثبات: الانعكاس `MEDIUM`، والتنفيذ أو replay أو OOB هو `HIGH`.
+
+---
+
 ## ترتيب التنفيذ المقترح
 
 ```
@@ -577,7 +602,8 @@ P5.0.9 ✅ (1.4.0: multipart + مسار OpenAPI + حقول مخفية + storage 
 P5.0.10 ✅ (1.5.0: login + resume + sitemap + CWE/OWASP/إصلاح)
 P5.0.11 ✅ (1.5.1: checkpoint 0600 + مواد جلسة + دليل login/sitemap)
 P5.0.12 ✅ (1.5.2: فجوتا recall + جدول 43/43 GET + قرارات النطاق)
-P5.1 ←   (1.6.0: Juice Shop sample + session integrity + modern XSS؛ async لاحقاً)
+P5.1   ✅ (1.6.0: path + header/cookie proof + scope cross-origin + WAF + OWASP 2025)
+P5.2 ←   (1.7.0: Juice Shop baseline + session integrity + modern XSS + OOB interactsh؛ async لاحقاً)
 ```
 
 P5.0 اكتمل: SV1 يصدّر SARIF صالحاً، يفرض نطاقاً، يحفظ الجلسات ويقارنها،
@@ -595,6 +621,9 @@ stored XSS. 1.3.5 أغلق نقل جسم الطلب عبر أصل آخر، وط�
 ومعاملات مسار OpenAPI، وتفعيل الحقول المخفية وكلمات المرور صراحةً، وحالة
 تخزين محصورة بالهدف، وcurl واعياً بالجلسة. 1.5.0 أضاف الدخول من نموذج
 same-origin، واستكمال مرحلة النقاط عبر checkpoint، وبذور robots/sitemap،
-وتصنيف CWE/OWASP/الإصلاح. الخطوة القادمة P5.1: محرك async وتسلسل دخول مسجّل
-وGraphQL/WebSocket، أو P4.1 لـ DNS/OOB SQLi حسب الحاجة.
+وتصنيف CWE/OWASP/الإصلاح. 1.6.0 أضاف Coverage 2.0: نقاط path على كل صفحة،
+وهيدر/كوكي على كل صفحة مع إثبات Chromium، ونطاقاً صريحاً لأصل API إضافي،
+وبصمة WAF سلبية، وتصنيف OWASP 2025. الخطوة القادمة P5.2: قياس Juice Shop
+كعينة تطبيق حقيقي، ثم session integrity وmodern XSS، ثم interactsh وDNS/OOB
+وGraphQL/WebSocket. المحرك async وتسلسل الدخول المسجّل يبقيان مؤجلين عمداً.
 

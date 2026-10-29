@@ -97,13 +97,17 @@ def normalize(url: str, base: str) -> str:
     return urllib.parse.urlunsplit(cleaned)
 
 
-def form_endpoint(page_url: str, form: Form) -> str:
-    """Return a same-origin HTTP(S) form target, or empty when it is unsafe.
+def form_endpoint(page_url: str, form: Form, allows=None) -> str:
+    """Return an HTTP(S) form target, or empty when it is unsafe.
 
     A scanned page must not choose where the scanner sends its headers. Without
     this gate a hostile page can point a form at a third-party origin and make
     the scan leak custom headers or probe a host outside the target. Query
     parameters on the action are part of the endpoint and stay in place.
+
+    ``allows`` is the operator's explicit scope predicate. A form on a scoped
+    API origin is reachable only when that predicate says so; the default stays
+    same-origin, so an unauthorised page cannot widen the scan.
     """
     raw = (form.action or page_url).strip()
     if raw.lower().startswith(SKIP_PAGE_SCHEMES):
@@ -112,7 +116,10 @@ def form_endpoint(page_url: str, form: Form) -> str:
     parts = urllib.parse.urlsplit(action)
     if parts.scheme not in ("http", "https"):
         return ""
-    if not net.same_origin(action, page_url):
+    if allows is not None:
+        if not allows(action):
+            return ""
+    elif not net.same_origin(action, page_url):
         return ""
     return urllib.parse.urlunsplit(parts._replace(fragment=""))
 
@@ -146,9 +153,10 @@ def crawl(client: net.Client, start_url: str, max_pages: int, max_depth: int,
             if raw.lower().startswith(SKIP_PAGE_SCHEMES):
                 continue
             candidate = normalize(raw, page.url)
-            if not net.same_origin(candidate, start_url):
-                continue
-            if allows is not None and not allows(candidate):
+            if allows is not None:
+                if not allows(candidate):
+                    continue
+            elif not net.same_origin(candidate, start_url):
                 continue
             if net.is_skippable(candidate) or candidate in seen:
                 continue
@@ -176,7 +184,8 @@ def _injectable(field: FormField, include_hidden: bool,
 
 
 def points_from_page(page: Page, include_hidden: bool = False,
-                     include_password: bool = False) -> list[InjectionPoint]:
+                     include_password: bool = False,
+                     allows=None) -> list[InjectionPoint]:
     points: list[InjectionPoint] = []
     parts = urllib.parse.urlsplit(page.url)
 
@@ -199,7 +208,7 @@ def points_from_page(page: Page, include_hidden: bool = False,
             )
 
     for form in page.forms:
-        action = form_endpoint(page.url, form)
+        action = form_endpoint(page.url, form, allows=allows)
         if not action:
             continue
         method = "POST" if form.method == "post" else "GET"
@@ -232,11 +241,14 @@ def points_from_page(page: Page, include_hidden: bool = False,
 
 
 def collect_points(pages: list[Page], include_hidden: bool = False,
-                   include_password: bool = False) -> list[InjectionPoint]:
+                   include_password: bool = False,
+                   allows=None) -> list[InjectionPoint]:
     seen: set[tuple] = set()
     collected: list[InjectionPoint] = []
     for page in pages:
-        for point in points_from_page(page, include_hidden, include_password):
+        for point in points_from_page(
+            page, include_hidden, include_password, allows=allows,
+        ):
             if point.key() in seen:
                 continue
             seen.add(point.key())

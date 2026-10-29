@@ -1,14 +1,20 @@
-# SV1 1.5.1 - quality gates
+# SV1 1.6.0 - quality gates
 
-Date: 2026-10-28
+Date: 2026-10-29
 
-`1.5.1` is a session-material and lab-proof patch. Checkpoint temporary files
-are created with mode `0600`, `--resume` warns before a new file is committed,
+`1.6.0` is Coverage 2.0. `--path` creates a replayable point for every URL path
+segment; `--headers` and `--cookies` follow every discovered page; header and
+cookie XSS can be proved in Chromium; a scope file can authorize a second
+API/SPA origin without sending target credentials there; and one passive GET
+names a known WAF. The four scanners remain XSS, SQLi, blind XSS and SSRF;
+reflection-only results remain `MEDIUM`. Detection and proof rules are unchanged.
+
+`1.5.1` was the session-material and lab-proof patch: checkpoint temporary files
+use mode `0600`, `--resume` warns before a new file is committed,
 storage/checkpoint/resume JSON are ignored, and the coverage floor is 51.0%.
-The full lab now proves login-protected `/private` and sitemap-only `/orphan`.
-`1.5.0` added the operating layer around the existing detection engine. The four
-scanners remain XSS, SQLi, blind XSS and SSRF; reflection-only results remain
-`MEDIUM`. Detection and proof rules are unchanged.
+The full lab proves login-protected `/private` and sitemap-only `/orphan`.
+`1.5.0` added the operating layer around the detection engine: login, resume,
+sitemap seeds and standard metadata.
 
 ## What changed
 
@@ -41,18 +47,19 @@ $env:SV1_LAB_TESTS='1'; python -m unittest tests.test_lab_1_3
 Results on Windows 11 / Python 3.14.6:
 
 - `ruff`: pass.
-- `mypy`: pass, 41 source files.
-- default tests: **177 discovered, 166 pass, 11 opt-in tests skipped**.
-- Chromium integration: **10/10**.
+- `mypy`: pass, 43 source files.
+- default tests: **202 discovered, 189 pass, 13 opt-in tests skipped**.
+- Chromium integration: **12/12**.
 - full lab: **40/40 verified**, 24 confirmed, 16 replayed, 0 unverified, 0 errors,
   25 pages, 34 points; 13 `CRITICAL`, 25 `HIGH`, 2 `MEDIUM`;
-  23 XSS, 16 SQLI, 1 SSRF; 1174 requests, 275.2 s.
-- default branch coverage: **51.3%** (5,837 statements); the CI floor is
+  23 XSS, 16 SQLI, 1 SSRF; 274.0 s (the 1.6.0 gate adds one passive WAF probe
+  and re-runs the unchanged detection path).
+- default branch coverage: **52.6%** (6,075 statements); the CI floor is
   **51.0%**.
 
 Coverage of the new and touched paths:
 
-| Module | 1.5.1 |
+| Module | 1.6.0 |
 |---|---:|
 | `auth.py` | 73.3% |
 | `checkpoint.py` | 77.6% |
@@ -63,7 +70,9 @@ Coverage of the new and touched paths:
 | `storage.py` | 72.4% |
 | `scope.py` | 75.5% |
 | `net.py` | 76.5% |
-| `browser.py` | 16.1% (integration is separate) |
+| `browser.py` | 14.9% (integration is separate) |
+| `coverage.py` | 85.2% |
+| `waf.py` | 100.0% |
 | `blind.py` | 85.9% |
 | `stored.py` | 90.7% |
 | `verify.py` | 46.0% |
@@ -153,11 +162,12 @@ stays as history.
 
 ## الخلاصة
 
-`1.5.1` يصلّب ملفات checkpoint بمود `0600`، ويحذر أن ملف `--resume` مادة جلسة،
-ويستثني ملفات الجلسة من Git، ويرفع أرضية التغطية إلى 51.0%. يضيف المختبر
-الكامل `/private` المحمي بالدخول و`/orphan` القادم من sitemap. لا تتغير قاعدة
+`1.6.0` هو Coverage 2.0: `--path` يحوّل كل segment في المسار إلى نقطة قابلة
+لإعادة التشغيل، و`--headers`/`--cookies` يتبعان كل صفحة مكتشفة، وXSS عبر
+الهيدر أو الكوكي يُثبت في Chromium، و`--scope` يسمح بأصل API/SPA إضافي بلا
+إرسال جلسة الهدف إليه، وطلب سلبي واحد يبصم WAF معروفاً. لا تتغير قاعدة
 الإثبات: الانعكاس وحده `MEDIUM`.
-الاختبارات 177 مكتشفاً (166 ينجح، 11 اختيارياً)، Chromium 10/10، المختبر
-الكامل 40/40 في 275.2 ثانية، والتغطية 51.3% فوق أرضية 51.0%. الدليل العام من
+الاختبارات 202 مكتشفاً (189 ينجح، 13 اختيارياً)، Chromium 12/12، المختبر
+الكامل 40/40 في 274.0 ثانية، والتغطية 52.6% فوق أرضية 51.0%. الدليل العام من
 1.5.0 باقٍ: Firing Range نتيجة `HIGH` مؤكدة في 12 طلباً و18.0 ثانية، وAltoro
 نتيجة `HIGH` مؤكدة في 11 طلباً و13.6 ثانية، بلا أخطاء.

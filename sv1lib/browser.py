@@ -156,6 +156,8 @@ class Browser:
         self._pw: Any = None
         self._browser: Any = None
         self._context: Any = None
+        self._extra_headers: dict[str, str] = {}
+        self._extra_origin = ""
 
     # -- lifecycle ---------------------------------------------------------
     def start(self) -> bool:
@@ -244,6 +246,67 @@ class Browser:
             return {}
         return state if isinstance(state, dict) else {}
 
+    # -- per-visit carriers -------------------------------------------------
+    def _override_cookie(self, name: str, value: str, url: str = "") -> list[dict]:
+        """Temporarily replace one cookie for a single navigation.
+
+        Cookie XSS is only proven when the browser actually sends the payload.
+        The live session must survive the proof, so the old cookie records are
+        captured and restored after the visit. The temporary value is scoped to
+        the page origin being proved; a server-set domain cookie is not widened.
+        """
+        if self._context is None:
+            return []
+        origin = net.origin(url) or net.origin(self.base_url) or ""
+        if not origin:
+            return []
+        scope_url = origin.rstrip("/") + "/"
+        if not scope_url:
+            return []
+        saved: list[dict] = []
+        try:
+            # Save every same-name cookie, not just this origin's record. The
+            # restore path clears by name and must not drop a neighbour origin.
+            existing = self._context.cookies()
+        except Exception:
+            existing = []
+        for cookie in existing:
+            if str(cookie.get("name", "")) != name:
+                continue
+            saved.append(dict(cookie))
+            try:
+                self._context.clear_cookies(
+                    name=name,
+                    domain=cookie.get("domain"),
+                    path=cookie.get("path"),
+                )
+            except Exception:
+                pass
+        try:
+            self._context.add_cookies([{
+                "name": name,
+                "value": str(value),
+                "url": scope_url,
+            }])
+        except Exception:
+            self._restore_cookie(name, saved)
+            return []
+        return saved
+
+    def _restore_cookie(self, name: str, saved: list[dict]) -> None:
+        if self._context is None:
+            return
+        try:
+            self._context.clear_cookies(name=name)
+        except Exception:
+            pass
+        if not saved:
+            return
+        try:
+            self._context.add_cookies(saved)
+        except Exception:
+            pass
+
     # -- scope and headers -------------------------------------------------
     def session_headers_for(self, url: str) -> dict:
         """Operator/imported headers only go to the scan origin."""
@@ -285,6 +348,11 @@ class Browser:
                 route.abort("blockedbyclient")
                 return
             headers = self.session_headers_for(request.url)
+            proof_origin = self._extra_origin or self.base_url
+            if self._extra_headers and proof_origin and net.same_target(
+                request.url, proof_origin
+            ):
+                headers.update(self._extra_headers)
             if headers:
                 # playwright replaces the header set when the option is used;
                 # keep the browser's own headers (cookie, UA, accept) intact.
@@ -639,6 +707,36 @@ class Browser:
         guard_url = net.path_url(point.url, mapping) if source == "path" else point.url
         if self._blocks_navigation(guard_url):
             return Visit(url=point.url, error=f"outside scan scope: {guard_url}")
+
+        if source == "header":
+            header_name = str(point.param)
+            self._extra_headers = {header_name: str(payload)}
+            self._extra_origin = net.origin(point.url) or self.base_url
+            try:
+                return self.visit(
+                    point.url,
+                    wait_ms,
+                    shot_path,
+                    interact_marker=interact_marker,
+                )
+            finally:
+                self._extra_headers = {}
+                self._extra_origin = ""
+
+        if source == "cookie":
+            cookie_name = str(point.param)
+            saved = self._override_cookie(
+                cookie_name, str(payload), url=point.url,
+            )
+            try:
+                return self.visit(
+                    point.url,
+                    wait_ms,
+                    shot_path,
+                    interact_marker=interact_marker,
+                )
+            finally:
+                self._restore_cookie(cookie_name, saved)
 
         if point.method == "GET":
             if source == "path":

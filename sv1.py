@@ -22,13 +22,13 @@ if sys.version_info < (3, 10):
     sys.stderr.write("SV1 needs Python 3.10 or newer\n")
     raise SystemExit(2)
 
-from sv1lib import auth, banner, blind, config, crawl, discovery, domxss, hidden
+from sv1lib import auth, banner, blind, config, coverage, crawl, discovery, domxss, hidden
 from sv1lib import imports as imports_mod, jsparse, net, oob, openapi, report, spa, sqli, ssrf
 from sv1lib import browser as browser_mod
 from sv1lib import checkpoint as checkpoint_mod
 from sv1lib import history as history_mod
 from sv1lib import policy, sarif, scope as scope_mod
-from sv1lib import secondorder, storage, stored, verify, xss
+from sv1lib import secondorder, storage, stored, verify, waf, xss
 from sv1lib.models import ScanStats
 
 TOKEN_RE = re.compile(r"sv1[0-9a-zA-Z]+")
@@ -104,9 +104,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--no-sqli", action="store_true", help="disable sqli checks")
     parser.add_argument("--no-union", action="store_true", help="skip union based extraction")
 
-    parser.add_argument("--headers", action="store_true", help="inject into x-forwarded-for, referer, user-agent")
+    parser.add_argument("--headers", action="store_true",
+                        help="inject into x-forwarded-for, referer, user-agent on every page")
     parser.add_argument("--deep", action="store_true", help="add more header candidates")
-    parser.add_argument("--cookies", action="store_true", help="inject into the cookie values you passed")
+    parser.add_argument("--cookies", action="store_true",
+                        help="inject into the cookie values you passed on every page")
     parser.add_argument("--json", default="", help="json endpoint to test (default POST)")
     parser.add_argument("--json-data", default='{"id": "1", "q": "test"}', help="json body template")
     parser.add_argument("--data", default="", help="raw body template; use * as the injection marker")
@@ -143,6 +145,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--password-fields", dest="password_fields", action="store_true",
                         help="inject into password form inputs (off by default)")
     parser.add_argument("--params", action="store_true", help="discover hidden query parameters")
+    parser.add_argument("--path", action="store_true",
+                        help="inject into URL path segments of every discovered page")
     parser.add_argument("--js", action="store_true", help="mine endpoints from javascript")
     parser.add_argument("--second-order", action="store_true",
                         help="probe second-order sqli (writes to the target)")
@@ -255,13 +259,25 @@ def merge_points(points: list, extra: list) -> None:
         points.append(point)
 
 
-def extra_points(args: argparse.Namespace, target: str, cookies: dict) -> list:
-    """Header, cookie, JSON and raw body points are opt in."""
+def extra_points(args: argparse.Namespace, target: str, cookies: dict,
+                 pages: list | None = None) -> list:
+    """Header, cookie, JSON and raw body points are opt in.
+
+    Header and cookie coverage follows every discovered page, not just the
+    target URL. The old single-page behaviour hid the same input on linked
+    routes, which is exactly where real applications carry state.
+    """
     extra = []
     if args.headers:
-        extra.extend(crawl.header_points(target, deep=args.deep))
+        if pages:
+            extra.extend(coverage.header_points(pages, deep=args.deep))
+        else:
+            extra.extend(crawl.header_points(target, deep=args.deep))
     if args.cookies and cookies:
-        extra.extend(crawl.cookie_points(target, cookies))
+        if pages:
+            extra.extend(coverage.cookie_points(pages, cookies))
+        else:
+            extra.extend(crawl.cookie_points(target, cookies))
 
     method = (args.method or "POST").upper()
     content_type = args.content_type or "application/json"
@@ -331,7 +347,7 @@ def prove_xss(engine, pairs: list, args: argparse.Namespace, client=None) -> Non
         if finding.technique == "reflection-encoded":
             continue
         if point.source not in ("query", "form", "multipart", "path",
-                                "json", "raw", "js"):
+                                "json", "raw", "js", "header", "cookie"):
             finding.severity = "MEDIUM"
             note = f"browser proof unavailable for {point.source} inputs"
             finding.detail = f"{finding.detail} | {note}".strip(" |")
@@ -692,6 +708,9 @@ def run(args: argparse.Namespace) -> int:
     pages_limit = max(1, args.pages) if args.crawl else 1
 
     report.section("recon")
+    waf_hit = waf.probe(client, target)
+    if waf_hit is not None:
+        report.info(f"waf     {waf_hit.name} · {waf_hit.evidence}")
     sitemap_seeds: list[str] = []
     if args.sitemap:
         sitemap_seeds, sitemap_note = discovery.discover(
@@ -759,7 +778,10 @@ def run(args: argparse.Namespace) -> int:
                 if not explorer.import_cookies(client.cookies):
                     report.warn("spa cookie import failed - session may be missing")
                 try:
-                    new_pages, spa_points, spa_note = spa.capture(client, explorer, pages)
+                    new_pages, spa_points, spa_note = spa.capture(
+                        client, explorer, pages,
+                        allows=scope_rules.allows if scope_rules is not None else None,
+                    )
                 finally:
                     explorer.close()
                 known = {page.url for page in pages}
@@ -779,9 +801,14 @@ def run(args: argparse.Namespace) -> int:
         pages,
         include_hidden=args.hidden_fields,
         include_password=args.password_fields,
+        allows=scope_rules.allows if scope_rules is not None else None,
     )
     merge_points(points, spa_points)
-    extra = extra_points(args, target, session_cookies)
+    if args.path:
+        path_points = coverage.path_points(pages)
+        report.info(f"path    {len(path_points)} point(s) from url segments")
+        merge_points(points, path_points)
+    extra = extra_points(args, target, session_cookies, pages=pages)
     merge_points(points, extra)
     imported_points = imports_mod.points(
         imported,
@@ -796,7 +823,10 @@ def run(args: argparse.Namespace) -> int:
         report.info(f"params  {note}")
         merge_points(points, hidden_points)
     if args.js:
-        js_points = jsparse.endpoints(client, pages)
+        js_points = jsparse.endpoints(
+            client, pages,
+            allows=scope_rules.allows if scope_rules is not None else None,
+        )
         report.info(f"js      {len(js_points)} point(s) mined from scripts")
         merge_points(points, js_points)
     if args.openapi:
@@ -845,6 +875,7 @@ def run(args: argparse.Namespace) -> int:
         "ssrf": bool(args.ssrf),
         "stored": bool(args.stored),
         "params": bool(args.params),
+        "path": bool(args.path),
         "hidden_fields": bool(args.hidden_fields),
         "password_fields": bool(args.password_fields),
         "login_attack": bool(args.login_attack),
@@ -1173,8 +1204,10 @@ def run(args: argparse.Namespace) -> int:
         "union": not args.no_union,
         "replay": not args.no_verify,
         "browser": engine is not None,
+        "waf": waf_hit.name if waf_hit is not None else "",
         "stored": bool(args.stored),
         "hidden": bool(args.params),
+        "path": bool(args.path),
         "js": bool(args.js),
         "external_js": bool(args.external_js),
         "har": bool(args.har),

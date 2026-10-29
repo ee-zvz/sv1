@@ -2,6 +2,56 @@
 
 All notable changes to SV1. Format follows Keep a Changelog.
 
+## 1.6.0 - 2026-10-29
+
+Coverage 2.0. Detection scope is still XSS, SQLi, blind XSS and SSRF;
+reflection-only remains `MEDIUM`; `HIGH` still needs execution or replay. This
+release widens the inputs the proof engine can reach without weakening the proof
+boundary.
+
+### Added
+
+- `--path` turns every non-empty URL path segment of every discovered page into
+  a replayable point. Percent-encoded values are decoded once, the query string
+  and trailing slash stay in place, and the concrete route is rebuilt for
+  baseline, browser proof and curl.
+- `--headers` and `--cookies` now create points on every unique discovered page,
+  not only the target URL. Both carriers are capped by
+  `EXTRA_MAX_POINTS` (200).
+- Chromium proof for header and cookie XSS. A custom header is applied by the
+  route guard for the proof origin; a cookie value is written temporarily and
+  restored after the visit. Both can now reach `HIGH`/`CONFIRMED`; they were
+  previously always demoted to `MEDIUM`.
+- Scope-aware cross-origin discovery. When `--scope` explicitly authorizes
+  another origin, crawl links/forms, SPA XHR/fetch captures, JavaScript endpoint
+  mining and external bundle analysis may reach it. Imported headers and
+  cookies are still sent only to the scan origin.
+- Passive WAF fingerprinting for named edges. One ordinary GET reports the
+  product and evidence; a plain 403 is not treated as a WAF.
+- OWASP Top 10:2025 mappings: XSS/SQLi -> `A05:2025 Injection`, SSRF ->
+  `A01:2025 Broken Access Control`.
+
+### Changed
+
+- The checkpoint compatibility key includes `path`, so a checkpoint cannot mix
+  a path-segment scan with one that skipped path coverage.
+- `--headers`/`--cookies` help text and the README now describe route-wide
+  coverage instead of target-only coverage.
+- The default extra-point cap is 200 per carrier; the browser proof budget is
+  unchanged.
+
+### Tests
+
+- Default suite: **202 discovered, 189 pass, 13 opt-in skips**.
+- Branch coverage: **52.6%** (6,075 statements) against the 51.0% floor;
+  `ruff` clean, `mypy` clean on 43 source files.
+- Chromium integration: **12/12**, including new header-XSS proof, cookie-XSS
+  proof and post-proof cookie restoration tests.
+- Full lab gate: **40/40 verified**, 24 confirmed, 16 replayed, 0 unverified,
+  0 errors, 25 pages, 34 points, 13 `CRITICAL`, 25 `HIGH`, 2 `MEDIUM`
+  (23 XSS, 16 SQLI, 1 SSRF), 274.0 s. The passive WAF probe adds one ordinary
+  request and does not change detection.
+
 ## 1.5.2 - 2026-10-29
 
 Reflected recall payload patch. Detection scope is unchanged: XSS, SQLi, blind

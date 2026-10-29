@@ -2,6 +2,8 @@
 
 - **التاريخ:** 2026-10-29
 - **SV1:** 1.5.2 (هذا القياس) — الأساس 1.5.1 (`9e2dcc4`)
+- **1.6.0:** يوسّع المدخلات (path/header/cookie/scope) ولا يغيّر محرك
+  reflected؛ أرقام Firing Range أعلاه تبقى مرجع العلاقة الحالية.
 - **المنافس:** dalfox 3.2.4
 - **الهدف:** `https://public-firing-range.appspot.com/reflected/`
 

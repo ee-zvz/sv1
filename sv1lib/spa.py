@@ -65,10 +65,20 @@ def _points_from_form(url: str, body: str, method: str,
     return points
 
 
-def _points_from_capture(captured: CapturedRequest, page_url: str) -> list[InjectionPoint]:
+def _in_scope(url: str, page_url: str, allows=None) -> bool:
+    if allows is not None:
+        try:
+            return bool(allows(url))
+        except Exception:
+            return False
+    return net.same_origin(url, page_url)
+
+
+def _points_from_capture(captured: CapturedRequest, page_url: str,
+                         allows=None) -> list[InjectionPoint]:
     """One browser request can carry query fields and a JSON/form/raw body."""
     full = urllib.parse.urljoin(page_url, captured.url).split("#", 1)[0]
-    if not net.same_origin(full, page_url) or net.is_skippable(full):
+    if not _in_scope(full, page_url, allows) or net.is_skippable(full):
         return []
     method = (captured.method or "GET").upper()
     query_points = _points_from_url(full, method)
@@ -109,7 +119,8 @@ def _points_from_capture(captured: CapturedRequest, page_url: str) -> list[Injec
     return query_points
 
 
-def capture(client, engine, pages: list[Page]) -> tuple[list[Page], list[InjectionPoint], str]:
+def capture(client, engine, pages: list[Page],
+            allows=None) -> tuple[list[Page], list[InjectionPoint], str]:
     """Return (new pages, points, note). Bounded on every axis."""
     known = {page.url for page in pages}
     candidates = [
@@ -132,7 +143,7 @@ def capture(client, engine, pages: list[Page]) -> tuple[list[Page], list[Injecti
         base = result.url or url
         for call in result.requests:
             full = urllib.parse.urljoin(base, call.url).split("#", 1)[0]
-            if not net.same_origin(full, url) or net.is_skippable(full):
+            if not _in_scope(full, url, allows) or net.is_skippable(full):
                 continue
             key = (
                 full,
@@ -153,7 +164,7 @@ def capture(client, engine, pages: list[Page]) -> tuple[list[Page], list[Injecti
             )
         for raw in result.anchors:
             full = urllib.parse.urljoin(base, raw).split("#", 1)[0]
-            if not net.same_origin(full, url) or net.is_skippable(full):
+            if not _in_scope(full, url, allows) or net.is_skippable(full):
                 continue
             if full in known:
                 continue
@@ -173,7 +184,7 @@ def capture(client, engine, pages: list[Page]) -> tuple[list[Page], list[Injecti
     seen_points: set[tuple] = set()
     body_calls = 0
     for captured in captured_requests:
-        for point in _points_from_capture(captured, captured.url):
+        for point in _points_from_capture(captured, captured.url, allows):
             key = point.key()
             if key in seen_points:
                 continue

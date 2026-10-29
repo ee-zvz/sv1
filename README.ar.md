@@ -5,7 +5,13 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.5.2` يغلق فجوتَي الاسترجاع في الـpayloads:
+SQLite session history. Release `1.6.0` is **Coverage 2.0**: `--path` turns every
+URL path segment into a replayable point; `--headers` and `--cookies` follow every
+discovered page and header/cookie XSS can be proved in Chromium; an explicit
+`--scope` can authorize an API/SPA origin without sending the target session
+there; one passive GET fingerprints a named WAF; and findings map to OWASP Top
+10:2025. The reflected recall remains **43/43 GET pages**. The previous release
+`1.5.2` يغلق فجوتَي الاسترجاع في الـpayloads:
 `data:text/javascript` لـ`<script src>` وevent handler بلا اقتباسات للـattribute
 العاري؛ الجدول المصحح **43/43 صفحة GET**. `1.5.1` hardens checkpoint handling
 and the authenticated/sitemap lab proof; `1.5.0` adds the real-world operating layer:

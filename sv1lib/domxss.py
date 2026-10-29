@@ -133,7 +133,7 @@ def analyze(
 
 
 def external_sources(client, page: Page, allows=None) -> list[tuple[str, str]]:
-    """Read same-origin `<script src>` bodies for source/sink analysis."""
+    """Read same-origin or scope-authorized script bodies for source/sink analysis."""
     if client is None:
         return []
     bodies: list[tuple[str, str]] = []
@@ -146,9 +146,12 @@ def external_sources(client, page: Page, allows=None) -> list[tuple[str, str]]:
         if not src or src.lower().startswith(SKIP_PREFIX):
             continue
         url = urllib.parse.urljoin(page.url, src)
-        if not net.same_origin(url, page.url) or url in seen:
+        if url in seen:
             continue
-        if allows is not None and not allows(url):
+        if allows is not None:
+            if not allows(url):
+                continue
+        elif not net.same_origin(url, page.url):
             continue
         seen.add(url)
         used += 1

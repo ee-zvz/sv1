@@ -142,19 +142,19 @@ class Explore:
 FINDING_META = {
     "XSS": (
         "CWE-79",
-        "A03:2021 Injection",
+        "A05:2025 Injection",
         "Encode output for the exact HTML, attribute, URL or JavaScript context; "
         "use a framework auto-escaper and a restrictive Content-Security-Policy.",
     ),
     "SQLI": (
         "CWE-89",
-        "A03:2021 Injection",
+        "A05:2025 Injection",
         "Use parameterized queries or prepared statements; never concatenate "
         "request data into SQL, and validate the type before the query.",
     ),
     "SSRF": (
         "CWE-918",
-        "A10:2021 Server-Side Request Forgery",
+        "A01:2025 Broken Access Control",
         "Allowlist destination schemes, hosts and ports; resolve and re-check "
         "after redirects, and block link-local/cloud metadata ranges.",
     ),

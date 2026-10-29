@@ -17,6 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from sv1lib import browser as browser_mod
 from sv1lib import crawl, net, spa
+from sv1lib.models import InjectionPoint
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PORT = 8098
@@ -64,6 +65,20 @@ class ResourceHandler(BaseHTTPRequestHandler):
                 status = 403
                 body = b"forbidden"
             ctype = "text/plain; charset=utf-8"
+        elif self.path == "/reflect-header":
+            body = (
+                "<html><body><div>"
+                + self.headers.get("X-Sv1-Test", "")
+                + "</div></body></html>"
+            ).encode()
+            ctype = "text/html; charset=utf-8"
+        elif self.path == "/reflect-cookie":
+            body = (
+                "<html><body><div>"
+                + self.headers.get("Cookie", "")
+                + "</div></body></html>"
+            ).encode()
+            ctype = "text/html; charset=utf-8"
         elif self.path == "/body-form":
             body = (
                 "<html><body>"
@@ -363,6 +378,62 @@ class BrowserCaptureTests(unittest.TestCase):
             for path, headers in target.records
         ))
         self.assertEqual(target.statuses[-1], 200)
+
+    def test_browser_proves_header_xss(self) -> None:
+        target = start_resource_server()
+        self.addCleanup(stop_resource_server, target)
+        target_url = f"http://127.0.0.1:{target.server_address[1]}"
+        point = InjectionPoint(
+            url=target_url + "/reflect-header",
+            method="GET",
+            params=(("X-Sv1-Test", "old"),),
+            param="X-Sv1-Test",
+            source="header",
+        )
+        marker = "sv1headerproof"
+        engine = browser_mod.Browser(base_url=target_url, timeout_ms=8000)
+        try:
+            self.assertTrue(engine.start(), engine.reason)
+            result = engine.visit_point(
+                point, f"<svg/onload=alert('{marker}')>", wait_ms=800,
+            )
+        finally:
+            engine.close()
+        self.assertFalse(result.error, result.error)
+        self.assertEqual(result.proof(marker), f"alert:{marker}")
+
+    def test_browser_proves_cookie_xss_and_restores_session(self) -> None:
+        target = start_resource_server()
+        self.addCleanup(stop_resource_server, target)
+        target_url = f"http://127.0.0.1:{target.server_address[1]}"
+        point = InjectionPoint(
+            url=target_url + "/reflect-cookie",
+            method="GET",
+            params=(("probe", "old"),),
+            param="probe",
+            source="cookie",
+        )
+        marker = "sv1cookieproof"
+        engine = browser_mod.Browser(
+            cookies={"probe": "old", "session": "keep"},
+            base_url=target_url,
+            timeout_ms=8000,
+        )
+        try:
+            self.assertTrue(engine.start(), engine.reason)
+            result = engine.visit_point(
+                point, f"<svg/onload=alert('{marker}')>", wait_ms=800,
+            )
+            cookies = {
+                item["name"]: item["value"]
+                for item in engine._context.cookies(target_url)
+            }
+        finally:
+            engine.close()
+        self.assertFalse(result.error, result.error)
+        self.assertEqual(result.proof(marker), f"alert:{marker}")
+        self.assertEqual(cookies.get("probe"), "old")
+        self.assertEqual(cookies.get("session"), "keep")
 
     def test_cross_target_form_body_is_not_sent_by_chromium(self) -> None:
         target = start_resource_server()

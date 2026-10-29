@@ -356,7 +356,7 @@ class FindingMetadataTests(unittest.TestCase):
             document = json.loads(Path(report_path).read_text(encoding="utf-8"))
             props = document["runs"][0]["results"][0]["properties"]
             self.assertEqual(props["cwe"], "CWE-89")
-            self.assertIn("A03:2021", props["owasp"])
+            self.assertIn("A05:2025", props["owasp"])
 
 
 class CliSurfaceTests(unittest.TestCase):

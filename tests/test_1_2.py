@@ -445,15 +445,15 @@ class ProofPolicyTests(unittest.TestCase):
         self.assertEqual(finding.severity, "HIGH")
         self.assertEqual(finding.confidence, "CONFIRMED")
 
-    def test_header_inputs_are_not_claimed_as_proven(self) -> None:
+    def test_header_inputs_can_be_proven_in_the_browser(self) -> None:
         finding = Finding(
             kind="XSS",
-            severity="HIGH",
+            severity="MEDIUM",
             url="https://example.com/item",
             method="GET",
             param="X-Test",
             payload="<svg/onload=alert('sv1abc123')>",
-            confidence="HIGH",
+            confidence="MEDIUM",
             evidence="reflected",
             technique="reflected/text",
         )
@@ -463,6 +463,37 @@ class ProofPolicyTests(unittest.TestCase):
             params=(("X-Test", "1"),),
             param="X-Test",
             source="header",
+        )
+        engine = SimpleNamespace(
+            visit_point=lambda *args, **kwargs: SimpleNamespace(
+                fired=lambda token: True,
+                error="",
+                screenshot="shot.png",
+                proof=lambda token: "alert:sv1abc123",
+            )
+        )
+        sv1.prove_xss(engine, [(finding, point)], SimpleNamespace(artifacts=""))
+        self.assertEqual(finding.severity, "HIGH")
+        self.assertEqual(finding.confidence, "CONFIRMED")
+
+    def test_unreplayable_inputs_are_not_claimed_as_proven(self) -> None:
+        finding = Finding(
+            kind="XSS",
+            severity="HIGH",
+            url="https://example.com/socket",
+            method="GET",
+            param="message",
+            payload="<svg/onload=alert('sv1abc123')>",
+            confidence="HIGH",
+            evidence="reflected",
+            technique="reflected/text",
+        )
+        point = InjectionPoint(
+            url="https://example.com/socket",
+            method="GET",
+            params=(("message", "1"),),
+            param="message",
+            source="websocket",
         )
         engine = SimpleNamespace(visit_point=lambda *args, **kwargs: None)
         sv1.prove_xss(engine, [(finding, point)], SimpleNamespace(artifacts=""))

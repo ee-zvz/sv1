@@ -7,10 +7,16 @@
 **SV1** is a Python XSS / SQL injection / blind XSS / SSRF scanner for Windows 11.
 It proves execution inside Chromium, catches out-of-band callbacks, crawls SPAs,
 imports OpenAPI, and ships CI output: SARIF, severity gates, scoped scans, and
-SQLite session history. Release `1.5.2` closes the two reflected payload gaps:
-`data:text/javascript` for `<script src>` and quote-free event handlers for bare
-attributes. The corrected page-level recall is **43/43 GET pages**. `1.5.1`
-hardens checkpoint handling and the authenticated/sitemap lab proof; `1.5.0`
+SQLite session history. Release `1.6.0` is **Coverage 2.0**: every discovered
+route is also a path-segment input (`--path`), header and cookie points follow
+all crawled pages and can be promoted to `HIGH` by Chromium execution, and an
+explicit scope file can authorize API/SPA origins so the crawler, XHR capture,
+JavaScript mining and DOM analysis reach them without leaking the target
+session. It adds passive WAF fingerprinting and updates finding metadata to
+OWASP Top 10:2025 (`A05:2025 Injection`, `A01:2025 Broken Access Control`).
+The reflected recall remains **43/43 GET pages**. `1.5.2` closed the
+`data:text/javascript` and quote-free event-handler reflection gaps; `1.5.1`
+hardened checkpoint handling and the authenticated/sitemap lab proof; `1.5.0`
 added the real-world operating layer:
 same-origin form login with CSRF preservation, resumable point scans, robots and
 sitemap discovery, and CWE/OWASP/remediation metadata in every output. It keeps
@@ -36,8 +42,8 @@ and CWE/OWASP/remediation metadata across console, HTML, JSON, CSV and SARIF.
 `1.5.1` creates checkpoint temp files with mode `0600`, prints a session-material
 warning for `--resume`, ignores checkpoint/storage-state/resume JSON in Git,
 raises the coverage floor to 51.0%, and proves login-protected and sitemap-only
-pages in the full lab. The field audit is in
-[`docs/IMPROVEMENTS.md`](docs/IMPROVEMENTS.md).
+pages in the full lab. `1.6.0` keeps that proof bar while widening coverage. The
+field audit is in [`docs/IMPROVEMENTS.md`](docs/IMPROVEMENTS.md).
 
 A vulnerability scanner for **XSS**, **SQL Injection**, **Blind XSS** and **SSRF**
 written in Python, running on Windows 11. On start it prints an animated banner
@@ -120,9 +126,10 @@ python sv1.py -u <URL> [options]
 | `--no-xss` / `--no-sqli` | Disable one of the two |
 | `--time` | Run time-based injection checks (slow, accurate) |
 | `--no-union` | Disable UNION extraction |
-| `--headers` | Inject into `X-Forwarded-For`, `Referer`, `User-Agent` |
+| `--headers` | Inject into `X-Forwarded-For`, `Referer`, `User-Agent` on every discovered page |
 | `--deep` | Additional headers: `X-Real-IP`, `Client-IP`, `Origin`, … |
-| `--cookies` | Inject into cookie values passed with `--cookie` |
+| `--cookies` | Inject into cookie values passed with `--cookie` on every discovered page |
+| `--path` | Inject into every URL path segment of every discovered page |
 | `--json URL` | Test JSON body injection; nested objects and arrays are flattened to leaf points |
 | `--json-data JSON` | JSON body template (default `{"id": "1", "q": "test"}`) |
 | `--data BODY` | Raw body template; use `*` as the injection marker, or pass JSON to test nested leaves |
@@ -143,7 +150,7 @@ python sv1.py -u <URL> [options]
 | `--resume FILE` | Resume a point scan from an atomic checkpoint file |
 | `--hidden-fields` | Probe hidden form inputs too (values are preserved by default) |
 | `--password-fields` | Probe password inputs too (off by default) |
-| `--external-js` | Read same-origin external scripts for DOM source/sink analysis |
+| `--external-js` | Read external scripts for DOM source/sink analysis (same-origin, or scope-authorized) |
 | `--params` | Discover hidden GET parameters on the target URL |
 | `--js` | Extract injection points from page scripts |
 | `--second-order` | Second-order SQLi (writes to the target) |
@@ -189,8 +196,14 @@ python sv1.py -u https://site.tld --crawl --stored --html report.html
 # No browser (faster, no execution proof)
 python sv1.py -u https://site.tld --crawl --no-browser
 
-# Header and cookie injection (tests the target URL itself)
-python sv1.py -u https://site.tld/api/account --headers --deep --cookies --cookie "sid=abc"
+# Header and cookie injection across every discovered page
+python sv1.py -u https://site.tld --crawl --headers --deep --cookies --cookie "sid=abc"
+
+# Path-segment injection on every crawled route
+python sv1.py -u https://site.tld --crawl --path --xss --sqli
+
+# Scope authorizes a public API/SPA origin; target credentials are not sent there
+python sv1.py -u https://site.tld --crawl --spa --scope scope.txt --path
 
 # JSON endpoint (PowerShell eats inner quotes, so use backticks)
 python sv1.py -u https://site.tld/api/item --json https://site.tld/api/item `
@@ -222,7 +235,7 @@ python sv1.py -u https://site.tld/api/search --method POST `
 # SPA XHR/fetch POST body capture
 python sv1.py -u https://site.tld/app --spa --xss
 
-# External same-origin bundle source/sink analysis, with browser proof
+# External bundle source/sink analysis, with browser proof
 python sv1.py -u https://site.tld/app --external-js --xss
 
 # Hidden parameters on one page
@@ -278,18 +291,50 @@ the `--fail-on` threshold, `2` = the target did not respond or a file could not 
   JSON document or a raw template whose first `*` is the marker; `--method` and
   `--content-type` control the request. Form points also honour non-POST methods.
 - **XHR/fetch POST capture.** `--spa` records the method, body and content type
-  of same-origin XHR/fetch calls. JSON and form-urlencoded bodies become points;
-  raw bodies with `*` are accepted. Body capture is capped at 200 KB per call and
-  40 points per SPA pass.
-- **External JavaScript.** `--external-js` reads up to four same-origin
+  of same-origin (or explicitly scoped) XHR/fetch calls. JSON and form-urlencoded
+  bodies become points; raw bodies with `*` are accepted. Body capture is capped
+  at 200 KB per call and 40 points per SPA pass.
+- **External JavaScript.** `--external-js` reads up to four external
   `<script src>` bundles per page (1.5 MB each), looks for DOM source/sink pairs,
-  and proves the candidate in Chromium. Cross-origin bundles are skipped.
+  and proves the candidate in Chromium. Same-origin is the default; a scoped
+  cross-origin bundle is read only when `--scope` authorizes its host.
 - **Nested OpenAPI bodies.** JSON `requestBody` schemas are expanded into nested
   objects and arrays before points are created; form and multipart bodies remain
   top-level.
 - **Honest severity.** Reflected XSS starts at `MEDIUM` in the scan output.
   Chromium promotion to `HIGH`/`CONFIRMED` happens only after the marker executes.
   A JSON or XHR reflection stays `MEDIUM` until Chromium proves an executable path.
+
+### Coverage 2.0 (1.6.0)
+
+- **Path segments are inputs.** `--path` turns every non-empty segment of every
+  discovered URL into a replayable point. `/api/users/42` produces points for
+  `api`, `users` and `42`; the original query string and trailing slash stay in
+  place, and a percent-encoded segment is decoded exactly once before replay.
+  Browser proof and curl rebuild the concrete segment with `net.path_url`.
+- **Headers and cookies follow the route, not just the entry URL.** `--headers`
+  and `--cookies` now create points on every unique discovered page. A custom
+  header is injected through the Chromium route guard for the exact proof
+  origin; it never becomes a context-wide header for third-party subresources.
+  A cookie point is temporarily written to the target origin, replayed, and
+  restored record-by-record even when the visit fails. Header and cookie XSS
+  therefore reach `HIGH`/`CONFIRMED` only after a real alert, not on reflection.
+- **Scope can authorize a second origin.** With `--scope`, links, forms, captured
+  XHR/fetch URLs, JavaScript endpoints and external bundles may live on another
+  scoped host. The HTTP client still sends imported headers and cookies only to
+  the scan origin; the additional origin is reached anonymously. This is the gap
+  that hid an API host such as `listing.example.tld` during a crawl of the apex.
+- **WAF names are visible before the first block.** One ordinary GET fingerprints
+  named edges from headers, cookies or block-page markers (`Cloudflare`,
+  `Akamai`, `Imperva`, `F5 BIG-IP`, `AWS WAF`, `ModSecurity`, `NAXSI`, `Sucuri`,
+  `Wordfence`, `Azure Front Door`, `Fastly`, `Vercel`, `Wallarm`, `SafeLine`,
+  `Barracuda`, `Citrix NetScaler`). A plain 403 is not a fingerprint.
+- **Standards metadata is current.** XSS and SQLi map to `A05:2025 Injection`;
+  SSRF maps to `A01:2025 Broken Access Control`. The finding still carries
+  `CWE`, remediation and the proof counters.
+- **The proof boundary is unchanged.** Starting severity for a reflection is
+  `MEDIUM`; `HIGH` still requires Chromium execution, replay or OOB proof.
+  Cross-origin points never receive the target's session material.
 
 ### Login, resume and discovery (1.5.0)
 
@@ -318,9 +363,9 @@ the `--fail-on` threshold, `2` = the target did not respond or a file could not 
 - **Sitemaps add seeds, not permissions.** `--sitemap` reads `robots.txt`, follows
   up to three same-origin sitemap files (one index hop), skips assets and refuses
   external hosts. The normal page cap, depth, scope and form parser still apply.
-- **Findings are ticket-ready.** XSS/SQLI/SSRF carry CWE, OWASP 2021 and a short
-  remediation. They appear in the console, HTML, JSON, CSV and SARIF. Severity is
-  unchanged.
+- **Findings are ticket-ready.** XSS/SQLI/SSRF carry CWE, OWASP Top 10:2025 and
+  a short remediation. They appear in the console, HTML, JSON, CSV and SARIF.
+  Severity is unchanged.
 
 ### Form fidelity and authenticated state (1.4.0)
 
@@ -407,10 +452,12 @@ the `--fail-on` threshold, `2` = the target did not respond or a file could not 
 - **No inverted TLS flag.** `-k/--insecure` now sets Chromium
   `ignore_https_errors=True`. Before 1.2.1 the value was inverted, so `-k` kept
   certificate errors fatal and the default silently ignored them.
-- **Forms stay on the target.** A form action must be same-origin HTTP(S) before
-  the crawler turns it into a point, before stored/second-order submission, and
-  before the browser submits it. A hostile page cannot redirect scanner headers
-  or payloads to a third-party origin through `<form action>`.
+- **Forms stay on the target unless scope says otherwise.** By default a form
+  action must be same-origin HTTP(S) before the crawler turns it into a point,
+  before stored/second-order submission, and before the browser submits it.
+  With `--scope`, an explicitly authorized cross-origin form is reachable
+  anonymously; stored/second-order writes remain same-origin. A hostile page
+  cannot widen the scan by itself.
 - **Parallel requests do not share a `requests.Session`.** Each worker gets its
   own session and adapter pool; all sessions share one thread-safe cookie jar.
   Login cookies still propagate, but adapter state and connection pools are not
@@ -530,16 +577,19 @@ python sv1.py -u https://site.tld --crawl --db sv1.db --diff
 8x, honours a numeric `Retry-After` (capped at 30s), and recovers gradually
 after 20 healthy responses. `--rps 0` stays unlimited.
 
-> 1.5.1 hardens checkpoint files and extends the authenticated/sitemap lab
-> proof. 1.5.0 ships same-origin login, point-level `--resume`, sitemap seeds and
-> CWE/OWASP/remediation metadata. The async engine remains deferred to 1.6.0.
-> The release keeps redirect scope hop by hop, refuses cross-origin request
-> bodies, canonicalizes scope paths and IPv6, isolates session headers and
-> cookies on the target origin, imports the live HTTP session into Chromium,
-> and keeps server-set cookie isolation, baseline-aware SQLi replay, HAR/raw
-> request import, nested JSON/raw bodies, XHR POST capture, external JavaScript
-> analysis and nested OpenAPI bodies. CI runs the Chromium integration tests,
-> the full-lab acceptance test, ruff, mypy and a 51.0% coverage floor.
+> 1.6.0 ships Coverage 2.0: path-segment points, route-wide header/cookie
+> coverage with Chromium proof, scope-authorized cross-origin discovery, passive
+> WAF fingerprinting and OWASP 2025 metadata. 1.5.1 hardened checkpoint files
+> and extended the authenticated/sitemap lab proof. 1.5.0 added same-origin
+> login, point-level `--resume`, sitemap seeds and CWE/OWASP/remediation
+> metadata. The async engine remains deferred beyond 1.6.0. The release keeps
+> redirect scope hop by hop, refuses cross-origin request bodies, canonicalizes
+> scope paths and IPv6, isolates session headers and cookies on the target
+> origin, imports the live HTTP session into Chromium, and keeps server-set
+> cookie isolation, baseline-aware SQLi replay, HAR/raw request import, nested
+> JSON/raw bodies, XHR POST capture, external JavaScript analysis and nested
+> OpenAPI bodies. CI runs the Chromium integration tests, the full-lab
+> acceptance test, ruff, mypy and a 51.0% coverage floor.
 
 ---
 
@@ -672,10 +722,11 @@ rejected. It tests the target URL itself (like Arjun), not every crawled page.
 **Points from JavaScript** (`--js`)
 
 The crawler follows `<a href>` only. Modern apps call `/api/...` from inside the
-script. SV1 reads the inline script and fetches same-origin external scripts
-(capped at 6 files per page), extracts every quoted string containing `?` or `&`,
-turns it into a normal `InjectionPoint`, and runs XSS + SQLi on it. External links
-and static files (`*.js?v=1`) are excluded.
+script. SV1 reads the inline script and fetches external scripts (same-origin by
+default, or scope-authorized, capped at 6 files per page), extracts every quoted
+string containing `?` or `&`, turns it into a normal `InjectionPoint`, and runs
+XSS + SQLi on it. Unscoped external links and static files (`*.js?v=1`) are
+excluded.
 
 **SPA crawl** (`--spa`)
 
@@ -792,8 +843,8 @@ commands: [`docs/REALWORLD.md`](docs/REALWORLD.md). The same-target comparison
 against dalfox and sqlmap is in [`docs/COMPARISON.md`](docs/COMPARISON.md).
 
 Live-site validation: **8 runs, 80 pages, 53 injection points, 630 requests,
-63 findings, 63/63 verified, 0 errors**. Automated tests: **177 discovered,
-166 pass by default, 11 opt-in tests skipped; the Chromium integration tests and
+63 findings, 63/63 verified, 0 errors**. Automated tests: **202 discovered,
+189 pass by default, 13 opt-in tests skipped; the Chromium integration tests and
 the full-lab acceptance test run in CI**.
 
 | Target | Scope | Result |
@@ -806,6 +857,7 @@ the full-lab acceptance test run in CI**.
 | Google Firing Range, DOM, 1.2.0 | 25 pages crawled, 20 rendered | **15 HIGH** DOM findings, 0 errors |
 | Altoro Mutual search, 1.3.1 | one GET parameter | **1 HIGH** reflected XSS, confirmed; replay 1/1 |
 | Firing Range, HAR import, 1.3.1 | one imported GET point | **1 HIGH** confirmed; replay 1/1 |
+| Local lab, 1.6.0 | full gate incl. login/sitemap/private/orphan | **40/40** findings, 0 unstable; 274.0 s |
 | Local lab, 1.5.1 | full coverage incl. login/sitemap/private/orphan | **40/40** findings, 0 unstable; 1174 requests, 275.2 s |
 | Local lab, 1.5.0 | retained baseline incl. multipart/path/storage/CSRF | **38/38** findings, 0 unstable; 1099 requests, 261.0 s |
 | Local lab, 1.4.0 | retained baseline | **38/38** findings, 0 unstable; 1099 requests, 262.8 s |
@@ -818,6 +870,13 @@ history. The two `MEDIUM` cases in
 the retained Firing Range corpus are `/url/css_import` (a stylesheet `<link>`
 cannot execute `javascript:` in current Chromium) and `/url/object_data`
 (pinned to the removed Flash type); they stay reflection-only.
+
+The 1.6.0 lab gate re-runs the same 40 cases: 40/40 verified (24 confirmed in
+the browser or OOB, 16 replayed over HTTP), 0 unstable — CRITICAL 13 / HIGH 25 /
+MEDIUM 2, 25 pages, 34 points, 274.0 s, 0 errors; 23 XSS, 16 SQLI and 1 SSRF.
+The passive WAF probe adds one ordinary request and does not change detection.
+The gate is enforced by `tests/test_lab_1_3.py`; the 1.5.1 report below remains
+the stored JSON/SARIF evidence for the same corpus.
 
 The 1.5.1 lab acceptance run: 40/40 verified (24 confirmed in the browser or
 OOB, 16 replayed over HTTP), 0 unstable — CRITICAL 13 / HIGH 25 / MEDIUM 2,
@@ -873,6 +932,8 @@ sv1/
 │   ├── policy.py       fail-on threshold and exit code
 │   ├── sarif.py        SARIF 2.1.0 export
 │   ├── crawl.py        crawler + form extractor (stdlib)
+│   ├── coverage.py     path/header/cookie points across discovered pages
+│   ├── waf.py          passive named-edge fingerprint
 │   ├── baseline.py     noise measurement and page identity (difflib)
 │   ├── context.py      injection context analysis + payload building
 │   ├── payloads.py     payloads and DB error signatures
@@ -900,6 +961,8 @@ sv1/
 ├── tests/test_1_2.py   request fidelity, context grammar, proof policy
 ├── tests/test_1_3.py   HAR, nested JSON, SPA bodies, external JS
 ├── tests/test_1_4.py   multipart, OpenAPI paths, form policy, storage state
+├── tests/test_1_5.py   login, sitemap seeds, resume, metadata
+├── tests/test_1_6.py   path/carrier coverage, scoped origins, WAF, OWASP 2025
 ├── tests/test_audit_1_3_5.py  request-boundary and scope regressions
 ├── tests/test_browser_1_3.py  Chromium integration: XHR, headers, cookies (CI)
 ├── tests/test_lab_1_3.py      full-lab release gate (CI)
@@ -1057,12 +1120,13 @@ note    database error surfaced (MySQL) - error based injection
   stylesheet `link` or a removed Flash `object` can reflect a `javascript:` URL
   without executing it; those findings stay `MEDIUM`.
 - DOM detection relies on source→sink pairs inside inline `<script>` by default.
-  `--external-js` adds up to four same-origin bundles per page (1.5 MB each).
-  `--spa` executes pages but does not analyse external bundle text. The browser
-  budget renders 20 pages per DOM pass.
-- `--js` reads URLs written as text inside scripts (inline script + same-origin
-  external files). If the URL is built from variables (`'/api/' + id`) it is not
-  found — that is where `--spa` comes in and catches it from the actual request.
+  `--external-js` adds up to four bundles per page (1.5 MB each; same-origin by
+  default, or scope-authorized). `--spa` executes pages but does not analyse
+  external bundle text. The browser budget renders 20 pages per DOM pass.
+- `--js` reads URLs written as text inside scripts (inline script + external
+  files; same-origin by default, or scope-authorized). If the URL is built from
+  variables (`'/api/' + id`) it is not found — that is where `--spa` comes in
+  and catches it from the actual request.
 - `--spa`: up to 6 pages, 1.8 s wait for late requests, captures XHR/fetch POST
   bodies up to 200 KB. Multipart POST bodies are skipped. Requires Chromium;
   skipped with `--no-browser`.
@@ -1075,8 +1139,9 @@ note    database error surfaced (MySQL) - error based injection
   capture/proxy. Imported values are not printed to the console.
 - Nested JSON is bounded at 24 levels; a leaf path is sent by rebuilding the
   original template. In a raw body, the first `*` is the injection marker.
-- `--external-js` reads same-origin scripts only; cross-origin CDN bundles are
-  skipped. It is a source/sink scan, not a full JavaScript parser.
+- `--external-js` reads same-origin scripts by default; a cross-origin CDN
+  bundle is skipped unless `--scope` authorizes it. It is a source/sink scan, not
+  a full JavaScript parser.
 - `--params` tests the target URL itself, not every crawled page.
 - `--second-order` tries one payload (`sv1'`) and up to 6 forms and 6 pages;
   fields filtered on input will not surface.
@@ -1095,8 +1160,15 @@ note    database error surfaced (MySQL) - error based injection
 - SQLi: error/boolean/time + UNION extraction. UNION needs a text column and
   unblocked `ORDER BY`/`UNION`. `--dump` reads identity and table names only, not
   full rows; Oracle has no dump yet.
-- `--headers` and `--cookies` test the target URL itself, not every crawled page.
-- WAF/flood protection can flip results. Lower `--rps` when needed.
+- `--headers` and `--cookies` now follow every discovered page. The builder is
+  capped at `EXTRA_MAX_POINTS` (200 by default) so a large crawl cannot turn one
+  flag into an unbounded request set.
+- `--path` tests every non-empty path segment of every discovered page. It is
+  opt-in because routers often return the same 404 for an injected structural
+  segment such as `/api`; the point is still real, but the extra requests are
+  not always useful.
+- WAF/flood protection can flip results. Lower `--rps` when needed; the passive
+  fingerprint only names the edge, it does not bypass it.
 - Time-based scanning is slow by nature: every payload waits several seconds.
 - `--stored`, `--second-order` and `--blind` write data to the target.
 - `--login` supports a single same-origin POST form with a password field and
@@ -1132,10 +1204,14 @@ MIT — see `LICENSE`.
 
 ## Version
 
-`1.5.2` — current public release. It closes the two reflected payload gaps from
-the Firing Range recall baseline (`data:text/javascript` for `<script src>` and
-quote-free event handlers for bare attributes), and corrects the page-level table
-to **43/43 GET pages**. `1.5.1` hardens checkpoint files with mode `0600`,
+`1.6.0` — current public release. Coverage 2.0 adds opt-in path-segment points,
+header and cookie points on every discovered page with Chromium proof, scoped
+cross-origin crawl/XHR/JavaScript discovery, passive WAF fingerprinting and
+OWASP Top 10:2025 metadata. The reflection/proof boundary is unchanged, and the
+Firing Range reflected recall is still **43/43 GET pages**. `1.5.2` closes the
+two reflected payload gaps from that baseline (`data:text/javascript` for
+`<script src>` and quote-free event handlers for bare attributes). `1.5.1`
+hardens checkpoint files with mode `0600`,
 warns that `--resume` state is session material, ignores checkpoint/storage/resume
 JSON in Git, raises the coverage floor to 51.0%, and extends the full lab to
 login-protected `/private` and sitemap-only `/orphan` proof. `1.5.0` adds

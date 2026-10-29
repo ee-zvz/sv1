@@ -169,9 +169,9 @@ def _meta(meta: dict | None) -> dict:
     """Keep restart-relevant scan options; never accept arbitrary secrets."""
     allowed = (
         "crawl", "depth", "scanners", "time_based", "union", "dump",
-        "second_order", "blind", "ssrf", "stored", "params", "hidden_fields",
-        "password_fields", "login_attack", "js", "spa", "openapi", "login",
-        "login_ok",
+        "second_order", "blind", "ssrf", "stored", "params", "path",
+        "hidden_fields", "password_fields", "login_attack", "js", "spa",
+        "openapi", "login", "login_ok",
     )
     source = meta or {}
     return {name: source[name] for name in allowed if name in source}
@@ -181,7 +181,7 @@ def compatible(raw: dict, meta: dict) -> tuple[bool, str]:
     """Refuse to mix a checkpoint with a materially different scan."""
     saved = raw.get("meta") or {}
     for name in ("crawl", "depth", "scanners", "time_based", "union", "dump",
-                 "second_order", "blind", "ssrf", "stored", "params",
+                 "second_order", "blind", "ssrf", "stored", "params", "path",
                  "hidden_fields", "password_fields", "login_attack", "js",
                  "spa", "openapi", "login"):
         if name not in saved:

@@ -20,7 +20,16 @@ SCRIPT_BODY_RE = re.compile(r"<script\b[^>]*>(.*?)</script>", re.S | re.I)
 SKIP_PREFIX = ("data:", "javascript:", "mailto:", "tel:", "blob:", "#")
 
 
-def _sources(client, page: Page) -> list[str]:
+def _in_scope(url: str, page_url: str, allows=None) -> bool:
+    if allows is not None:
+        try:
+            return bool(allows(url))
+        except Exception:
+            return False
+    return net.same_origin(url, page_url)
+
+
+def _sources(client, page: Page, allows=None) -> list[str]:
     bodies = [
         match.group(1)
         for match in SCRIPT_BODY_RE.finditer(page.html)
@@ -34,7 +43,7 @@ def _sources(client, page: Page) -> list[str]:
         if src.lower().startswith(SKIP_PREFIX):
             continue
         url = urllib.parse.urljoin(page.url, src)
-        if not net.same_origin(url, page.url):
+        if not _in_scope(url, page.url, allows):
             continue
         fetched += 1
         response = client.fetch(url)
@@ -43,13 +52,13 @@ def _sources(client, page: Page) -> list[str]:
     return bodies
 
 
-def endpoints(client, pages: list[Page]) -> list[InjectionPoint]:
+def endpoints(client, pages: list[Page], allows=None) -> list[InjectionPoint]:
     seen: set[tuple] = set()
     points: list[InjectionPoint] = []
     mined = 0
 
     for page in pages:
-        sources = _sources(client, page)
+        sources = _sources(client, page, allows=allows)
         if not sources:
             continue
         mined += 1
@@ -59,7 +68,7 @@ def endpoints(client, pages: list[Page]) -> list[InjectionPoint]:
                 if raw.lower().startswith(SKIP_PREFIX):
                     continue
                 url = urllib.parse.urljoin(page.url, raw)
-                if not net.same_origin(url, page.url):
+                if not _in_scope(url, page.url, allows):
                     continue
                 parts = urllib.parse.urlsplit(url)
                 if not parts.query or net.is_skippable(url):
